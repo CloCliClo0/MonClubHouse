@@ -1,0 +1,13 @@
+{
+  "name": "monclubhouse",
+  "version": "1.0.0",
+  "description": "MonClubHouse - Gestion de club sportif (workspace root)",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix server",
+    "start": "npm start --prefix server",
+    "dev": "npm run dev --prefix server",
+    "migrate": "npm run migrate --prefix server",
+    "migrate:undo": "npm run migrate:undo --prefix server"
+  }
+}
