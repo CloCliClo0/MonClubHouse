@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e0e0fc",
+                        "secondary": "#3f6653",
+                        "tertiary-container": "#006d48",
+                        "outline-variant": "#bfc9c1",
+                        "surface-bright": "#fbf8ff",
+                        "inverse-on-surface": "#f1efff",
+                        "tertiary-fixed": "#92f7c3",
+                        "primary-fixed": "#b1f0ce",
+                        "inverse-surface": "#2d2f44",
+                        "surface-container-highest": "#e0e0fc",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed": "#002113",
+                        "on-secondary-container": "#436b58",
+                        "tertiary-fixed-dim": "#75daa8",
+                        "on-surface": "#181a2e",
+                        "secondary-container": "#beead1",
+                        "on-secondary-fixed-variant": "#274e3d",
+                        "surface-container": "#edecff",
+                        "on-tertiary-fixed-variant": "#005235",
+                        "on-secondary-fixed": "#002114",
+                        "primary-fixed-dim": "#95d4b3",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#181a2e",
+                        "secondary-fixed": "#c1ecd4",
+                        "primary-container": "#2d6a4f",
+                        "inverse-primary": "#95d4b3",
+                        "error": "#ba1a1a",
+                        "on-primary-container": "#a8e7c5",
+                        "outline": "#707973",
+                        "on-primary-fixed-variant": "#0e5138",
+                        "background": "#fbf8ff",
+                        "surface": "#fbf8ff",
+                        "secondary-fixed-dim": "#a5d0b9",
+                        "on-surface-variant": "#404943",
+                        "tertiary": "#005236",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#89edba",
+                        "on-primary-fixed": "#002114",
+                        "surface-dim": "#d7d8f4",
+                        "surface-tint": "#2c694e",
+                        "surface-container-low": "#f4f2ff",
+                        "surface-container-high": "#e6e6ff",
+                        "on-error-container": "#93000a",
+                        "primary": "#0f5238"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "topbar_height": "64px",
+                        "gutter": "24px",
+                        "stack_sm": "8px",
+                        "stack_lg": "24px",
+                        "sidebar_width": "260px",
+                        "stack_xl": "32px",
+                        "stack_md": "16px",
+                        "container_max_width": "1280px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                        "label-lg": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .pitch-lines {
+            background-image: 
+                linear-gradient(to bottom, transparent 49.5%, rgba(255,255,255,0.2) 49.5%, rgba(255,255,255,0.2) 50.5%, transparent 50.5%),
+                radial-gradient(circle at center, transparent 15%, rgba(255,255,255,0.2) 15%, rgba(255,255,255,0.2) 16%, transparent 16%);
+            background-size: 100% 100%;
+        }
+        .pitch-border {
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background font-body-md text-on-background overflow-x-hidden">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-screen w-[260px] bg-[#2b2d42] flex flex-col py-gutter">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">sports_soccer</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg text-white font-black tracking-tight leading-tight">MCH</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-primary-fixed-variant/50 font-bold">Sports Management</p>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors hover:bg-white/5" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md">Tableau de bord</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors hover:bg-white/5" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-body-md">Calendrier</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors hover:bg-white/5" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-body-md">Membres</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-primary-fixed bg-primary/10 border-l-4 border-primary transition-all" href="/composition">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">sports_soccer</span>
+<span class="font-body-md font-semibold text-white">Équipes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors hover:bg-white/5" href="#">
+<span class="material-symbols-outlined">chat</span>
+<span class="font-body-md">Messages</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors hover:bg-white/5" href="#">
+<span class="material-symbols-outlined">campaign</span>
+<span class="font-body-md">Actualités</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors hover:bg-white/5" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md">Finances</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors hover:bg-white/5" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md">Paramètres</span>
+</a>
+</nav>
+<div class="px-2 mt-auto border-t border-white/10 pt-4">
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors hover:bg-white/5" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-md">Aide</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors hover:bg-white/5" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md">Déconnexion</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar Anchor -->
+<header class="fixed top-0 right-0 w-[calc(100%-260px)] h-[64px] bg-surface flex justify-between items-center px-gutter border-b border-outline-variant z-10">
+<div class="flex items-center gap-4 w-1/2">
+<div class="relative w-full max-w-md group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-body-md" placeholder="Rechercher une équipe, un joueur..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 rounded-full hover:bg-surface-container-low flex items-center justify-center text-on-surface-variant transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<button class="w-10 h-10 rounded-full hover:bg-surface-container-low flex items-center justify-center text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-8 w-[1px] bg-outline-variant mx-2"></div>
+<div class="flex items-center gap-3 cursor-pointer p-1 hover:bg-surface-container-low rounded-lg transition-colors group">
+<div class="text-right hidden sm:block">
+<p class="font-label-lg text-on-surface leading-none">Coach Jean</p>
+<p class="font-label-md text-on-surface-variant">Admin Club</p>
+</div>
+<img alt="User profile" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="A professional, high-resolution portrait of a middle-aged sports coach in a clean, modern studio setting. He is wearing a dark navy athletic polo shirt with a subtle club logo. The lighting is soft and directional, typical of a corporate headshot, with a neutral gray background. The overall aesthetic is professional, competent, and modern, aligning with a high-end sports management interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkcFBvfHKF0y8PVMEJLjFK5r0EQ9Wn0BKgWiCqawpyebAf8fJNQBHFhkah4rPhJwI0YRCzKU61t1MB2ZlsaooaDNS18YfkozfRfxlVWJjvccGZR1KJgSSgJ42LAHlpHTHmSK5mMh9HvdVMGrah-sZF_rlCYyHJUJXOQHYSh3VzrWKRFsG_K_-8-TIjDKJ6Vy1qLaZBQgJElrwe-fpkjTsySeYVR1fQ5mvwD-cNg_1NEh3zTjZl6fgk9zWsg2RMdLxZ6PNAOUVv-KQ"/>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-[260px] mt-[64px] p-gutter min-h-[calc(100vh-64px)] flex gap-gutter">
+<!-- Left Panel: Configuration -->
+<section class="w-[280px] shrink-0">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 h-fit sticky top-[88px] flex flex-col gap-stack_lg">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary">tune</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Configuration</h2>
+</div>
+<div class="space-y-stack_md">
+<div class="flex flex-col gap-1.5">
+<label class="font-label-lg text-on-surface-variant">Sélection du Match</label>
+<select class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-3 text-body-md focus:border-primary focus:ring-0 cursor-pointer hover:bg-surface-container-low transition-colors appearance-none">
+<option>VS Olympique Lyonnais - 12/10</option>
+<option>VS AS Monaco - 19/10</option>
+<option>VS Lille OSC - 26/10</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-lg text-on-surface-variant">Formation Tactique</label>
+<select class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-3 text-body-md focus:border-primary focus:ring-0 cursor-pointer hover:bg-surface-container-low transition-colors appearance-none" id="formation-select">
+<option selected="" value="4-3-3">4 - 3 - 3</option>
+<option value="4-4-2">4 - 4 - 2</option>
+<option value="3-5-2">3 - 5 - 2</option>
+<option value="4-2-3-1">4 - 2 - 3 - 1</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5 pt-2">
+<label class="font-label-lg text-on-surface-variant">Style de Jeu</label>
+<div class="grid grid-cols-2 gap-2">
+<button class="p-2 border border-outline-variant rounded-lg text-label-md hover:border-primary hover:text-primary transition-all bg-surface">Offensif</button>
+<button class="p-2 border border-primary bg-primary/5 text-primary rounded-lg text-label-md font-bold">Équilibré</button>
+</div>
+</div>
+</div>
+<div class="h-[1px] bg-outline-variant my-2"></div>
+<button class="w-full bg-primary text-white py-3 rounded-lg font-label-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all shadow-sm">
+<span class="material-symbols-outlined text-[20px]">save</span>
+                    Sauvegarder
+                </button>
+<button class="w-full bg-surface-container-lowest text-on-surface-variant border border-outline-variant py-2.5 rounded-lg font-label-lg hover:bg-surface-container-low transition-all">
+                    Aperçu PDF
+                </button>
+</div>
+</section>
+<!-- Right Panel: Football Pitch -->
+<section class="flex-1 min-w-0">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-8 h-full min-h-[700px] flex flex-col relative overflow-hidden">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Composition de l'équipe</h2>
+<p class="text-body-md text-on-surface-variant">Placez vos joueurs sur le terrain pour le prochain match.</p>
+</div>
+<div class="flex items-center gap-2 bg-secondary-container/30 px-4 py-2 rounded-full text-secondary font-label-lg">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+                        Match Validé
+                    </div>
+</div>
+<!-- The Pitch Container -->
+<div class="flex-1 bg-gradient-to-b from-[#3a7d44] to-[#2d6a4f] rounded-2xl relative shadow-inner overflow-hidden flex flex-col items-center">
+<!-- Pitch Texture & Markings -->
+<div class="absolute inset-4 pitch-border rounded-xl pitch-lines opacity-60"></div>
+<!-- Goal Upper -->
+<div class="absolute top-0 w-32 h-6 border-x-2 border-b-2 border-white/30"></div>
+<!-- Goal Lower -->
+<div class="absolute bottom-0 w-32 h-6 border-x-2 border-t-2 border-white/30"></div>
+<!-- Players Grid Layout (Conceptual Overlay) -->
+<div class="relative w-full h-full p-12 grid grid-rows-4 items-center" id="pitch-overlay">
+<!-- Forward Line -->
+<div class="flex justify-around items-center">
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">RW</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">A. MBAPPE</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">ST</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">K. BENZEMA</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">LW</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">V. JUNIOR</span>
+</div>
+</div>
+<!-- Midfield Line -->
+<div class="flex justify-around items-center px-12">
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">CM</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">L. MODRIC</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">CDM</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">CASEMIRO</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">CM</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">T. KROOS</span>
+</div>
+</div>
+<!-- Defense Line -->
+<div class="flex justify-around items-center">
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">RB</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">D. CARVAJAL</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">CB</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">E. MILITAO</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">CB</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">D. ALABA</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">LB</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">F. MENDY</span>
+</div>
+</div>
+<!-- Goalkeeper -->
+<div class="flex justify-center items-center">
+<div class="flex flex-col items-center gap-2">
+<div class="w-11 h-11 bg-white border-2 border-yellow-400 rounded-full flex items-center justify-center text-primary font-bold shadow-md hover:scale-110 transition-transform cursor-pointer">GK</div>
+<span class="text-white text-[10px] font-bold bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm">T. COURTOIS</span>
+</div>
+</div>
+</div>
+<!-- Watermark -->
+<div class="absolute bottom-4 right-6 opacity-20 pointer-events-none">
+<h3 class="font-headline-md text-white/50 tracking-[0.2em] font-black uppercase text-sm">MCH MANAGEMENT</h3>
+</div>
+</div>
+<!-- Footer Stats -->
+<div class="mt-8 flex gap-stack_lg">
+<div class="flex-1 bg-surface-container-low p-4 rounded-xl border border-outline-variant flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">trending_up</span>
+</div>
+<div>
+<p class="font-label-md text-on-surface-variant">Note d'Équipe</p>
+<p class="font-headline-md text-on-surface">84/100</p>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-low p-4 rounded-xl border border-outline-variant flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-secondary-container/50 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">shield</span>
+</div>
+<div>
+<p class="font-label-md text-on-surface-variant">Défense</p>
+<p class="font-headline-md text-on-surface">Stable</p>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-low p-4 rounded-xl border border-outline-variant flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-error-container/50 flex items-center justify-center text-error">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<div>
+<p class="font-label-md text-on-surface-variant">Vitesse</p>
+<p class="font-headline-md text-on-surface">Élevée</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<script>
+        // Simple micro-interaction for formation selection (UI demonstration only)
+        document.getElementById('formation-select').addEventListener('change', function(e) {
+            const formation = e.target.value;
+            console.log('Changing formation to:', formation);
+            // In a real app, this would trigger a rerender of the pitch layout
+            // For this UI demo, we'll just flash a highlight effect
+            const pitch = document.querySelector('.bg-gradient-to-b');
+            pitch.classList.add('brightness-110');
+            setTimeout(() => {
+                pitch.classList.remove('brightness-110');
+            }, 300);
+        });
+
+        // Hover effects on player circles
+        document.querySelectorAll('.pitch-overlay div > div').forEach(player => {
+            player.addEventListener('mouseenter', () => {
+                player.querySelector('div').style.backgroundColor = '#ecfdf5'; // primary-container light
+            });
+            player.addEventListener('mouseleave', () => {
+                player.querySelector('div').style.backgroundColor = '#ffffff';
+            });
+        });
+    </script>
+</body></html>

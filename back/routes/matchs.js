@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getAll, getById, create, update, saisirScore, remove } = require('../controllers/matchController');
-const { getByMatch, creerConvocations, repondre, repondreParent } = require('../controllers/convocationController');
+const { getByMatch, creerConvocations, repondre, repondreParent, renvoyerEmail } = require('../controllers/convocationController');
 const { getByMatch: getCompo, upsert: upsertCompo, getFormations } = require('../controllers/compositionController');
 const { authenticate } = require('../middlewares/auth');
 const { requireMinRole, requireRole } = require('../middlewares/rbac');
@@ -20,6 +20,7 @@ router.get('/:matchId/convocations', authenticate, getByMatch);
 router.post('/:matchId/convocations', authenticate, requireMinRole('coach'), creerConvocations);
 router.patch('/:matchId/reponse', authenticate, requireRole('joueur', 'parent', 'coach'), repondre);
 router.patch('/:matchId/reponse-parent', authenticate, requireRole('parent'), repondreParent);
+router.post('/:matchId/convocations/:joueurId/email', authenticate, requireMinRole('coach'), renvoyerEmail);
 
 // Composition
 router.get('/:matchId/composition', authenticate, getCompo);

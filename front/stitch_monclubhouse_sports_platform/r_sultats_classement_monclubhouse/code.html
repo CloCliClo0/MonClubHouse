@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#e0e0fc",
+            "secondary": "#3f6653",
+            "tertiary-container": "#006d48",
+            "outline-variant": "#bfc9c1",
+            "surface-bright": "#fbf8ff",
+            "inverse-on-surface": "#f1efff",
+            "tertiary-fixed": "#92f7c3",
+            "primary-fixed": "#b1f0ce",
+            "inverse-surface": "#2d2f44",
+            "surface-container-highest": "#e0e0fc",
+            "on-secondary": "#ffffff",
+            "error-container": "#ffdad6",
+            "on-error": "#ffffff",
+            "on-primary": "#ffffff",
+            "on-tertiary-fixed": "#002113",
+            "on-secondary-container": "#436b58",
+            "tertiary-fixed-dim": "#75daa8",
+            "on-surface": "#181a2e",
+            "secondary-container": "#beead1",
+            "on-secondary-fixed-variant": "#274e3d",
+            "surface-container": "#edecff",
+            "on-tertiary-fixed-variant": "#005235",
+            "on-secondary-fixed": "#002114",
+            "primary-fixed-dim": "#95d4b3",
+            "on-tertiary": "#ffffff",
+            "on-background": "#181a2e",
+            "secondary-fixed": "#c1ecd4",
+            "primary-container": "#2d6a4f",
+            "inverse-primary": "#95d4b3",
+            "error": "#ba1a1a",
+            "on-primary-container": "#a8e7c5",
+            "outline": "#707973",
+            "on-primary-fixed-variant": "#0e5138",
+            "background": "#fbf8ff",
+            "surface": "#fbf8ff",
+            "secondary-fixed-dim": "#a5d0b9",
+            "on-surface-variant": "#404943",
+            "tertiary": "#005236",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary-container": "#89edba",
+            "on-primary-fixed": "#002114",
+            "surface-dim": "#d7d8f4",
+            "surface-tint": "#2c694e",
+            "surface-container-low": "#f4f2ff",
+            "surface-container-high": "#e6e6ff",
+            "on-error-container": "#93000a",
+            "primary": "#0f5238"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "topbar_height": "64px",
+            "gutter": "24px",
+            "stack_sm": "8px",
+            "stack_lg": "24px",
+            "sidebar_width": "260px",
+            "stack_xl": "32px",
+            "stack_md": "16px",
+            "container_max_width": "1280px"
+          },
+          "fontFamily": {
+            "headline-lg": ["Inter"],
+            "body-lg": ["Inter"],
+            "body-sm": ["Inter"],
+            "label-md": ["Inter"],
+            "label-lg": ["Inter"],
+            "display-lg": ["Inter"],
+            "body-md": ["Inter"],
+            "headline-md": ["Inter"]
+          },
+          "fontSize": {
+            "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+            "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+            "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+            "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+            "label-lg": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+            "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+            "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+            "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #f4f4f6; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .sidebar-active { position: relative; }
+    .sidebar-active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: #0f5238; }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e8e8f0; border-radius: 10px; }
+  </style>
+</head>
+<body class="text-on-surface">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-[260px] bg-[#2b2d42] flex flex-col py-6 z-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-lg text-headline-lg text-white font-black tracking-tight">MCH</h1>
+<p class="text-on-primary-fixed-variant/60 font-label-md text-label-md">Sports Club Management</p>
+</div>
+<nav class="flex-1 overflow-y-auto custom-scrollbar">
+<div class="space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Tableau de bord</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-body-md text-body-md">Calendrier</span>
+</a>
+<!-- Active Tab: Sports Soccer / Équipes as representative for Results -->
+<a class="flex items-center gap-3 px-6 py-3 text-primary-fixed bg-primary/10 border-l-4 border-primary transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="sports_soccer">sports_soccer</span>
+<span class="font-body-md text-body-md">Équipes</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="font-body-md text-body-md">Membres</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+<span class="font-body-md text-body-md">Messages</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+<span class="font-body-md text-body-md">Actualités</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-body-md text-body-md">Finances</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Paramètres</span>
+</a>
+</div>
+</nav>
+<div class="mt-auto px-6 space-y-1">
+<button class="w-full bg-primary py-3 px-4 rounded-lg flex items-center justify-center gap-2 text-white font-label-lg hover:bg-primary/90 transition-all mb-4">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span>Nouvel événement</span>
+</button>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-body-md text-body-md">Aide</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-primary-fixed-variant/70 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-body-md text-body-md">Déconnexion</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-260px)] h-[64px] bg-surface border-b border-outline-variant flex justify-between items-center px-6 z-40">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg pl-10 pr-4 py-2 text-body-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="Rechercher un résultat, une équipe..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<button class="p-2 hover:bg-surface-container-low rounded-full transition-colors relative">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<button class="p-2 hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="help">help</span>
+</button>
+</div>
+<div class="h-8 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="text-right">
+<p class="font-label-lg text-label-lg text-on-surface group-hover:text-primary transition-colors">Admin Club</p>
+<p class="font-label-md text-label-md text-on-surface-variant/70">MCH FC</p>
+</div>
+<div class="h-10 w-10 rounded-full bg-surface-container-highest border border-outline-variant overflow-hidden">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="A professional headshot of a sports club administrator, smiling confidently against a soft-focus athletic field background. The lighting is natural and warm, emphasizing a modern corporate aesthetic with high-quality digital photography standards, using a palette of soft whites and deep navy blues." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDizWHogLBZcxz9-7W68ZT_dCFKwsTPHwh_Lz0i68hxXwGI2exjef8zR0KfRjTRr7B0X3EITSApIgbaehcRFxLkdkwCKHX5JhofkyoClsvNstbrDa67HLX1yWdj-dhkZpQ3dPNCnCi__dHcXDr0DTfECbV_KTHrEQiaPD6uDCkEP6nOcZ3c_FjjIPLAJlgA3zApiE_OKYWLEYypnHv2RurwQlxVM1PZUtOQ_ScRuHt2qjTNJVJ5ccvuzYMGf4MNPxAitj7Ij1Qa8_k"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-[260px] pt-[64px] min-h-screen p-6">
+<div class="max-w-[1280px] mx-auto">
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-surface mb-1">Résultats &amp; Classement</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Suivez les performances de toutes les sections du club.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 border border-outline-variant rounded-lg font-label-lg text-on-surface hover:bg-surface-container-low transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="filter_list">filter_list</span>
+            Filtrer
+          </button>
+<button class="px-4 py-2 border border-outline-variant rounded-lg font-label-lg text-on-surface hover:bg-surface-container-low transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="download">download</span>
+            Exporter PDF
+          </button>
+</div>
+</div>
+<!-- Tabs Navigation -->
+<div class="flex gap-8 border-b border-outline-variant mb-8">
+<button class="pb-4 font-label-lg text-label-lg text-primary border-b-2 border-primary transition-all" id="tab-btn-results" onclick="switchTab('results')">
+          Résultats du club
+        </button>
+<button class="pb-4 font-label-lg text-label-lg text-on-surface-variant hover:text-primary transition-all relative" id="tab-btn-ranking" onclick="switchTab('ranking')">
+          Classement FFF
+          <span class="ml-2 inline-flex items-center rounded-full bg-secondary-container px-2 py-0.5 text-[10px] font-bold text-on-secondary-container uppercase tracking-wider">Bêta</span>
+</button>
+</div>
+<!-- Tab Content: Results -->
+<div class="space-y-6" id="tab-results">
+<!-- Result Group: This Weekend -->
+<section>
+<h3 class="font-headline-md text-headline-md mb-4 text-on-surface flex items-center gap-2">
+            Derniers matchs
+            <span class="text-body-sm font-normal text-on-surface-variant">(Semaine 42)</span>
+</h3>
+<div class="grid gap-3">
+<!-- Row: Victoire -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex items-center hover:shadow-sm transition-all border-l-4 border-l-primary/60">
+<div class="w-48">
+<span class="font-label-md text-label-md text-primary/80 uppercase tracking-widest mb-1 block">Seniors A</span>
+<p class="font-body-md text-body-md text-on-surface-variant">14 Oct. 2023</p>
+</div>
+<div class="flex-1 flex items-center justify-center gap-12">
+<div class="flex items-center gap-4 w-48 justify-end">
+<span class="font-headline-md text-headline-md">MCH FC</span>
+<div class="w-10 h-10 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-primary" data-icon="shield">shield</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="bg-primary/5 px-6 py-2 rounded-lg border border-primary/10">
+<span class="text-[32px] font-black tracking-tighter text-primary">3 - 1</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Régional 1</span>
+</div>
+<div class="flex items-center gap-4 w-48 justify-start">
+<div class="w-10 h-10 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="sports_soccer">sports_soccer</span>
+</div>
+<span class="font-headline-md text-headline-md">AS Saint-Priest</span>
+</div>
+</div>
+<div class="w-32 flex justify-end">
+<span class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-label-md font-bold text-primary">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+                  Victoire
+                </span>
+</div>
+</div>
+<!-- Row: Défaite -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex items-center hover:shadow-sm transition-all border-l-4 border-l-error/60">
+<div class="w-48">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest mb-1 block">U19 National</span>
+<p class="font-body-md text-body-md text-on-surface-variant">14 Oct. 2023</p>
+</div>
+<div class="flex-1 flex items-center justify-center gap-12">
+<div class="flex items-center gap-4 w-48 justify-end">
+<span class="font-headline-md text-headline-md">MCH FC</span>
+<div class="w-10 h-10 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-primary" data-icon="shield">shield</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="bg-error/5 px-6 py-2 rounded-lg border border-error/10">
+<span class="text-[32px] font-black tracking-tighter text-error">0 - 2</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Champ. National</span>
+</div>
+<div class="flex items-center gap-4 w-48 justify-start">
+<div class="w-10 h-10 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="sports_soccer">sports_soccer</span>
+</div>
+<span class="font-headline-md text-headline-md">Olympique Lyon</span>
+</div>
+</div>
+<div class="w-32 flex justify-end">
+<span class="inline-flex items-center gap-1.5 rounded-full bg-error/10 px-3 py-1 text-label-md font-bold text-error">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+                  Défaite
+                </span>
+</div>
+</div>
+<!-- Row: Nul -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex items-center hover:shadow-sm transition-all border-l-4 border-l-outline/60">
+<div class="w-48">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest mb-1 block">U17 Régional</span>
+<p class="font-body-md text-body-md text-on-surface-variant">13 Oct. 2023</p>
+</div>
+<div class="flex-1 flex items-center justify-center gap-12">
+<div class="flex items-center gap-4 w-48 justify-end opacity-70">
+<span class="font-headline-md text-headline-md">Grenoble Foot</span>
+<div class="w-10 h-10 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="sports_soccer">sports_soccer</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="bg-surface-container px-6 py-2 rounded-lg border border-outline-variant">
+<span class="text-[32px] font-black tracking-tighter text-on-surface">2 - 2</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Régional 2</span>
+</div>
+<div class="flex items-center gap-4 w-48 justify-start">
+<div class="w-10 h-10 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-primary" data-icon="shield">shield</span>
+</div>
+<span class="font-headline-md text-headline-md">MCH FC</span>
+</div>
+</div>
+<div class="w-32 flex justify-end">
+<span class="inline-flex items-center gap-1.5 rounded-full bg-outline-variant/20 px-3 py-1 text-label-md font-bold text-outline">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+                  Nul
+                </span>
+</div>
+</div>
+<!-- Row: Victoire (Away) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex items-center hover:shadow-sm transition-all border-l-4 border-l-primary/60">
+<div class="w-48">
+<span class="font-label-md text-label-md text-primary/80 uppercase tracking-widest mb-1 block">Féminines A</span>
+<p class="font-body-md text-body-md text-on-surface-variant">13 Oct. 2023</p>
+</div>
+<div class="flex-1 flex items-center justify-center gap-12">
+<div class="flex items-center gap-4 w-48 justify-end opacity-70">
+<span class="font-headline-md text-headline-md">Valence FC</span>
+<div class="w-10 h-10 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="sports_soccer">sports_soccer</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="bg-primary/5 px-6 py-2 rounded-lg border border-primary/10">
+<span class="text-[32px] font-black tracking-tighter text-primary">1 - 4</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Coupe de France</span>
+</div>
+<div class="flex items-center gap-4 w-48 justify-start">
+<div class="w-10 h-10 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-primary" data-icon="shield">shield</span>
+</div>
+<span class="font-headline-md text-headline-md">MCH FC</span>
+</div>
+</div>
+<div class="w-32 flex justify-end">
+<span class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-label-md font-bold text-primary">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+                  Victoire
+                </span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Tab Content: Ranking Placeholder -->
+<div class="hidden" id="tab-ranking">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-12 flex flex-col items-center text-center">
+<div class="w-24 h-24 bg-surface-container rounded-full flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-[48px] text-primary" data-icon="trophy">emoji_events</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Classements Officiels FFF</h3>
+<p class="max-w-lg font-body-lg text-body-lg text-on-surface-variant mb-8">
+            Connectez votre compte à l'API de la Fédération Française de Football pour synchroniser automatiquement les classements de toutes vos catégories.
+          </p>
+<div class="w-full max-w-md bg-surface-container p-6 rounded-lg border border-outline-variant mb-8">
+<div class="flex items-start gap-4 text-left">
+<span class="material-symbols-outlined text-primary mt-1" data-icon="info">info</span>
+<div>
+<p class="font-label-lg text-label-lg mb-1">Configuration requise</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Rendez-vous dans vos <strong>Paramètres &gt; Intégrations</strong> pour saisir votre clé API Footclubs ou contactez le support technique de la FFF pour obtenir vos accès.</p>
+</div>
+</div>
+</div>
+<button class="px-6 py-3 bg-primary text-white rounded-lg font-label-lg hover:bg-primary/90 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="api">api</span>
+            Configurer l'API FFF
+          </button>
+</div>
+<!-- API Guide/Visual -->
+<div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="p-6 border border-outline-variant rounded-xl bg-surface/50">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="sync">sync</span>
+<h4 class="font-label-lg text-label-lg mb-2">Mise à jour temps réel</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Les points et positions sont actualisés dès l'homologation des scores par la Ligue.</p>
+</div>
+<div class="p-6 border border-outline-variant rounded-xl bg-surface/50">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="auto_graph">auto_graph</span>
+<h4 class="font-label-lg text-label-lg mb-2">Statistiques avancées</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Visualisez les séries (V-N-D), la différence de buts et le fair-play automatiquement.</p>
+</div>
+<div class="p-6 border border-outline-variant rounded-xl bg-surface/50">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="share">share</span>
+<h4 class="font-label-lg text-label-lg mb-2">Partage public</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Générez des widgets de classement pour votre site web ou réseaux sociaux.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+    function switchTab(tab) {
+      const resultsTab = document.getElementById('tab-results');
+      const rankingTab = document.getElementById('tab-ranking');
+      const resultsBtn = document.getElementById('tab-btn-results');
+      const rankingBtn = document.getElementById('tab-btn-ranking');
+
+      if (tab === 'results') {
+        resultsTab.classList.remove('hidden');
+        rankingTab.classList.add('hidden');
+        
+        resultsBtn.classList.add('text-primary', 'border-primary');
+        resultsBtn.classList.remove('text-on-surface-variant');
+        
+        rankingBtn.classList.remove('text-primary', 'border-primary');
+        rankingBtn.classList.add('text-on-surface-variant');
+        rankingBtn.classList.remove('border-b-2');
+      } else {
+        resultsTab.classList.add('hidden');
+        rankingTab.classList.remove('hidden');
+        
+        rankingBtn.classList.add('text-primary', 'border-primary', 'border-b-2');
+        rankingBtn.classList.remove('text-on-surface-variant');
+        
+        resultsBtn.classList.remove('text-primary', 'border-primary');
+        resultsBtn.classList.add('text-on-surface-variant');
+      }
+    }
+
+    // Micro-interactions for table rows
+    document.querySelectorAll('.bg-surface-container-lowest').forEach(row => {
+      row.addEventListener('mouseenter', () => {
+        row.style.transform = 'translateY(-2px)';
+      });
+      row.addEventListener('mouseleave', () => {
+        row.style.transform = 'translateY(0)';
+      });
+    });
+  </script>
+</body></html>

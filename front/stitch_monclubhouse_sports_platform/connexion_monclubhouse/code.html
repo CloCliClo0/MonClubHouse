@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Connexion | MonClubHouse</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-container": "#006d48",
+                      "on-primary-fixed-variant": "#0e5138",
+                      "outline-variant": "#bfc9c1",
+                      "background": "#fbf8ff",
+                      "secondary-fixed-dim": "#a5d0b9",
+                      "secondary": "#3f6653",
+                      "primary": "#0f5238",
+                      "on-secondary": "#ffffff",
+                      "surface-tint": "#2c694e",
+                      "on-secondary-fixed-variant": "#274e3d",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed": "#002114",
+                      "surface-variant": "#e0e0fc",
+                      "inverse-surface": "#2d2f44",
+                      "on-surface-variant": "#404943",
+                      "on-background": "#181a2e",
+                      "primary-fixed": "#b1f0ce",
+                      "on-primary-container": "#a8e7c5",
+                      "on-secondary-container": "#436b58",
+                      "on-secondary-fixed": "#002114",
+                      "surface-dim": "#d7d8f4",
+                      "surface": "#fbf8ff",
+                      "surface-bright": "#fbf8ff",
+                      "inverse-primary": "#95d4b3",
+                      "on-tertiary-fixed-variant": "#005235",
+                      "primary-fixed-dim": "#95d4b3",
+                      "surface-container": "#edecff",
+                      "tertiary": "#005236",
+                      "surface-container-low": "#f4f2ff",
+                      "on-error": "#ffffff",
+                      "tertiary-fixed-dim": "#75daa8",
+                      "surface-container-highest": "#e0e0fc",
+                      "error-container": "#ffdad6",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed": "#92f7c3",
+                      "on-tertiary-fixed": "#002113",
+                      "on-error-container": "#93000a",
+                      "primary-container": "#2d6a4f",
+                      "surface-container-lowest": "#ffffff",
+                      "outline": "#707973",
+                      "surface-container-high": "#e6e6ff",
+                      "on-surface": "#181a2e",
+                      "secondary-fixed": "#c1ecd4",
+                      "inverse-on-surface": "#f1efff",
+                      "secondary-container": "#beead1",
+                      "on-tertiary-container": "#89edba",
+                      "error": "#ba1a1a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "sidebar_width": "260px",
+                      "stack_md": "16px",
+                      "topbar_height": "64px",
+                      "container_max_width": "1280px",
+                      "stack_xl": "32px",
+                      "stack_lg": "24px",
+                      "stack_sm": "8px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "label-lg": ["Inter"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-lg": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-login-gradient {
+            background: linear-gradient(135deg, #2b2d42 0%, #1b4332 100%);
+        }
+    </style>
+</head>
+<body class="bg-login-gradient min-h-screen flex items-center justify-center p-4">
+<!-- Login Container -->
+<main class="w-full max-w-[420px] bg-white rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500" style="padding: 40px;">
+<!-- Header / Logo Section -->
+<header class="flex flex-col items-center mb-stack_xl">
+<div class="w-14 h-14 bg-[#2d6a4f] rounded-lg flex items-center justify-center mb-stack_md">
+<span class="text-white font-black text-headline-md tracking-tighter">MCH</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-background text-center">MonClubHouse</h1>
+<p class="font-body-md text-body-md text-on-surface-variant text-center mt-1">Ton club, ta maison</p>
+</header>
+<!-- Login Form -->
+<form class="space-y-stack_lg" id="loginForm">
+<!-- Email Field -->
+<div class="space-y-stack_sm">
+<label class="block font-label-lg text-label-lg text-on-surface" for="email">Adresse e-mail</label>
+<div class="relative group">
+<input class="w-full px-4 py-3 bg-white border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-body-md outline-none" id="email" name="email" placeholder="nom@votreclub.fr" required="" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-stack_sm">
+<div class="flex justify-between items-center">
+<label class="block font-label-lg text-label-lg text-on-surface" for="password">Mot de passe</label>
+<a class="font-label-md text-label-md text-primary hover:underline" href="#">Oublié ?</a>
+</div>
+<div class="relative">
+<input class="w-full px-4 py-3 bg-white border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-body-md outline-none" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface" id="togglePassword" type="button">
+<span class="material-symbols-outlined text-[20px]" id="passwordIcon">visibility</span>
+</button>
+</div>
+</div>
+<!-- Submit Button -->
+<button class="w-full py-3 px-4 bg-[#2d6a4f] hover:bg-[#1b4332] text-white font-label-lg text-label-lg rounded-lg transition-all transform active:scale-[0.98] shadow-sm" type="submit">
+                Se connecter
+            </button>
+</form>
+<!-- Divider -->
+<div class="relative my-stack_xl">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-outline-variant"></div>
+</div>
+<div class="relative flex justify-center text-label-md">
+<span class="px-3 bg-white text-on-surface-variant">ou</span>
+</div>
+</div>
+<!-- Social Login -->
+<button class="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-outline-variant hover:bg-surface-container-low text-on-surface font-label-lg text-label-lg rounded-lg transition-all">
+<svg class="w-5 h-5" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+            Continuer avec Google
+        </button>
+<!-- Footer -->
+<footer class="mt-stack_xl text-center">
+<p class="font-body-md text-body-md text-on-surface-variant">
+                Pas de compte ? 
+                <a class="text-primary font-label-lg hover:underline decoration-2 underline-offset-4 ml-1" href="#">S'inscrire</a>
+</p>
+</footer>
+</main>
+<!-- Micro-interactions Script -->
+<script>
+        const toggleBtn = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const passwordIcon = document.getElementById('passwordIcon');
+
+        toggleBtn.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            passwordIcon.textContent = type === 'password' ? 'visibility' : 'visibility_off';
+        });
+
+        // Form submission animation mock
+        const form = document.getElementById('loginForm');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin h-5 w-5 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            `;
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert('Simulation: Connexion réussie vers le tableau de bord.');
+            }, 1500);
+        });
+    </script>
+</body></html>

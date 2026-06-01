@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f4f6; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .sidebar-active-indicator {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #0f5238;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-container": "#006d48",
+                      "on-primary-fixed-variant": "#0e5138",
+                      "outline-variant": "#bfc9c1",
+                      "background": "#fbf8ff",
+                      "secondary-fixed-dim": "#a5d0b9",
+                      "secondary": "#3f6653",
+                      "primary": "#0f5238",
+                      "on-secondary": "#ffffff",
+                      "surface-tint": "#2c694e",
+                      "on-secondary-fixed-variant": "#274e3d",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed": "#002114",
+                      "surface-variant": "#e0e0fc",
+                      "inverse-surface": "#2d2f44",
+                      "on-surface-variant": "#404943",
+                      "on-background": "#181a2e",
+                      "primary-fixed": "#b1f0ce",
+                      "on-primary-container": "#a8e7c5",
+                      "on-secondary-container": "#436b58",
+                      "on-secondary-fixed": "#002114",
+                      "surface-dim": "#d7d8f4",
+                      "surface": "#fbf8ff",
+                      "surface-bright": "#fbf8ff",
+                      "inverse-primary": "#95d4b3",
+                      "on-tertiary-fixed-variant": "#005235",
+                      "primary-fixed-dim": "#95d4b3",
+                      "surface-container": "#edecff",
+                      "tertiary": "#005236",
+                      "surface-container-low": "#f4f2ff",
+                      "on-error": "#ffffff",
+                      "tertiary-fixed-dim": "#75daa8",
+                      "surface-container-highest": "#e0e0fc",
+                      "error-container": "#ffdad6",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed": "#92f7c3",
+                      "on-tertiary-fixed": "#002113",
+                      "on-error-container": "#93000a",
+                      "primary-container": "#2d6a4f",
+                      "surface-container-lowest": "#ffffff",
+                      "outline": "#707973",
+                      "surface-container-high": "#e6e6ff",
+                      "on-surface": "#181a2e",
+                      "secondary-fixed": "#c1ecd4",
+                      "inverse-on-surface": "#f1efff",
+                      "secondary-container": "#beead1",
+                      "on-tertiary-container": "#89edba",
+                      "error": "#ba1a1a"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "sidebar_width": "260px",
+                      "stack_md": "16px",
+                      "topbar_height": "64px",
+                      "container_max_width": "1280px",
+                      "stack_xl": "32px",
+                      "stack_sm": "8px",
+                      "stack_lg": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "label-lg": ["Inter"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-lg": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-[#f4f4f6] text-on-surface">
+<!-- SIDEBAR -->
+<aside class="fixed left-0 top-0 h-screen w-[260px] bg-[#2b2d42] flex flex-col py-gutter z-50">
+<div class="px-6 mb-10">
+<h1 class="font-headline-lg text-headline-lg text-white font-black tracking-tight">MCH</h1>
+<p class="text-on-primary-fixed-variant/60 text-[12px] font-medium uppercase tracking-wider">Sports Club Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active Tab: Tableau de bord -->
+<a class="flex items-center gap-3 px-6 py-3 text-primary-fixed bg-primary/10 border-l-4 border-primary transition-all group" href="#">
+<span class="material-symbols-outlined text-primary-fixed" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Tableau de bord</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-body-md text-body-md">Calendrier</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="font-body-md text-body-md">Membres</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="sports_soccer">sports_soccer</span>
+<span class="font-body-md text-body-md">Équipes</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+<span class="font-body-md text-body-md">Messages</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+<span class="font-body-md text-body-md">Actualités</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-body-md text-body-md">Finances</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant/70 hover:text-white hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Paramètres</span>
+</a>
+</nav>
+<div class="px-4 mt-auto space-y-4">
+<button class="w-full bg-primary py-3 rounded-lg text-white font-label-lg flex items-center justify-center gap-2 hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+                Nouvel événement
+            </button>
+<div class="pt-4 border-t border-white/10 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-on-primary-fixed-variant/70 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span class="font-body-md text-body-md">Aide</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-primary-fixed-variant/70 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="logout">logout</span>
+<span class="font-body-md text-body-md">Déconnexion</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- TOPBAR -->
+<header class="fixed top-0 right-0 w-[calc(100%-260px)] h-[64px] bg-surface dark:bg-surface-container border-b border-outline-variant flex justify-between items-center px-gutter z-40">
+<div class="flex items-center gap-4 w-1/3">
+<div class="relative w-full max-w-[400px]">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-body-md font-body-md" placeholder="Rechercher..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 border-r border-outline-variant pr-6">
+<button class="relative p-2 rounded-full hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="help">help</span>
+</button>
+</div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="text-right">
+<p class="font-label-lg text-on-surface leading-none">Julien Moreau</p>
+<p class="font-body-sm text-on-surface-variant">Admin Club</p>
+</div>
+<img alt="User profile" class="w-10 h-10 rounded-full object-cover border-2 border-outline-variant" data-alt="A clean, professional headshot of a smiling middle-aged man with short brown hair. He is wearing a dark navy polo shirt with a subtle sports club logo. The background is a soft, blurred locker room with modern aesthetic, neutral colors, and high-key, professional lighting, conveying a sense of leadership and community." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_QvZxG2-xVKAgST4EUfgmBvaDopZu8B2MoO7tHN40pCPcxVNmrrkiU6wOdjNMzBZzt0bEnk2e2D43SHGI0R-40ih_soZvIJAEOitc_a32QfZl68UHqSIxHaG1KIR0AbcC0NDEaKmoG149K0UMIa3tQbOM7njNNc-2BkPctNcnN9UkZ65fxdWTs5Vyr82NyNwPsxb2Jkksb9xOkczr3i_4-hBRXfQUBYGiRJpeKkQyekKDlkNy6kPNp6gD_lFW3MNmX_iO26fHBXg"/>
+</div>
+</div>
+</header>
+<!-- MAIN CONTENT -->
+<main class="ml-[260px] mt-[64px] p-gutter max-w-[1280px] mx-auto min-h-[calc(100vh-64px)]">
+<!-- Welcome Header -->
+<div class="mb-10">
+<h2 class="font-display-lg text-display-lg text-on-surface">Bonjour Julien 👋</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-2">Voici ce qui se passe dans votre club aujourd'hui.</p>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-gutter">
+<!-- Card Membres -->
+<div class="bg-white border border-[#e8e8f0] p-6 rounded-lg border-l-4 border-primary shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-on-surface-variant font-label-md uppercase tracking-wider">Membres</p>
+<h3 class="text-headline-lg font-headline-lg text-on-surface mt-2">1,248</h3>
+<p class="text-primary font-label-md flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="trending_up">trending_up</span>
+                            +12% ce mois
+                        </p>
+</div>
+<div class="bg-primary/10 p-3 rounded-full">
+<span class="material-symbols-outlined text-primary" data-icon="groups">groups</span>
+</div>
+</div>
+</div>
+<!-- Card Équipes -->
+<div class="bg-white border border-[#e8e8f0] p-6 rounded-lg border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-on-surface-variant font-label-md uppercase tracking-wider">Équipes</p>
+<h3 class="text-headline-lg font-headline-lg text-on-surface mt-2">32</h3>
+<p class="text-blue-500 font-label-md flex items-center gap-1 mt-1">
+                            Tous actifs
+                        </p>
+</div>
+<div class="bg-blue-50 p-3 rounded-full">
+<span class="material-symbols-outlined text-blue-500" data-icon="sports_soccer">sports_soccer</span>
+</div>
+</div>
+</div>
+<!-- Card Matchs -->
+<div class="bg-white border border-[#e8e8f0] p-6 rounded-lg border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-on-surface-variant font-label-md uppercase tracking-wider">Matchs</p>
+<h3 class="text-headline-lg font-headline-lg text-on-surface mt-2">14</h3>
+<p class="text-orange-500 font-label-md flex items-center gap-1 mt-1">
+                            Prévus ce weekend
+                        </p>
+</div>
+<div class="bg-orange-50 p-3 rounded-full">
+<span class="material-symbols-outlined text-orange-500" data-icon="event_available">event_available</span>
+</div>
+</div>
+</div>
+<!-- Card Notifications -->
+<div class="bg-white border border-[#e8e8f0] p-6 rounded-lg border-l-4 border-error shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-on-surface-variant font-label-md uppercase tracking-wider">Notifications</p>
+<h3 class="text-headline-lg font-headline-lg text-on-surface mt-2">8</h3>
+<p class="text-error font-label-md flex items-center gap-1 mt-1">
+                            À traiter urgemment
+                        </p>
+</div>
+<div class="bg-red-50 p-3 rounded-full">
+<span class="material-symbols-outlined text-error" data-icon="campaign">campaign</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bento Grid Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Prochains événements -->
+<div class="bg-white border border-[#e8e8f0] rounded-lg overflow-hidden flex flex-col">
+<div class="p-6 border-b border-[#e8e8f0] flex justify-between items-center">
+<h4 class="font-headline-md text-headline-md">Prochains événements</h4>
+<button class="text-primary font-label-md hover:underline">Voir tout</button>
+</div>
+<div class="flex-1 p-0 overflow-y-auto">
+<div class="divide-y divide-[#e8e8f0]">
+<div class="p-4 hover:bg-surface-container-low transition-colors flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-orange-100 flex flex-col items-center justify-center text-orange-700">
+<span class="material-symbols-outlined text-[20px]" data-icon="sports_soccer">sports_soccer</span>
+<span class="text-[10px] font-bold uppercase">SAM</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-label-lg text-on-surface truncate">MCH U19 vs Red Star FC</p>
+<p class="font-body-sm text-on-surface-variant">Stade Municipal • 15:30</p>
+</div>
+<span class="px-2 py-1 bg-green-100 text-green-700 rounded font-label-md text-[11px]">Match</span>
+</div>
+<div class="p-4 hover:bg-surface-container-low transition-colors flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-blue-100 flex flex-col items-center justify-center text-blue-700">
+<span class="material-symbols-outlined text-[20px]" data-icon="fitness_center">fitness_center</span>
+<span class="text-[10px] font-bold uppercase">LUN</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-label-lg text-on-surface truncate">Entraînement Seniors A</p>
+<p class="font-body-sm text-on-surface-variant">Terrain Annexe • 19:00</p>
+</div>
+<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded font-label-md text-[11px]">Entraînement</span>
+</div>
+<div class="p-4 hover:bg-surface-container-low transition-colors flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-tertiary-fixed flex flex-col items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[20px]" data-icon="groups">groups</span>
+<span class="text-[10px] font-bold uppercase">MAR</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-label-lg text-on-surface truncate">Réunion de Bureau</p>
+<p class="font-body-sm text-on-surface-variant">Siège Club • 20:30</p>
+</div>
+<span class="px-2 py-1 bg-slate-100 text-slate-700 rounded font-label-md text-[11px]">Réunion</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Notifications récentes -->
+<div class="bg-white border border-[#e8e8f0] rounded-lg overflow-hidden flex flex-col">
+<div class="p-6 border-b border-[#e8e8f0] flex justify-between items-center">
+<h4 class="font-headline-md text-headline-md">Notifications récentes</h4>
+<button class="text-primary font-label-md hover:underline">Marquer comme lu</button>
+</div>
+<div class="flex-1 p-0">
+<div class="divide-y divide-[#e8e8f0]">
+<!-- Unread Notification -->
+<div class="p-4 bg-blue-50/50 flex gap-4 border-l-4 border-blue-500">
+<div class="bg-white p-2 rounded-full h-fit border border-blue-100">
+<span class="material-symbols-outlined text-blue-500" data-icon="mail">mail</span>
+</div>
+<div>
+<p class="font-label-lg text-on-surface">Nouveau message reçu</p>
+<p class="font-body-sm text-on-surface-variant mt-1 line-clamp-2">L'entraîneur des U15 a envoyé le rapport de match du weekend dernier...</p>
+<p class="font-body-sm text-blue-500 mt-1 font-semibold">Il y a 10 min</p>
+</div>
+</div>
+<!-- Read Notification -->
+<div class="p-4 hover:bg-surface-container-low transition-colors flex gap-4">
+<div class="bg-surface-container-low p-2 rounded-full h-fit">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="payments">payments</span>
+</div>
+<div>
+<p class="font-label-lg text-on-surface">Paiement validé</p>
+<p class="font-body-sm text-on-surface-variant mt-1">La cotisation de Thomas Dubois a été reçue via Stripe.</p>
+<p class="font-body-sm text-on-surface-variant/60 mt-1">Il y a 2 heures</p>
+</div>
+</div>
+<!-- Read Notification -->
+<div class="p-4 hover:bg-surface-container-low transition-colors flex gap-4">
+<div class="bg-surface-container-low p-2 rounded-full h-fit">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="person_add">person_add</span>
+</div>
+<div>
+<p class="font-label-lg text-on-surface">Nouveau membre</p>
+<p class="font-body-sm text-on-surface-variant mt-1">Sarah Martin vient de rejoindre l'équipe féminine Seniors.</p>
+<p class="font-body-sm text-on-surface-variant/60 mt-1">Hier, 18:45</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Accès rapides -->
+<div class="bg-white border border-[#e8e8f0] rounded-lg overflow-hidden flex flex-col p-6">
+<h4 class="font-headline-md text-headline-md mb-6">Accès rapides</h4>
+<div class="grid grid-cols-2 gap-4 h-full">
+<button class="group bg-surface-container-low hover:bg-primary hover:text-white border border-[#e8e8f0] rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all duration-300">
+<span class="material-symbols-outlined text-[32px] text-primary group-hover:text-white transition-colors" data-icon="assignment_turned_in">assignment_turned_in</span>
+<span class="font-label-lg">Convocations</span>
+</button>
+<button class="group bg-surface-container-low hover:bg-primary hover:text-white border border-[#e8e8f0] rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all duration-300">
+<span class="material-symbols-outlined text-[32px] text-primary group-hover:text-white transition-colors" data-icon="forum">forum</span>
+<span class="font-label-lg">Chat</span>
+</button>
+<button class="group bg-surface-container-low hover:bg-primary hover:text-white border border-[#e8e8f0] rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all duration-300">
+<span class="material-symbols-outlined text-[32px] text-primary group-hover:text-white transition-colors" data-icon="leaderboard">leaderboard</span>
+<span class="font-label-lg">Résultats</span>
+</button>
+<button class="group bg-surface-container-low hover:bg-primary hover:text-white border border-[#e8e8f0] rounded-xl p-4 flex flex-col items-center justify-center gap-3 transition-all duration-300">
+<span class="material-symbols-outlined text-[32px] text-primary group-hover:text-white transition-colors" data-icon="account_circle">account_circle</span>
+<span class="font-label-lg">Profil</span>
+</button>
+</div>
+<div class="mt-6 p-4 bg-primary-container/10 border border-primary/20 rounded-lg flex items-center gap-4">
+<span class="material-symbols-outlined text-primary" data-icon="lightbulb">lightbulb</span>
+<p class="font-body-sm text-on-surface">Astuce: Vous pouvez glisser-déposer les tuiles pour réorganiser vos accès rapides.</p>
+</div>
+</div>
+</div>
+<!-- Secondary section - Statistics Visual -->
+<div class="mt-gutter grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<div class="bg-white border border-[#e8e8f0] rounded-lg p-6">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-headline-md text-headline-md">Inscriptions mensuelles</h4>
+<select class="bg-surface-container-low border-none rounded p-1 text-label-md">
+<option>6 derniers mois</option>
+<option>Cette année</option>
+</select>
+</div>
+<div class="h-48 flex items-end justify-between gap-2 px-2">
+<div class="w-full bg-primary/10 rounded-t-sm h-[40%] relative group">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-white text-[10px] px-1 rounded">24</div>
+</div>
+<div class="w-full bg-primary/10 rounded-t-sm h-[60%] relative group">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-white text-[10px] px-1 rounded">38</div>
+</div>
+<div class="w-full bg-primary/10 rounded-t-sm h-[55%] relative group">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-white text-[10px] px-1 rounded">32</div>
+</div>
+<div class="w-full bg-primary/10 rounded-t-sm h-[80%] relative group">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-white text-[10px] px-1 rounded">56</div>
+</div>
+<div class="w-full bg-primary/10 rounded-t-sm h-[70%] relative group">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-white text-[10px] px-1 rounded">48</div>
+</div>
+<div class="w-full bg-primary rounded-t-sm h-[95%] relative group">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-white text-[10px] px-1 rounded">62</div>
+</div>
+</div>
+<div class="flex justify-between mt-4 text-on-surface-variant font-label-md">
+<span>Jan</span>
+<span>Fév</span>
+<span>Mar</span>
+<span>Avr</span>
+<span>Mai</span>
+<span>Juin</span>
+</div>
+</div>
+<div class="bg-white border border-[#e8e8f0] rounded-lg p-6 flex flex-col justify-between">
+<div>
+<h4 class="font-headline-md text-headline-md mb-2">État des licences</h4>
+<p class="font-body-sm text-on-surface-variant mb-6">Suivi de la validation documentaire des membres.</p>
+</div>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-label-md mb-1">
+<span>Validées</span>
+<span>85%</span>
+</div>
+<div class="w-full bg-surface-container-low h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[85%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-label-md mb-1">
+<span>En attente</span>
+<span>10%</span>
+</div>
+<div class="w-full bg-surface-container-low h-2 rounded-full overflow-hidden">
+<div class="bg-orange-400 h-full w-[10%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-label-md mb-1">
+<span>Manquantes</span>
+<span>5%</span>
+</div>
+<div class="w-full bg-surface-container-low h-2 rounded-full overflow-hidden">
+<div class="bg-error h-full w-[5%]"></div>
+</div>
+</div>
+</div>
+<button class="mt-6 w-full py-2 border border-outline-variant rounded-lg text-label-lg text-on-surface hover:bg-surface-container-low transition-colors">
+                    Relancer les retardataires
+                </button>
+</div>
+</div>
+</main>
+<script>
+        // Simple interactions for atmosphere
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('mousedown', () => {
+                btn.style.transform = 'scale(0.98)';
+            });
+            btn.addEventListener('mouseup', () => {
+                btn.style.transform = 'scale(1)';
+            });
+        });
+
+        // Hover effect for stats cards
+        const cards = document.querySelectorAll('.grid > div');
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transition = 'all 0.3s ease';
+            });
+        });
+    </script>
+</body></html>
