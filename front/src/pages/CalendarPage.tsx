@@ -1,54 +1,74 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../services/api'
 
-type ViewMode = 'mois' | 'semaine' | 'jour'
-
-const DAYS = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM']
-
-const events: Record<number, { text: string; type: 'match' | 'training' }[]> = {
-  2: [{ text: '🏃 Entraîn. U15', type: 'training' }],
-  4: [{ text: '🏃 Entraîn. Séniors', type: 'training' }],
-  7: [{ text: '⚽ vs Rival', type: 'match' }],
-  9: [{ text: '🏃 Entraîn. U15', type: 'training' }],
-  11: [{ text: '🏃 Entraîn. Séniors', type: 'training' }],
-  14: [{ text: '⚽ Derby Local', type: 'match' }],
-  17: [{ text: '🏃 Entraîn. Spécifique', type: 'training' }],
-  21: [{ text: '⚽ vs Paris FC', type: 'match' }],
-  28: [{ text: '⚽ Tournoi Été', type: 'match' }],
+type CalEvent = {
+  id: number
+  adversaire?: string
+  date: string
+  type: string
+  statut: string
+  equipe: { nom: string }
+  terrain?: { nom: string }
 }
 
-const prevDays = [26, 27, 28, 29, 30, 31]
-const today = 7
+type ViewMode = 'mois' | 'semaine' | 'jour'
+const DAYS = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM']
 
 export default function CalendarPage() {
-  const [view, setView] = useState<ViewMode>('mois')
+  const navigate = useNavigate()
+  const [events, setEvents]   = useState<CalEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [view, setView]       = useState<ViewMode>('mois')
+  const [current, setCurrent] = useState(new Date())
 
-  const allDays = [
-    ...prevDays.map((d) => ({ day: d, current: false })),
-    ...Array.from({ length: 29 }, (_, i) => ({ day: i + 1, current: true })),
-  ]
+  useEffect(() => {
+    const y = current.getFullYear()
+    const m = String(current.getMonth() + 1).padStart(2, '0')
+    api.get(`/matchs?month=${y}-${m}`)
+      .then(r => setEvents(r.data.data || []))
+      .catch(() => setEvents([]))
+      .finally(() => setLoading(false))
+  }, [current])
+
+  const prevMonth = () => setCurrent(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))
+  const nextMonth = () => setCurrent(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))
+  const goToday   = () => setCurrent(new Date())
+
+  const year  = current.getFullYear()
+  const month = current.getMonth()
+  const monthLabel = current.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+
+  // Premier jour du mois (0=dim → décalage lundi)
+  const firstDay = new Date(year, month, 1).getDay()
+  const offset   = firstDay === 0 ? 6 : firstDay - 1
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const daysInPrev  = new Date(year, month, 0).getDate()
+  const today = new Date()
+
+  // Jours à afficher
+  const cells: { day: number; current: boolean }[] = []
+  for (let i = offset - 1; i >= 0; i--) cells.push({ day: daysInPrev - i, current: false })
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, current: true })
+  while (cells.length % 7 !== 0) cells.push({ day: cells.length - daysInMonth - offset + 1, current: false })
+
+  const eventsForDay = (day: number) =>
+    events.filter(e => new Date(e.date).getDate() === day && new Date(e.date).getMonth() === month)
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-headline-lg text-on-surface">Calendrier</h2>
-          <p className="text-body-md text-on-surface-variant">
-            Gérez les matchs et les entraînements du mois
-          </p>
+          <p className="text-body-md text-on-surface-variant">Gérez les matchs et les entraînements</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="bg-white border border-outline-variant rounded-lg p-1 flex">
-            {(['mois', 'semaine', 'jour'] as ViewMode[]).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-4 py-1.5 rounded-md text-label-md font-semibold capitalize transition-all ${
-                  view === v
-                    ? 'bg-primary-container text-white'
-                    : 'text-on-surface-variant hover:bg-surface-container'
-                }`}
-              >
+            {(['mois', 'semaine', 'jour'] as ViewMode[]).map(v => (
+              <button key={v} onClick={() => setView(v)}
+                className={`px-4 py-1.5 rounded-md text-label-md capitalize transition-all ${
+                  view === v ? 'bg-primary-container text-white' : 'text-on-surface-variant hover:bg-surface-container'
+                }`}>
                 {v.charAt(0).toUpperCase() + v.slice(1)}
               </button>
             ))}
@@ -56,21 +76,20 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Calendar Card */}
       <div className="bg-white border border-outline-variant rounded-xl overflow-hidden">
-        {/* Calendar Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-white">
+        {/* Header calendrier */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
           <div className="flex items-center gap-4">
-            <h3 className="text-headline-md font-bold text-on-surface">Juin 2025</h3>
+            <h3 className="text-headline-md font-bold text-on-surface capitalize">{monthLabel}</h3>
             <div className="flex gap-1">
-              <button className="p-1.5 hover:bg-surface-container rounded-md border border-outline-variant transition-colors">
+              <button onClick={prevMonth} className="p-1.5 hover:bg-surface-container rounded-md border border-outline-variant transition-colors">
                 <span className="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_left</span>
               </button>
-              <button className="p-1.5 hover:bg-surface-container rounded-md border border-outline-variant transition-colors">
+              <button onClick={nextMonth} className="p-1.5 hover:bg-surface-container rounded-md border border-outline-variant transition-colors">
                 <span className="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
               </button>
             </div>
-            <button className="px-3 py-1.5 border border-outline-variant rounded-md text-label-md hover:bg-surface-container transition-all">
+            <button onClick={goToday} className="px-3 py-1.5 border border-outline-variant rounded-md text-label-md hover:bg-surface-container transition-all">
               Aujourd'hui
             </button>
           </div>
@@ -86,111 +105,105 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Days header */}
+        {/* Jours */}
         <div className="calendar-grid bg-surface-container-low border-b border-outline-variant">
-          {DAYS.map((d) => (
+          {DAYS.map(d => (
             <div key={d} className="py-3 text-center border-r border-outline-variant last:border-r-0">
               <span className="text-label-md text-on-surface-variant">{d}</span>
             </div>
           ))}
         </div>
 
-        {/* Grid body */}
-        <div className="calendar-grid bg-white">
-          {allDays.map(({ day, current }, i) => {
-            const isToday = current && day === today
-            const dayEvents = current ? events[day] : []
-            const isLast = i >= allDays.length - 7
-
+        {/* Grille */}
+        <div className="calendar-grid">
+          {cells.map(({ day, current: isCurrent }, i) => {
+            const isToday = isCurrent && day === today.getDate() && month === today.getMonth() && year === today.getFullYear()
+            const dayEvents = isCurrent ? eventsForDay(day) : []
+            const isLast = i >= cells.length - 7
             return (
-              <div
-                key={i}
+              <div key={i}
                 className={`day-cell p-2 border-r border-outline-variant last:border-r-0 ${!isLast ? 'border-b' : ''} ${
-                  !current ? 'bg-surface-container-lowest opacity-40' : ''
-                } ${isToday ? 'bg-primary/5 border-2 border-primary relative' : ''}`}
-              >
-                <span
-                  className={`text-label-md ${
-                    isToday ? 'text-primary font-bold' : 'text-on-surface-variant'
-                  }`}
-                >
-                  {day}
-                </span>
+                  !isCurrent ? 'bg-surface-container-lowest opacity-40' : ''
+                } ${isToday ? 'bg-primary/5 border-2 border-primary relative' : ''}`}>
+                <span className={`text-label-md ${isToday ? 'text-primary font-bold' : 'text-on-surface-variant'}`}>{day}</span>
                 {isToday && (
                   <span className="absolute top-2 right-2 text-[10px] font-black text-primary bg-primary-fixed px-1 rounded">
                     AUJOURD'HUI
                   </span>
                 )}
-                {dayEvents && (
-                  <div className="mt-2 space-y-1">
-                    {dayEvents.map((ev, j) => (
-                      <div
-                        key={j}
-                        className={`px-2 py-1 rounded text-body-sm font-semibold cursor-pointer transition-colors ${
-                          ev.type === 'match'
-                            ? 'bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20'
-                            : 'bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100'
-                        }`}
-                      >
-                        {ev.text}
-                      </div>
-                    ))}
-                  </div>
+                {loading && isCurrent && i < 7 && (
+                  <div className="mt-1 h-5 bg-surface-container-low rounded animate-pulse" />
                 )}
+                <div className="mt-1 space-y-1">
+                  {dayEvents.map(ev => (
+                    <div key={ev.id}
+                      onClick={() => navigate(`/resultats/${ev.id}`)}
+                      className={`px-1.5 py-0.5 rounded text-[11px] font-semibold cursor-pointer truncate transition-colors ${
+                        ev.type === 'match' || ev.type === 'amical' || ev.type === 'coupe'
+                          ? 'bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20'
+                          : 'bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100'
+                      }`}>
+                      {ev.type === 'entrainement' ? '🏃' : '⚽'} {ev.adversaire || ev.equipe?.nom}
+                    </div>
+                  ))}
+                </div>
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats mois */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-outline-variant flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <span className="material-symbols-outlined text-primary">event_available</span>
-              </div>
-              <h4 className="text-headline-md text-on-surface">Événements ce mois</h4>
+        <div className="bg-white p-6 rounded-xl border border-outline-variant">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <span className="material-symbols-outlined text-primary">event_available</span>
             </div>
-            <p className="text-display-lg text-primary">12</p>
+            <h4 className="text-headline-md text-on-surface">Événements ce mois</h4>
           </div>
-          <p className="text-body-sm text-on-surface-variant mt-4">8 entraînements, 4 matchs officiels prévus.</p>
+          <p className="text-display-lg text-primary font-black">{events.length}</p>
+          <p className="text-body-sm text-on-surface-variant mt-2">
+            {events.filter(e => e.type === 'entrainement').length} entraînement(s),{' '}
+            {events.filter(e => e.type !== 'entrainement').length} match(s)
+          </p>
         </div>
-
-        <div className="bg-white p-6 rounded-xl border border-outline-variant flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-secondary/10 rounded-lg">
-                <span className="material-symbols-outlined text-secondary">notifications_active</span>
-              </div>
-              <h4 className="text-headline-md text-on-surface">Prochain match</h4>
+        <div className="bg-white p-6 rounded-xl border border-outline-variant">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-secondary/10 rounded-lg">
+              <span className="material-symbols-outlined text-secondary">notifications_active</span>
             </div>
-            <p className="text-body-lg font-semibold text-on-surface mt-2">Aujourd'hui, 15:30</p>
-            <p className="text-body-md text-on-surface-variant">Stade Municipal vs Rival Club</p>
+            <h4 className="text-headline-md text-on-surface">Prochain match</h4>
           </div>
-          <button className="text-primary text-label-md hover:underline flex items-center gap-1 mt-4">
-            Détails du match
-            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-          </button>
+          {(() => {
+            const next = events.filter(e => e.type !== 'entrainement' && new Date(e.date) >= new Date()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+            return next ? (
+              <>
+                <p className="text-body-lg font-semibold text-on-surface mt-2">
+                  {new Date(next.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </p>
+                <p className="text-body-md text-on-surface-variant">vs {next.adversaire}</p>
+              </>
+            ) : <p className="text-body-md text-on-surface-variant mt-2">Aucun match programmé</p>
+          })()}
         </div>
-
-        <div className="bg-white p-6 rounded-xl border border-outline-variant flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-tertiary-container/10 rounded-lg">
-                <span className="material-symbols-outlined text-tertiary-container">groups</span>
-              </div>
-              <h4 className="text-headline-md text-on-surface">Disponibilités</h4>
+        <div className="bg-white p-6 rounded-xl border border-outline-variant">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-tertiary-container/10 rounded-lg">
+              <span className="material-symbols-outlined text-tertiary-container">groups</span>
             </div>
-            <p className="text-body-lg font-semibold text-on-surface">88% validés</p>
-            <p className="text-body-sm text-on-surface-variant">Moyenne de présence aux entraînements.</p>
+            <h4 className="text-headline-md text-on-surface">Équipes actives</h4>
           </div>
+          <p className="text-display-lg text-primary font-black">
+            {Array.from(new Set(events.map(e => e.equipe?.nom))).filter(Boolean).length}
+          </p>
+          <p className="text-body-sm text-on-surface-variant mt-2">avec des événements ce mois</p>
         </div>
       </div>
 
       {/* FAB */}
-      <button className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-50 group">
+      <button onClick={() => navigate('/evenements/creer')}
+        className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-50 group">
         <span className="material-symbols-outlined">calendar_add_on</span>
         <span className="absolute right-full mr-4 bg-inverse-surface text-inverse-on-surface px-3 py-1 rounded text-label-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
           Nouvel événement

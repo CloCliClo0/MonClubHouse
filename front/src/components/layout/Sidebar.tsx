@@ -1,35 +1,36 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { logout } from '../../services/auth'
 
 const NAV_GROUPS = [
   {
     label: 'Principal',
     items: [
-      { path: '/dashboard',    icon: 'dashboard',             label: 'Tableau de bord' },
-      { path: '/calendrier',   icon: 'calendar_today',        label: 'Calendrier'      },
-      { path: '/messages',     icon: 'chat',                  label: 'Messages'        },
+      { path: '/dashboard',   icon: 'dashboard',             label: 'Tableau de bord' },
+      { path: '/calendrier',  icon: 'calendar_today',        label: 'Calendrier'      },
+      { path: '/messages',    icon: 'chat',                  label: 'Messages'        },
     ],
   },
   {
     label: 'Équipes',
     items: [
-      { path: '/equipes',       icon: 'sports_soccer',        label: 'Équipes'         },
-      { path: '/convocations',  icon: 'assignment_turned_in', label: 'Convocations'    },
-      { path: '/composition',   icon: 'format_list_numbered', label: 'Composition'     },
-      { path: '/adversaires',   icon: 'groups',               label: 'Adversaires'     },
+      { path: '/equipes',      icon: 'sports_soccer',        label: 'Équipes'         },
+      { path: '/convocations', icon: 'assignment_turned_in', label: 'Convocations'    },
+      { path: '/composition',  icon: 'format_list_numbered', label: 'Composition'     },
+      { path: '/adversaires',  icon: 'groups',               label: 'Adversaires'     },
     ],
   },
   {
     label: 'Compétitions',
     items: [
-      { path: '/resultats',     icon: 'leaderboard',          label: 'Résultats'       },
-      { path: '/statistiques',  icon: 'bar_chart',            label: 'Statistiques'    },
+      { path: '/resultats',    icon: 'leaderboard',          label: 'Résultats'       },
+      { path: '/statistiques', icon: 'bar_chart',            label: 'Statistiques'    },
     ],
   },
   {
     label: 'Club',
     items: [
-      { path: '/mon-club',      icon: 'home_work',            label: 'Mon Club'        },
-      { path: '/admin',         icon: 'admin_panel_settings', label: 'Administration'  },
+      { path: '/mon-club',     icon: 'home_work',            label: 'Mon Club'        },
+      { path: '/admin',        icon: 'admin_panel_settings', label: 'Administration'  },
     ],
   },
 ]
@@ -97,7 +98,10 @@ export default function Sidebar() {
           <span className="text-body-md">Paramètres</span>
         </NavLink>
 
-        <button className="flex items-center gap-3 px-4 py-2.5 w-full text-white/50 hover:text-white transition-colors rounded-lg">
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-4 py-2.5 w-full text-white/50 hover:text-white hover:bg-white/5 transition-colors rounded-lg"
+        >
           <span className="material-symbols-outlined text-[20px]">logout</span>
           <span className="text-body-md">Déconnexion</span>
         </button>

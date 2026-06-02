@@ -6,6 +6,7 @@ import PublicResultsPage from './pages/PublicResultsPage'
 import DashboardPage from './pages/DashboardPage'
 import CalendarPage from './pages/CalendarPage'
 import TeamsPage from './pages/TeamsPage'
+import CreateTeamPage from './pages/CreateTeamPage'
 import ChatPage from './pages/ChatPage'
 import ConvocationsPage from './pages/ConvocationsPage'
 import CompositionPage from './pages/CompositionPage'
@@ -22,16 +23,17 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Pages publiques (sans layout) */}
+        {/* Pages publiques */}
         <Route path="/login"          element={<LoginPage />} />
         <Route path="/register"       element={<RegisterPage />} />
         <Route path="/resultats-club" element={<PublicResultsPage />} />
 
-        {/* Pages authentifiées (avec sidebar + topbar) */}
+        {/* Pages authentifiées */}
         <Route element={<AppLayout />}>
           <Route path="/dashboard"          element={<DashboardPage />} />
           <Route path="/calendrier"         element={<CalendarPage />} />
           <Route path="/equipes"            element={<TeamsPage />} />
+          <Route path="/equipes/creer"      element={<CreateTeamPage />} />
           <Route path="/messages"           element={<ChatPage />} />
           <Route path="/convocations"       element={<ConvocationsPage />} />
           <Route path="/composition"        element={<CompositionPage />} />
