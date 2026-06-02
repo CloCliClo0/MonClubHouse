@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
 
+// ── Types codes ───────────────────────────────────────────────
+type InviteCode = {
+  id: number; code: string; role: 'joueur' | 'parent'; label?: string
+  uses_count: number; max_uses: number; expires_at?: string; actif: boolean
+  equipe?: { id: number; nom: string; categorie: string }
+}
+type Equipe = { id: number; nom: string; categorie: string }
+// ─────────────────────────────────────────────────────────────
+
 type Role = 'superadmin' | 'admin' | 'dirigeant' | 'coach' | 'joueur' | 'parent' | 'visiteur'
 const ROLES: Role[] = ['superadmin', 'admin', 'dirigeant', 'coach', 'joueur', 'parent', 'visiteur']
 
@@ -25,6 +34,9 @@ type ModalState =
 const BLANK = { nom: '', prenom: '', email: '', role: 'joueur' as Role, password: '' }
 
 export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<'users' | 'codes'>('users')
+
+  // ── État utilisateurs ─────────────────────────────────────
   const [users, setUsers]     = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
@@ -33,6 +45,49 @@ export default function AdminPage() {
   const [form, setForm]       = useState(BLANK)
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState('')
+
+  // ── État codes ────────────────────────────────────────────
+  const [codes, setCodes]         = useState<InviteCode[]>([])
+  const [equipes, setEquipes]     = useState<Equipe[]>([])
+  const [codesLoading, setCodesLoading] = useState(false)
+  const [showCodeForm, setShowCodeForm] = useState(false)
+  const [newCode, setNewCode]     = useState({ equipe_id: '', role: 'joueur', label: '', max_uses: '50' })
+  const [creatingCode, setCreatingCode] = useState(false)
+  const [copiedId, setCopiedId]   = useState<number | null>(null)
+
+  const loadCodes = () => {
+    setCodesLoading(true)
+    api.get('/codes').then(r => setCodes(r.data.data || [])).catch(() => setCodes([]))
+      .finally(() => setCodesLoading(false))
+  }
+  const loadEquipes = () => {
+    api.get('/equipes').then(r => setEquipes(r.data.data || [])).catch(() => setEquipes([]))
+  }
+
+  useEffect(() => { if (activeTab === 'codes') { loadCodes(); loadEquipes() } }, [activeTab])
+
+  const createCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCreatingCode(true)
+    try {
+      await api.post('/codes', { ...newCode, equipe_id: parseInt(newCode.equipe_id), max_uses: parseInt(newCode.max_uses) })
+      loadCodes()
+      setShowCodeForm(false)
+      setNewCode({ equipe_id: '', role: 'joueur', label: '', max_uses: '50' })
+    } catch {}
+    finally { setCreatingCode(false) }
+  }
+
+  const deleteCode = async (id: number) => {
+    await api.delete(`/codes/${id}`).catch(() => {})
+    loadCodes()
+  }
+
+  const copyCode = (code: InviteCode) => {
+    navigator.clipboard.writeText(code.code)
+    setCopiedId(code.id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   const load = () => {
     setLoading(true)
@@ -102,17 +157,166 @@ export default function AdminPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-headline-lg text-on-surface">Administration</h2>
-          <p className="text-body-md text-on-surface-variant">Gérez les utilisateurs et leurs rôles</p>
+          <p className="text-body-md text-on-surface-variant">Gérez les utilisateurs, rôles et codes d'accès</p>
         </div>
-        <button onClick={openCreate}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
-          <span className="material-symbols-outlined text-[20px]">person_add</span>
-          Ajouter un utilisateur
-        </button>
+        {activeTab === 'users' && (
+          <button onClick={openCreate}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
+            <span className="material-symbols-outlined text-[20px]">person_add</span>
+            Ajouter un utilisateur
+          </button>
+        )}
+        {activeTab === 'codes' && (
+          <button onClick={() => setShowCodeForm(v => !v)}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
+            <span className="material-symbols-outlined text-[20px]">add</span>
+            Générer un code
+          </button>
+        )}
       </div>
+
+      {/* Onglets */}
+      <div className="flex items-center border-b border-outline-variant mb-6">
+        {[
+          { key: 'users', label: 'Utilisateurs', icon: 'groups' },
+          { key: 'codes', label: 'Codes d\'accès', icon: 'key' },
+        ].map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key as any)}
+            className={`flex items-center gap-2 px-5 py-3 text-label-lg transition-all ${
+              activeTab === t.key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
+            }`}>
+            <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── ONGLET CODES ─────────────────────────────────────────── */}
+      {activeTab === 'codes' && (
+        <div className="space-y-5">
+          {/* Formulaire nouveau code */}
+          {showCodeForm && (
+            <div className="bg-white border border-[#e8e8f0] rounded-xl p-5">
+              <h3 className="text-headline-md mb-4">Nouveau code d'invitation</h3>
+              <form onSubmit={createCode} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Équipe *</label>
+                  <select value={newCode.equipe_id} onChange={e => setNewCode(f => ({ ...f, equipe_id: e.target.value }))}
+                    required className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
+                    <option value="">Choisir une équipe</option>
+                    {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.nom} — {eq.categorie}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Rôle autorisé</label>
+                  <select value={newCode.role} onChange={e => setNewCode(f => ({ ...f, role: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
+                    <option value="joueur">Joueur</option>
+                    <option value="parent">Parent</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Libellé (optionnel)</label>
+                  <input value={newCode.label} onChange={e => setNewCode(f => ({ ...f, label: e.target.value }))}
+                    placeholder="Ex : Saison 2025-26 U15"
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Utilisations max</label>
+                  <input type="number" value={newCode.max_uses} onChange={e => setNewCode(f => ({ ...f, max_uses: e.target.value }))}
+                    min="1" max="500"
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+                <div className="md:col-span-2 flex justify-end gap-3">
+                  <button type="button" onClick={() => setShowCodeForm(false)}
+                    className="px-4 py-2 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
+                  <button type="submit" disabled={creatingCode || !newCode.equipe_id}
+                    className="px-5 py-2 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40 flex items-center gap-2">
+                    {creatingCode && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
+                    Générer
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Liste des codes */}
+          <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+            {codesLoading ? (
+              <div className="p-6 space-y-3">
+                {[1,2,3].map(i => <div key={i} className="h-14 bg-surface-container-low rounded-lg animate-pulse" />)}
+              </div>
+            ) : codes.length === 0 ? (
+              <div className="py-16 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">key_off</span>
+                <p className="text-headline-md mb-1">Aucun code généré</p>
+                <p className="text-body-md">Créez un code pour permettre aux joueurs et parents de rejoindre une équipe.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#e8e8f0]">
+                {codes.map(c => (
+                  <div key={c.id} className={`px-5 py-4 flex items-center gap-4 flex-wrap ${!c.actif ? 'opacity-50' : ''}`}>
+                    {/* Code */}
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-lg tracking-widest text-on-surface bg-surface-container-low px-3 py-1.5 rounded-lg">
+                        {c.code}
+                      </span>
+                      <button onClick={() => copyCode(c)} title="Copier"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant">
+                        <span className="material-symbols-outlined text-[18px]">
+                          {copiedId === c.id ? 'check' : 'content_copy'}
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* Infos */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-full text-label-md font-semibold ${c.role === 'parent' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                          {c.role}
+                        </span>
+                        <span className="text-body-sm text-on-surface-variant">{c.equipe?.nom} — {c.equipe?.categorie}</span>
+                        {c.label && <span className="text-body-sm text-on-surface-variant italic">• {c.label}</span>}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+                        <span>{c.uses_count}/{c.max_uses} utilisations</span>
+                        {c.expires_at && <span>Expire le {new Date(c.expires_at).toLocaleDateString('fr-FR')}</span>}
+                        {!c.actif && <span className="text-error font-semibold">Désactivé</span>}
+                      </div>
+                    </div>
+
+                    {/* Barre de progression */}
+                    <div className="w-24 h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (c.uses_count / c.max_uses) * 100)}%` }} />
+                    </div>
+
+                    {/* Action */}
+                    <button onClick={() => deleteCode(c.id)} title="Désactiver"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-start gap-3 text-body-sm text-on-surface-variant">
+            <span className="material-symbols-outlined text-primary shrink-0">info</span>
+            <div>
+              <p className="font-semibold text-on-surface mb-1">Comment ça marche ?</p>
+              <p>Générez un code par équipe et par rôle. Partagez-le avec vos joueurs ou parents. Ils l'entrent lors de leur inscription sur <strong>/join</strong>. Les parents peuvent ensuite se lier à leur enfant.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ONGLET UTILISATEURS (original, inchangé) ─────────────── */}
+      {activeTab === 'users' && (<>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -304,6 +508,7 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      </>)} {/* fin onglet users */}
     </div>
   )
 }

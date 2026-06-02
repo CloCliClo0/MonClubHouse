@@ -26,7 +26,7 @@ export default function RegisterPage() {
       localStorage.setItem('userId', String(user.id))
       localStorage.setItem('prenom', user.prenom || user.nom || '')
       localStorage.setItem('role',   user.role || 'joueur')
-      navigate('/setup-club', { replace: true })
+      navigate('/join', { replace: true })
     } catch (err: any) {
       const msg = err.response?.data?.message
       if (err.response?.status === 409) {

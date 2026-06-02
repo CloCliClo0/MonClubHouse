@@ -12,12 +12,13 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Redirige vers /login si token expiré (sauf en mode démo local)
+// Redirige vers /login si token expiré — jamais sur les endpoints d'auth eux-mêmes
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    const isDevBypass = localStorage.getItem('token') === 'dev-bypass-token'
-    if (err.response?.status === 401 && !isDevBypass) {
+    const isDevBypass  = localStorage.getItem('token') === 'dev-bypass-token'
+    const isAuthRoute  = (err.config?.url as string | undefined)?.includes('/auth/')
+    if (err.response?.status === 401 && !isDevBypass && !isAuthRoute) {
       localStorage.removeItem('token')
       window.location.href = '/login'
     }

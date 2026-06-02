@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import PhotoUpload from '../components/PhotoUpload'
 import api from '../services/api'
 
-type Tab = 'mon-profil' | 'securite' | 'notifications'
+type Tab = 'mon-profil' | 'securite' | 'notifications' | 'mes-enfants'
+type Child = { id: number; nom: string; prenom: string; avatar?: string }
 
 const notifs = [
   { id: 1, icon: 'payments', title: 'Paiement reçu - Licence Sénior', body: 'Le paiement de M. Lucas Bernard pour la saison 2024/2025 a été validé.', time: 'Il y a 10 minutes', read: false },
@@ -14,9 +15,41 @@ const notifs = [
 export default function ProfilePage() {
   const [tab, setTab] = useState<Tab>('mon-profil')
   const [successBanner, setSuccessBanner] = useState(false)
+  const role = localStorage.getItem('role') || 'joueur'
+
+  // Données parent-enfant
+  const [children, setChildren]       = useState<Child[]>([])
+  const [allPlayers, setAllPlayers]   = useState<Child[]>([])
+  const [selectedChild, setSelectedChild] = useState<number | null>(null)
+  const [linking, setLinking]         = useState(false)
+  const [linkMsg, setLinkMsg]         = useState('')
+
+  useEffect(() => {
+    if (role === 'parent' && tab === 'mes-enfants') {
+      api.get('/codes/my-children').then(r => setChildren(r.data.data || [])).catch(() => {})
+      api.get('/codes/club-players').then(r => setAllPlayers(r.data.data || [])).catch(() => {})
+    }
+  }, [tab, role])
+
+  const linkChild = async () => {
+    if (!selectedChild) return
+    setLinking(true)
+    setLinkMsg('')
+    try {
+      const res = await api.post('/codes/link-child', { child_user_id: selectedChild })
+      setLinkMsg(res.data.message)
+      api.get('/codes/my-children').then(r => setChildren(r.data.data || [])).catch(() => {})
+      setSelectedChild(null)
+    } catch (e: any) {
+      setLinkMsg(e.response?.data?.message || 'Erreur')
+    } finally {
+      setLinking(false)
+    }
+  }
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'mon-profil', label: 'Mon Profil' },
+    ...(role === 'parent' ? [{ key: 'mes-enfants' as Tab, label: 'Mes enfants' }] : []),
     { key: 'securite', label: 'Sécurité' },
     { key: 'notifications', label: 'Notifications' },
   ]
@@ -139,6 +172,80 @@ export default function ProfilePage() {
                 </form>
               </div>
             </div>
+          </section>
+        </div>
+      )}
+
+      {/* Tab: Mes enfants (parent uniquement) */}
+      {tab === 'mes-enfants' && (
+        <div className="space-y-6 max-w-2xl">
+          {/* Enfants déjà liés */}
+          <section className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#e8e8f0]">
+              <h5 className="text-headline-md">Mes enfants rattachés</h5>
+              <p className="text-body-sm text-on-surface-variant">Vous recevez leurs convocations et suivez leurs matchs.</p>
+            </div>
+            {children.length === 0 ? (
+              <div className="py-10 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">child_care</span>
+                <p className="text-body-md">Aucun enfant rattaché pour le moment.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#e8e8f0]">
+                {children.map(c => (
+                  <div key={c.id} className="px-6 py-3 flex items-center gap-3">
+                    {c.avatar
+                      ? <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" alt="" />
+                      : <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center font-bold text-white text-sm">
+                          {c.prenom?.[0]}{c.nom?.[0]}
+                        </div>
+                    }
+                    <p className="text-label-lg text-on-surface">{c.prenom} {c.nom}</p>
+                    <span className="ml-auto px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-label-md">Joueur</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Lier un nouvel enfant */}
+          <section className="bg-white border border-[#e8e8f0] rounded-xl p-6">
+            <h5 className="text-headline-md mb-1">Rattacher un enfant</h5>
+            <p className="text-body-sm text-on-surface-variant mb-4">Sélectionnez le joueur inscrit dans votre club.</p>
+
+            {linkMsg && (
+              <div className={`mb-4 px-4 py-3 rounded-lg text-body-sm flex items-center gap-2 ${linkMsg.includes('Erreur') || linkMsg.includes('Réservé') ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'}`}>
+                <span className="material-symbols-outlined text-[16px]">{linkMsg.includes('Erreur') ? 'error' : 'check_circle'}</span>
+                {linkMsg}
+              </div>
+            )}
+
+            <div className="space-y-2 max-h-56 overflow-y-auto mb-4">
+              {allPlayers.filter(p => !children.find(c => c.id === p.id)).map(p => (
+                <button key={p.id} onClick={() => setSelectedChild(p.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                    selectedChild === p.id ? 'border-primary bg-primary/5' : 'border-[#e8e8f0] hover:border-primary/40'
+                  }`}>
+                  {p.avatar
+                    ? <img src={p.avatar} className="w-8 h-8 rounded-full object-cover" alt="" />
+                    : <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant text-xs font-bold">
+                        {p.prenom?.[0]}{p.nom?.[0]}
+                      </div>
+                  }
+                  <span className="text-label-lg text-on-surface">{p.prenom} {p.nom}</span>
+                  {selectedChild === p.id && (
+                    <span className="ml-auto material-symbols-outlined text-primary text-[20px]">check_circle</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <button onClick={linkChild} disabled={!selectedChild || linking}
+              className="px-6 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:brightness-110 disabled:opacity-50 flex items-center gap-2 transition-all">
+              {linking && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
+              <span className="material-symbols-outlined text-[18px]">link</span>
+              Rattacher cet enfant
+            </button>
           </section>
         </div>
       )}

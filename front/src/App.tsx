@@ -20,6 +20,7 @@ import OpponentsPage from './pages/OpponentsPage'
 import StatsPage from './pages/StatsPage'
 import SetupClubPage from './pages/SetupClubPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
+import JoinPage from './pages/JoinPage'
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/setup-club"     element={<SetupClubPage />} />
         <Route path="/resultats-club" element={<PublicResultsPage />} />
         <Route path="/auth/callback"  element={<AuthCallbackPage />} />
+        <Route path="/join"           element={<JoinPage />} />
 
         {/* Pages authentifiées */}
         <Route element={<AppLayout />}>

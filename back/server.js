@@ -28,6 +28,7 @@ const resultatsRoutes = require('./routes/resultats');
 const profilRoutes = require('./routes/profil');
 const adminRoutes  = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
+const codesRoutes  = require('./routes/codes');
 
 const app = express();
 const server = http.createServer(app);
@@ -94,6 +95,7 @@ app.use('/api/resultats', resultatsRoutes);
 app.use('/api/profil', profilRoutes);
 app.use('/api/admin',  adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/codes',  codesRoutes);
 
 // Auth Google (hors /api pour le redirect OAuth)
 app.use('/auth', authRoutes);

@@ -282,7 +282,49 @@ INSERT INTO `SequelizeMeta` (`name`) VALUES
 ('003_create_sports_terrains.js'),
 ('004_create_equipes_licencies.js'),
 ('005_create_matchs_convocations.js'),
-('006_create_chat_notifications.js');
+('006_create_chat_notifications.js'),
+('007_create_invite_codes.js');
+
+-- ------------------------------------------------------------
+-- 14. CODES D'INVITATION (accès par catégorie/équipe)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `invite_codes` (
+  `id`          INT         NOT NULL AUTO_INCREMENT,
+  `code`        VARCHAR(30) NOT NULL,
+  `equipe_id`   INT         NOT NULL,
+  `club_id`     INT         NOT NULL,
+  `role`        ENUM('joueur','parent') NOT NULL DEFAULT 'joueur',
+  `label`       VARCHAR(100) DEFAULT NULL,
+  `created_by`  INT         DEFAULT NULL,
+  `max_uses`    INT         DEFAULT 50,
+  `uses_count`  INT         DEFAULT 0,
+  `expires_at`  DATETIME    DEFAULT NULL,
+  `actif`       TINYINT(1)  DEFAULT 1,
+  `created_at`  DATETIME    NOT NULL,
+  `updated_at`  DATETIME    NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `invite_codes_code_unique` (`code`),
+  KEY `idx_invite_code_actif` (`code`, `actif`),
+  CONSTRAINT `fk_invite_equipe`   FOREIGN KEY (`equipe_id`) REFERENCES `equipes` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_invite_club`     FOREIGN KEY (`club_id`)   REFERENCES `clubs`   (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_invite_creator`  FOREIGN KEY (`created_by`) REFERENCES `users`  (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- 15. COMPTE SUPERADMIN — Hugo Delaunay
+--     Mot de passe : Hugo220406@  (bcrypt 12 rounds)
+--     Utilise ON DUPLICATE KEY pour ne pas écraser si déjà créé.
+-- ------------------------------------------------------------
+INSERT INTO `users`
+  (`nom`, `prenom`, `email`, `password_hash`, `role`, `actif`, `created_at`, `updated_at`)
+VALUES
+  ('Delaunay', 'Hugo', 'hugo22042006@gmail.com',
+   '$2a$12$nE4pdIlS3q.llAEwGPfA3ubv1VzjbfXQj3pqKNM7zEB4W0iHboXbG',
+   'superadmin', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+  `role`          = 'superadmin',
+  `password_hash` = '$2a$12$nE4pdIlS3q.llAEwGPfA3ubv1VzjbfXQj3pqKNM7zEB4W0iHboXbG',
+  `updated_at`    = NOW();
 
 
 SET FOREIGN_KEY_CHECKS = 1;

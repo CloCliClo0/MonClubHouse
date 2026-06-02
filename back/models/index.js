@@ -1,6 +1,7 @@
 const sequelize = require('../config/db');
 const User = require('./User');
 const Club = require('./Club');
+const InviteCode = require('./InviteCode');
 const Terrain = require('./Terrain');
 const Sport = require('./Sport');
 const Equipe = require('./Equipe');
@@ -70,10 +71,16 @@ Message.belongsTo(User, { foreignKey: 'sender_id', as: 'sender' });
 User.hasMany(Notification, { foreignKey: 'user_id', as: 'notifications' });
 Notification.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// Invite codes
+InviteCode.belongsTo(Club,  { foreignKey: 'club_id',   as: 'club' });
+InviteCode.belongsTo(Equipe,{ foreignKey: 'equipe_id', as: 'equipe' });
+InviteCode.belongsTo(User,  { foreignKey: 'created_by',as: 'createur' });
+
 module.exports = {
   sequelize,
   User,
   Club,
+  InviteCode,
   Terrain,
   Sport,
   Equipe,
