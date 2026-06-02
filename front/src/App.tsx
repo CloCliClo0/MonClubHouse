@@ -19,6 +19,7 @@ import CreateEventPage from './pages/CreateEventPage'
 import OpponentsPage from './pages/OpponentsPage'
 import StatsPage from './pages/StatsPage'
 import SetupClubPage from './pages/SetupClubPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/register"       element={<RegisterPage />} />
         <Route path="/setup-club"     element={<SetupClubPage />} />
         <Route path="/resultats-club" element={<PublicResultsPage />} />
+        <Route path="/auth/callback"  element={<AuthCallbackPage />} />
 
         {/* Pages authentifiées */}
         <Route element={<AppLayout />}>

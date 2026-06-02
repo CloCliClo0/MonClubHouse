@@ -1,13 +1,44 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import api from '../services/api'
 
 export default function RegisterPage() {
+  const [form, setForm] = useState({ prenom: '', nom: '', email: '', password: '', role: 'joueur' })
   const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    navigate('/dashboard')
+    setError('')
+    if (form.password.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères.')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await api.post('/auth/register', form)
+      const { access_token, user } = res.data.data
+      localStorage.setItem('token',  access_token)
+      localStorage.setItem('userId', String(user.id))
+      localStorage.setItem('prenom', user.prenom || user.nom || '')
+      localStorage.setItem('role',   user.role || 'joueur')
+      navigate('/setup-club', { replace: true })
+    } catch (err: any) {
+      const msg = err.response?.data?.message
+      if (err.response?.status === 409) {
+        setError('Cette adresse email est déjà utilisée.')
+      } else if (err.response?.status === 503 || !err.response) {
+        setError('Serveur ou base de données indisponible.')
+      } else {
+        setError(msg || 'Une erreur est survenue.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -24,87 +55,69 @@ export default function RegisterPage() {
           <p className="text-body-md text-on-surface-variant">Rejoins ton club</p>
         </div>
 
-        <form className="w-full flex flex-col gap-6" onSubmit={handleSubmit}>
+        {error && (
+          <div className="w-full mb-4 flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-body-sm">
+            <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">error</span>
+            {error}
+          </div>
+        )}
+
+        <form className="w-full flex flex-col gap-5" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
-              <label className="text-label-md text-on-surface-variant" htmlFor="first_name">
-                Prénom
-              </label>
+              <label className="text-label-md text-on-surface-variant" htmlFor="prenom">Prénom</label>
               <input
                 className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                id="first_name"
-                type="text"
-                placeholder="Jean"
-                required
+                id="prenom" type="text" placeholder="Jean" required
+                value={form.prenom} onChange={e => set('prenom', e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-label-md text-on-surface-variant" htmlFor="last_name">
-                Nom
-              </label>
+              <label className="text-label-md text-on-surface-variant" htmlFor="nom">Nom</label>
               <input
                 className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                id="last_name"
-                type="text"
-                placeholder="Dupont"
-                required
+                id="nom" type="text" placeholder="Dupont" required
+                value={form.nom} onChange={e => set('nom', e.target.value)}
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-label-md text-on-surface-variant" htmlFor="email">
-              Email
-            </label>
+            <label className="text-label-md text-on-surface-variant" htmlFor="email">Email</label>
             <input
               className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-              id="email"
-              type="email"
-              placeholder="jean.dupont@email.com"
-              required
+              id="email" type="email" placeholder="jean.dupont@email.com" required
+              value={form.email} onChange={e => set('email', e.target.value)}
+              autoComplete="email"
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-label-md text-on-surface-variant" htmlFor="password">
-              Mot de passe
-            </label>
+            <label className="text-label-md text-on-surface-variant" htmlFor="password">Mot de passe</label>
             <div className="relative">
               <input
                 className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10"
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                required
+                id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" required
+                value={form.password} onChange={e => set('password', e.target.value)}
+                autoComplete="new-password"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors"
-              >
+              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
                 <span className="material-symbols-outlined text-[20px]">
                   {showPassword ? 'visibility_off' : 'visibility'}
                 </span>
               </button>
             </div>
-            <p className="text-body-sm text-on-surface-variant/70 italic">
-              8 car. min., 1 majuscule, 1 chiffre
-            </p>
+            <p className="text-body-sm text-on-surface-variant/70 italic">8 car. min.</p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-label-md text-on-surface-variant" htmlFor="role">
-              Rôle
-            </label>
+            <label className="text-label-md text-on-surface-variant" htmlFor="role">Rôle</label>
             <div className="relative">
               <select
                 className="w-full appearance-none px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10"
-                id="role"
-                required
+                id="role" required value={form.role} onChange={e => set('role', e.target.value)}
               >
-                <option value="" disabled selected>
-                  Choisir un rôle
-                </option>
                 <option value="joueur">Joueur</option>
                 <option value="parent">Parent</option>
                 <option value="visiteur">Visiteur</option>
@@ -116,19 +129,20 @@ export default function RegisterPage() {
           </div>
 
           <button
-            type="submit"
-            className="w-full mt-2 bg-primary-container text-white py-3 px-6 rounded-lg text-label-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            type="submit" disabled={loading}
+            className="w-full mt-2 bg-primary-container text-white py-3 px-6 rounded-lg text-label-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            Créer mon compte
+            {loading
+              ? <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              : 'Créer mon compte'
+            }
           </button>
         </form>
 
         <footer className="mt-8 text-center space-y-3">
           <p className="text-body-md text-on-surface-variant">
             Déjà un compte ?{' '}
-            <Link to="/login" className="text-primary font-bold hover:underline ml-1">
-              Se connecter
-            </Link>
+            <Link to="/login" className="text-primary font-bold hover:underline ml-1">Se connecter</Link>
           </p>
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -138,10 +152,8 @@ export default function RegisterPage() {
               <span className="px-3 bg-white text-label-md text-on-surface-variant">ou</span>
             </div>
           </div>
-          <Link
-            to="/resultats-club"
-            className="flex items-center justify-center gap-2 text-on-surface-variant hover:text-primary text-label-md transition-colors"
-          >
+          <Link to="/resultats-club"
+            className="flex items-center justify-center gap-2 text-on-surface-variant hover:text-primary text-label-md transition-colors">
             <span className="material-symbols-outlined text-[18px]">leaderboard</span>
             Voir les résultats de mon club
           </Link>
