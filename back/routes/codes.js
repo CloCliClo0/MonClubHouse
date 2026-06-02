@@ -1,16 +1,18 @@
 const express = require('express');
 const router  = express.Router();
-const { authenticate } = require('../middlewares/auth');
-const { rbac }         = require('../middlewares/rbac');
+const { authenticate }            = require('../middlewares/auth');
+const { requireRole }             = require('../middlewares/rbac');
 const {
   listCodes, createCode, deleteCode,
   validateCode, linkChild, myChildren, clubPlayers,
 } = require('../controllers/codesController');
 
+const isAdmin = requireRole('superadmin', 'admin', 'dirigeant');
+
 // Admin : gestion des codes
-router.get('/',    authenticate, rbac(['superadmin','admin','dirigeant']), listCodes);
-router.post('/',   authenticate, rbac(['superadmin','admin','dirigeant']), createCode);
-router.delete('/:id', authenticate, rbac(['superadmin','admin','dirigeant']), deleteCode);
+router.get('/',       authenticate, isAdmin, listCodes);
+router.post('/',      authenticate, isAdmin, createCode);
+router.delete('/:id', authenticate, isAdmin, deleteCode);
 
 // Utilisateur : rejoindre avec un code
 router.post('/validate', authenticate, validateCode);
