@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { logout } from '../../services/auth'
+import Logo from '../Logo'
 
 const NAV_GROUPS = [
   {
@@ -41,11 +42,8 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-[260px] bg-sidebar flex flex-col z-50">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-white/5">
-        <h1 className="text-white font-black text-2xl tracking-tight leading-none">MCH</h1>
-        <p className="text-white/40 text-[11px] font-semibold uppercase tracking-widest mt-1">
-          Sports Club Management
-        </p>
+      <div className="px-5 py-4 border-b border-white/5">
+        <Logo variant="full" size={36} />
       </div>
 
       {/* Nav */}

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
+import PhotoUpload from '../components/PhotoUpload'
 
-type Club = { id: number; nom: string; description: string; adresse: string; ville: string; code_postal: string; telephone: string; email: string; site_web: string; numero_affiliation: string; couleur_primaire: string; couleur_secondaire: string }
+type Club = { id: number; nom: string; logo?: string; description: string; adresse: string; ville: string; code_postal: string; telephone: string; email: string; site_web: string; numero_affiliation: string; couleur_primaire: string; couleur_secondaire: string }
 type Terrain = { id: number; nom: string; type: string; capacite: number | null; adresse: string }
 type ModalState = { open: false } | { open: true; editing: Terrain | null }
 
@@ -142,10 +143,64 @@ export default function ClubPage() {
         <div className="h-20" style={{ background: `linear-gradient(135deg, ${club.couleur_primaire || '#0f5238'} 0%, ${club.couleur_secondaire || '#3f6653'} 100%)` }} />
         <div className="px-6 pb-6">
           <div className="flex items-end gap-5 -mt-8 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-lg flex items-center justify-center font-black text-xl"
-              style={{ color: club.couleur_primaire || '#0f5238' }}>
-              {club.nom?.slice(0, 3).toUpperCase() || 'MCH'}
+            {/* Logo du club avec upload */}
+            <div className="w-16 h-16 rounded-2xl border-4 border-white shadow-lg overflow-hidden shrink-0">
+              {club.logo ? (
+                <div className="relative group w-full h-full cursor-pointer" onClick={() => editMode && document.getElementById('club-logo-input')?.click()}>
+                  <img src={club.logo} alt="Logo" className="w-full h-full object-cover" />
+                  {editMode && (
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="material-symbols-outlined text-white text-[20px]">edit</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className={`relative group w-full h-full bg-white flex items-center justify-center font-black text-xl ${editMode ? 'cursor-pointer' : ''}`}
+                  style={{ color: club.couleur_primaire || '#0f5238' }}
+                  onClick={() => editMode && document.getElementById('club-logo-input')?.click()}
+                >
+                  {club.nom?.slice(0, 3).toUpperCase() || 'MCH'}
+                  {editMode && (
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="material-symbols-outlined text-white text-[18px]">add_photo_alternate</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+            {editMode && (
+              <>
+                <input
+                  id="club-logo-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    e.target.value = ''
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    try {
+                      const res = await api.post('/upload/club', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+                      if (res.data.success) {
+                        await api.patch(`/clubs/${club.id}`, { logo: res.data.url })
+                        load()
+                      }
+                    } catch {}
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('club-logo-input')?.click()}
+                  className="mb-1 flex items-center gap-1.5 px-3 py-1.5 text-primary border border-primary/30 rounded-lg text-label-md hover:bg-primary/5 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+                  Changer le logo
+                </button>
+              </>
+            )}
             <div className="mb-1">
               {editMode ? (
                 <input value={form.nom || ''} onChange={e => set('nom', e.target.value)}

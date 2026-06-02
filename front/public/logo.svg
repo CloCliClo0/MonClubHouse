@@ -1,0 +1,25 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond -->
+  <rect width="512" height="512" rx="100" fill="#0f5238"/>
+  <!-- Gradient overlay -->
+  <rect width="512" height="512" rx="100" fill="url(#grad)" opacity="0.3"/>
+  <!-- Maison / toiture -->
+  <path d="M256 80L60 236V440H196V308H316V440H452V236L256 80Z" fill="white" opacity="0.12"/>
+  <path d="M256 88L72 240V432H188V300H324V432H440V240L256 88Z" stroke="white" stroke-width="18" stroke-linejoin="round" fill="none" stroke-linecap="round"/>
+  <!-- Ballon de foot -->
+  <circle cx="256" cy="272" r="90" fill="white"/>
+  <!-- Pentagones ballon -->
+  <path d="M256 182 L226 230 L256 278 L286 230 Z" fill="#0f5238" opacity="0.9"/>
+  <path d="M166 272 L214 248 L214 296 Z" fill="#0f5238" opacity="0.9"/>
+  <path d="M346 272 L298 248 L298 296 Z" fill="#0f5238" opacity="0.9"/>
+  <path d="M196 348 L236 318 L276 318 L316 348" stroke="#0f5238" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <!-- Cercle contour -->
+  <circle cx="256" cy="272" r="90" stroke="#0f5238" stroke-width="4" fill="none" opacity="0.2"/>
+  <!-- Defs -->
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="512" y2="512">
+      <stop offset="0%" stop-color="white"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </linearGradient>
+  </defs>
+</svg>

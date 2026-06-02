@@ -26,7 +26,8 @@ const matchsRoutes = require('./routes/matchs');
 const chatRoutes = require('./routes/chat');
 const resultatsRoutes = require('./routes/resultats');
 const profilRoutes = require('./routes/profil');
-const adminRoutes = require('./routes/admin');
+const adminRoutes  = require('./routes/admin');
+const uploadRoutes = require('./routes/upload');
 
 const app = express();
 const server = http.createServer(app);
@@ -91,7 +92,8 @@ app.use('/api/matchs', matchsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/resultats', resultatsRoutes);
 app.use('/api/profil', profilRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin',  adminRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Auth Google (hors /api pour le redirect OAuth)
 app.use('/auth', authRoutes);
@@ -123,27 +125,30 @@ app.use((err, req, res, next) => {
 // Démarrage
 const PORT = process.env.PORT || 3000;
 
-const start = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('[DB] Connexion MySQL réussie');
+// Le serveur démarre toujours — la DB se connecte en arrière-plan avec retry
+server.listen(PORT, () => {
+  console.log(`[Server] MonClubHouse démarré sur le port ${PORT}`);
+  console.log(`[Server] URL: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
+});
 
-    // Synchronisation en dev uniquement (utiliser migrations en prod)
-    if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: false });
-      console.log('[DB] Modèles synchronisés');
+const connectDB = async (retries = 10, delay = 5000) => {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      await sequelize.authenticate();
+      console.log('[DB] Connexion MySQL réussie');
+      if (process.env.NODE_ENV === 'development') {
+        await sequelize.sync({ alter: false });
+        console.log('[DB] Modèles synchronisés');
+      }
+      return;
+    } catch (err) {
+      console.warn(`[DB] Tentative ${i}/${retries} échouée : ${err.message}`);
+      if (i < retries) await new Promise(r => setTimeout(r, delay));
     }
-
-    server.listen(PORT, () => {
-      console.log(`[Server] MonClubHouse démarré sur le port ${PORT}`);
-      console.log(`[Server] URL: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
-    });
-  } catch (err) {
-    console.error('[Server] Erreur démarrage:', err);
-    process.exit(1);
   }
+  console.error('[DB] Impossible de se connecter après plusieurs tentatives — les routes API renverront 503');
 };
 
-start();
+connectDB();
 
 module.exports = { app, io };

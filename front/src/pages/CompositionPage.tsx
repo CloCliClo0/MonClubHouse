@@ -10,7 +10,13 @@ type Player = {
   y: number
 }
 
-// Matchs à venir avec convocations validées
+type BenchPlayer = {
+  id: number
+  name: string
+  number: number
+  position: string
+}
+
 const UPCOMING_MATCHES = [
   { id: 1,  label: 'MCH Seniors A vs Red Star FC',      date: 'Sam. 7 juin 2025 · 15:30', equipe: 'Seniors A',   terrain: 'Stade Municipal',   competition: 'Division 3'   },
   { id: 6,  label: 'MCH Seniors A vs Paris FC B',        date: 'Sam. 14 juin 2025 · 14:00',equipe: 'Seniors A',   terrain: 'Stade Annexe',      competition: 'Division 3'   },
@@ -86,7 +92,7 @@ const FIELD_POSITIONS: Record<string, Player[]> = {
   ],
 }
 
-const BENCH = [
+const DEFAULT_BENCH: BenchPlayer[] = [
   { id: 12, name: 'F. Blanc',   number: 16, position: 'GB'  },
   { id: 13, name: 'P. Roux',    number: 14, position: 'DEF' },
   { id: 14, name: 'K. Martin',  number: 15, position: 'MIL' },
@@ -95,20 +101,105 @@ const BENCH = [
 
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2']
 
+type Selection = { id: number; source: 'field' | 'bench' }
+
 export default function CompositionPage() {
   const navigate = useNavigate()
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null)
   const [formation, setFormation]   = useState('4-3-3')
-  const [selected, setSelected]     = useState<number | null>(null)
-  const [saved, setSaved]           = useState(false)
+  const [fieldPlayers, setFieldPlayers] = useState<Player[]>(() => FIELD_POSITIONS['4-3-3'].map(p => ({ ...p })))
+  const [bench, setBench]               = useState<BenchPlayer[]>(DEFAULT_BENCH.map(p => ({ ...p })))
+  const [selected, setSelected]         = useState<Selection | null>(null)
+  const [saved, setSaved]               = useState(false)
 
   const match = UPCOMING_MATCHES.find(m => m.id === selectedMatchId)
-  const fieldPlayers = FIELD_POSITIONS[formation] || FIELD_POSITIONS['4-3-3']
+
+  const changeFormation = (f: string) => {
+    setFormation(f)
+    setFieldPlayers(FIELD_POSITIONS[f].map(p => ({ ...p })))
+    setBench(DEFAULT_BENCH.map(p => ({ ...p })))
+    setSelected(null)
+  }
 
   const handleSave = () => {
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
+
+  const handleReset = () => {
+    setFieldPlayers(FIELD_POSITIONS[formation].map(p => ({ ...p })))
+    setBench(DEFAULT_BENCH.map(p => ({ ...p })))
+    setSelected(null)
+  }
+
+  const handlePlayerClick = (id: number, source: 'field' | 'bench') => {
+    // Deselect if same player clicked again
+    if (selected?.id === id && selected?.source === source) {
+      setSelected(null)
+      return
+    }
+
+    // No player selected yet → select this one
+    if (!selected) {
+      setSelected({ id, source })
+      return
+    }
+
+    // Swap logic
+    if (selected.source === 'field' && source === 'field') {
+      // Field ↔ Field : échange nom et numéro, les positions restent
+      setFieldPlayers(prev => {
+        const next = prev.map(p => ({ ...p }))
+        const a = next.findIndex(p => p.id === selected.id)
+        const b = next.findIndex(p => p.id === id)
+        if (a >= 0 && b >= 0) {
+          const { name: na, number: nua } = next[a]
+          next[a].name = next[b].name
+          next[a].number = next[b].number
+          next[b].name = na
+          next[b].number = nua
+        }
+        return next
+      })
+    } else if (selected.source === 'bench' && source === 'bench') {
+      // Bench ↔ Bench
+      setBench(prev => {
+        const next = prev.map(p => ({ ...p }))
+        const a = next.findIndex(p => p.id === selected.id)
+        const b = next.findIndex(p => p.id === id)
+        if (a >= 0 && b >= 0) {
+          const { name: na, number: nua } = next[a]
+          next[a].name = next[b].name
+          next[a].number = next[b].number
+          next[b].name = na
+          next[b].number = nua
+        }
+        return next
+      })
+    } else {
+      // Field ↔ Bench : échange complet nom + numéro
+      const fieldId = selected.source === 'field' ? selected.id : id
+      const benchId = selected.source === 'bench' ? selected.id : id
+
+      const fp = fieldPlayers.find(p => p.id === fieldId)
+      const bp = bench.find(p => p.id === benchId)
+      if (fp && bp) {
+        const { name: fn, number: fnu } = fp
+        const { name: bn, number: bnu } = bp
+        setFieldPlayers(prev => prev.map(p =>
+          p.id === fieldId ? { ...p, name: bn, number: bnu } : p
+        ))
+        setBench(prev => prev.map(p =>
+          p.id === benchId ? { ...p, name: fn, number: fnu } : p
+        ))
+      }
+    }
+
+    setSelected(null)
+  }
+
+  const isSelected = (id: number, source: 'field' | 'bench') =>
+    selected?.id === id && selected?.source === source
 
   // ── Sélection du match ────────────────────────────────────────────────────
   if (!selectedMatchId) {
@@ -164,7 +255,7 @@ export default function CompositionPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <button onClick={() => setSelectedMatchId(null)}
+          <button onClick={() => { setSelectedMatchId(null); setSelected(null) }}
             className="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface text-label-md mb-2 transition-colors">
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             Choisir un autre match
@@ -173,7 +264,7 @@ export default function CompositionPage() {
           <p className="text-body-md text-on-surface-variant">{match?.label} · {match?.date}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setFormation('4-3-3')}
+          <button onClick={handleReset}
             className="flex items-center gap-2 border border-outline-variant text-on-surface px-4 py-2.5 rounded-lg text-label-lg hover:bg-surface-container-low transition-colors">
             <span className="material-symbols-outlined text-[20px]">restart_alt</span>
             Réinitialiser
@@ -204,6 +295,22 @@ export default function CompositionPage() {
         ))}
       </div>
 
+      {/* Hint échange */}
+      {selected && (
+        <div className="mb-4 flex items-center gap-3 bg-yellow-50 border border-yellow-200 px-4 py-3 rounded-xl text-body-sm text-yellow-800">
+          <span className="material-symbols-outlined text-yellow-600 text-[20px]">swap_horiz</span>
+          <span>
+            <strong>{selected.source === 'field'
+              ? fieldPlayers.find(p => p.id === selected.id)?.name
+              : bench.find(p => p.id === selected.id)?.name
+            }</strong> sélectionné — cliquez sur un autre joueur pour l'échanger, ou à nouveau pour désélectionner.
+          </span>
+          <button onClick={() => setSelected(null)} className="ml-auto text-yellow-600 hover:text-yellow-800">
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Terrain */}
         <div className="lg:col-span-2 bg-white border border-[#e8e8f0] rounded-xl p-4">
@@ -211,7 +318,7 @@ export default function CompositionPage() {
             <h3 className="text-headline-md">Disposition sur le terrain</h3>
             <div className="flex items-center gap-2">
               <span className="text-label-md text-on-surface-variant">Formation :</span>
-              <select value={formation} onChange={e => { setFormation(e.target.value); setSelected(null) }}
+              <select value={formation} onChange={e => changeFormation(e.target.value)}
                 className="border border-outline-variant rounded-lg px-3 py-1.5 text-label-md text-on-surface focus:outline-none focus:border-primary">
                 {FORMATIONS.map(f => <option key={f}>{f}</option>)}
               </select>
@@ -231,7 +338,6 @@ export default function CompositionPage() {
             <div className="absolute left-[38%] right-[38%] top-[5%] h-[3%] border-2 border-white/40 border-t-0 bg-white/10" />
             <div className="absolute left-[38%] right-[38%] bottom-[5%] h-[3%] border-2 border-white/40 border-b-0 bg-white/10" />
 
-            {/* Label équipe / adv */}
             <div className="absolute top-[3%] left-1/2 -translate-x-1/2 text-white/40 text-[10px] font-bold uppercase tracking-widest">
               {match?.label.split(' vs ')[1]}
             </div>
@@ -239,51 +345,63 @@ export default function CompositionPage() {
               {match?.equipe}
             </div>
 
-            {/* Joueurs */}
-            {fieldPlayers.map(p => (
-              <button key={p.id} onClick={() => setSelected(selected === p.id ? null : p.id)}
-                className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-                style={{ left: `${p.x}%`, top: `${p.y}%` }}>
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[11px] shadow-lg transition-all ${
-                  selected === p.id
-                    ? 'bg-yellow-400 text-black scale-125 ring-2 ring-yellow-300'
-                    : 'bg-white/90 text-primary group-hover:bg-white group-hover:scale-110'
-                }`}>
-                  {p.number}
-                </div>
-                <div className="bg-black/60 text-white text-[9px] font-bold px-1 py-0.5 rounded whitespace-nowrap">
-                  {p.name.split(' ').pop()}
-                </div>
-              </button>
-            ))}
+            {/* Joueurs sur le terrain */}
+            {fieldPlayers.map(p => {
+              const sel = isSelected(p.id, 'field')
+              const hasSelection = !!selected
+              return (
+                <button key={p.id} onClick={() => handlePlayerClick(p.id, 'field')}
+                  className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                  style={{ left: `${p.x}%`, top: `${p.y}%` }}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[11px] shadow-lg transition-all ${
+                    sel
+                      ? 'bg-yellow-400 text-black scale-125 ring-4 ring-yellow-300'
+                      : hasSelection
+                      ? 'bg-white/90 text-primary ring-2 ring-white/60 scale-105 hover:bg-white hover:scale-110'
+                      : 'bg-white/90 text-primary group-hover:bg-white group-hover:scale-110'
+                  }`}>
+                    {p.number}
+                  </div>
+                  <div className={`text-[9px] font-bold px-1 py-0.5 rounded whitespace-nowrap ${
+                    sel ? 'bg-yellow-400/90 text-black' : 'bg-black/60 text-white'
+                  }`}>
+                    {p.name.split(' ').pop()}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
 
         {/* Sidebar joueurs */}
         <div className="space-y-4">
-          {/* Onze */}
+          {/* Onze titulaire */}
           <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
               <h4 className="text-headline-md">Onze titulaire</h4>
               <span className="text-label-md text-on-surface-variant">{formation}</span>
             </div>
             <div className="divide-y divide-[#e8e8f0] max-h-[280px] overflow-y-auto">
-              {fieldPlayers.map(p => (
-                <div key={p.id} onClick={() => setSelected(selected === p.id ? null : p.id)}
-                  className={`px-4 py-2.5 flex items-center gap-3 cursor-pointer transition-colors ${
-                    selected === p.id ? 'bg-yellow-50' : 'hover:bg-surface-container-low'
-                  }`}>
-                  <span className={`w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center ${
-                    selected === p.id ? 'bg-yellow-400 text-yellow-900' : 'bg-primary text-white'
-                  }`}>{p.number}</span>
-                  <div className="flex-1">
-                    <span className="text-label-lg text-on-surface">{p.name}</span>
+              {fieldPlayers.map(p => {
+                const sel = isSelected(p.id, 'field')
+                return (
+                  <div key={p.id} onClick={() => handlePlayerClick(p.id, 'field')}
+                    className={`px-4 py-2.5 flex items-center gap-3 cursor-pointer transition-colors ${
+                      sel ? 'bg-yellow-50' : 'hover:bg-surface-container-low'
+                    }`}>
+                    <span className={`w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                      sel ? 'bg-yellow-400 text-yellow-900' : 'bg-primary text-white'
+                    }`}>{p.number}</span>
+                    <div className="flex-1">
+                      <span className="text-label-lg text-on-surface">{p.name}</span>
+                    </div>
+                    <span className="text-label-md text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded text-[11px]">
+                      {p.position}
+                    </span>
+                    {sel && <span className="material-symbols-outlined text-yellow-500 text-[16px]">swap_horiz</span>}
                   </div>
-                  <span className="text-label-md text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded text-[11px]">
-                    {p.position}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -293,30 +411,37 @@ export default function CompositionPage() {
               <h4 className="text-headline-md">Remplaçants</h4>
             </div>
             <div className="divide-y divide-[#e8e8f0]">
-              {BENCH.map(p => (
-                <div key={p.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-surface-container-low transition-colors">
-                  <span className="w-6 h-6 rounded-full bg-surface-container text-on-surface-variant text-[11px] font-bold flex items-center justify-center">
-                    {p.number}
-                  </span>
-                  <div className="flex-1">
-                    <span className="text-label-lg text-on-surface">{p.name}</span>
+              {bench.map(p => {
+                const sel = isSelected(p.id, 'bench')
+                return (
+                  <div key={p.id} onClick={() => handlePlayerClick(p.id, 'bench')}
+                    className={`px-4 py-2.5 flex items-center gap-3 cursor-pointer transition-colors ${
+                      sel ? 'bg-yellow-50' : 'hover:bg-surface-container-low'
+                    }`}>
+                    <span className={`w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                      sel ? 'bg-yellow-400 text-yellow-900' : 'bg-surface-container text-on-surface-variant'
+                    }`}>{p.number}</span>
+                    <div className="flex-1">
+                      <span className="text-label-lg text-on-surface">{p.name}</span>
+                    </div>
+                    <span className="text-label-md text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded text-[11px]">
+                      {p.position}
+                    </span>
+                    {sel && <span className="material-symbols-outlined text-yellow-500 text-[16px]">swap_horiz</span>}
                   </div>
-                  <span className="text-label-md text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded text-[11px]">
-                    {p.position}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
-          {/* Actions rapides */}
+          {/* Aide */}
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2 text-body-sm text-on-surface-variant">
             <p className="text-label-lg text-primary flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">tips_and_updates</span>
-              Conseils
+              <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
+              Échanger des joueurs
             </p>
-            <p>Cliquez sur un joueur sur le terrain ou dans la liste pour le sélectionner (surligné en jaune).</p>
-            <p>Changez de formation avec le menu déroulant — les positions s'adaptent automatiquement.</p>
+            <p>Cliquez sur un joueur (terrain ou banc) pour le sélectionner (jaune), puis sur un autre pour les échanger.</p>
+            <p>Vous pouvez intervertir titulaires entre eux, remplaçants entre eux, ou faire entrer un remplaçant.</p>
           </div>
         </div>
       </div>

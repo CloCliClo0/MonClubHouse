@@ -1,8 +1,11 @@
-import { Outlet } from 'react-router-dom'
+import { Navigate, Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
+import { getToken } from '../../services/auth'
 
 export default function AppLayout() {
+  if (!getToken()) return <Navigate to="/login" replace />
+
   return (
     <div className="min-h-screen bg-[#f4f4f6]">
       <Sidebar />

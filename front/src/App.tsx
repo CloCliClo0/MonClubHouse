@@ -18,6 +18,7 @@ import ClubPage from './pages/ClubPage'
 import CreateEventPage from './pages/CreateEventPage'
 import OpponentsPage from './pages/OpponentsPage'
 import StatsPage from './pages/StatsPage'
+import SetupClubPage from './pages/SetupClubPage'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         {/* Pages publiques */}
         <Route path="/login"          element={<LoginPage />} />
         <Route path="/register"       element={<RegisterPage />} />
+        <Route path="/setup-club"     element={<SetupClubPage />} />
         <Route path="/resultats-club" element={<PublicResultsPage />} />
 
         {/* Pages authentifiées */}

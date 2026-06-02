@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import PhotoUpload from '../components/PhotoUpload'
+import api from '../services/api'
 
 type Tab = 'mon-profil' | 'securite' | 'notifications'
 
@@ -52,13 +54,14 @@ export default function ProfilePage() {
             <div className="flex flex-col md:flex-row gap-8 items-start">
               {/* Avatar card */}
               <div className="w-full md:w-1/3 flex flex-col items-center text-center p-6 bg-surface-container-lowest rounded-xl border border-[#e8e8f0]">
-                <div className="relative group mb-4">
-                  <div className="w-36 h-36 rounded-full bg-primary-container flex items-center justify-center text-white text-4xl font-black border-4 border-white ring-1 ring-outline-variant">
-                    JD
-                  </div>
-                  <button className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                  </button>
+                <div className="mb-4">
+                  <PhotoUpload
+                    type="avatar"
+                    shape="circle"
+                    size={144}
+                    label="Changer la photo"
+                    onSuccess={(url) => api.put('/profil', { avatar: url }).catch(() => {})}
+                  />
                 </div>
                 <h4 className="text-headline-md">Jean-Marc Durand</h4>
                 <span className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-label-md">

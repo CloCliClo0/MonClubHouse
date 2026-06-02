@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import api from '../services/api'
+import EmojiPicker from '../components/EmojiPicker'
 
 type Channel = { id: number; nom: string; type: string; icon?: string }
 type Message = { id: number; sender_id: number; sender?: { nom: string; prenom: string }; contenu: string; created_at: string; mine?: boolean }
@@ -10,6 +11,27 @@ const TYPE_ICON: Record<string, string> = {
 
 type ChannelModal = { open: false } | { open: true }
 type InfoModal    = { open: false } | { open: true; channel: Channel }
+
+function isMediaUrl(s: string) {
+  return s.startsWith('/uploads/') ||
+    s.includes('drive.google.com') ||
+    /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(s)
+}
+
+function MessageContent({ contenu, mine }: { contenu: string; mine?: boolean }) {
+  if (isMediaUrl(contenu)) {
+    return (
+      <a href={contenu} target="_blank" rel="noreferrer">
+        <img
+          src={contenu}
+          alt="Image"
+          className="max-w-[240px] max-h-48 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+        />
+      </a>
+    )
+  }
+  return <p className="text-body-md">{contenu}</p>
+}
 
 export default function ChatPage() {
   const [channels, setChannels]     = useState<Channel[]>([])
@@ -22,7 +44,27 @@ export default function ChatPage() {
   const [infoModal, setInfoModal]       = useState<InfoModal>({ open: false })
   const [newCh, setNewCh]           = useState({ nom: '', type: 'equipe' })
   const [saving, setSaving]         = useState(false)
+  const [showEmoji, setShowEmoji]   = useState(false)
+  const [uploading, setUploading]   = useState(false)
+  const fileInputRef  = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const emojiButtonRef = useRef<HTMLButtonElement>(null)
+  const emojiPickerRef = useRef<HTMLDivElement>(null)
+
+  // Ferme l'emoji picker au clic extérieur
+  useEffect(() => {
+    if (!showEmoji) return
+    const handler = (e: MouseEvent) => {
+      if (
+        !emojiPickerRef.current?.contains(e.target as Node) &&
+        !emojiButtonRef.current?.contains(e.target as Node)
+      ) {
+        setShowEmoji(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showEmoji])
 
   const loadChannels = () => {
     setLoadingCh(true)
@@ -71,6 +113,32 @@ export default function ChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !activeId) return
+    e.target.value = ''
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await api.post('/upload/chat', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      if (res.data.success) {
+        // Envoie l'URL comme message (image ou lien selon le type)
+        const url = res.data.url as string
+        await api.post('/chat/messages', { channel_id: activeId, contenu: url }).catch(() => {})
+        loadMessages(activeId)
+      }
+    } catch {
+      // Fallback : affiche le nom du fichier dans la zone de saisie
+      setInput(prev => prev + ` [${file.name}]`)
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const createChannel = async () => {
     if (!newCh.nom.trim()) return
     setSaving(true)
@@ -87,8 +155,9 @@ export default function ChatPage() {
   const activeChannel = channels.find(c => c.id === activeId)
 
   return (
-    <div className="h-[calc(100vh-64px-48px)]">
-      <div className="bg-white rounded-xl border border-outline-variant flex overflow-hidden h-full shadow-sm">
+    // Wrapper relative pour positionner l'emoji picker en dehors du conteneur overflow-hidden
+    <div className="h-[calc(100vh-64px-48px)] relative">
+      <div className="bg-white rounded-xl border border-outline-variant flex h-full shadow-sm overflow-hidden">
 
         {/* Canaux */}
         <div className="w-[260px] border-r border-outline-variant flex flex-col bg-white shrink-0">
@@ -195,7 +264,7 @@ export default function ChatPage() {
                           {msg.mine ? 'Vous' : msg.sender ? `${msg.sender.prenom} ${msg.sender.nom}` : 'Utilisateur'}
                         </p>
                         <div className={`p-3 px-4 rounded-2xl border shadow-sm ${msg.mine ? 'bg-[#2d6a4f] text-white rounded-tr-none shadow-md border-transparent' : 'bg-[#f4f4f6] text-on-surface rounded-tl-none border-outline-variant/20'}`}>
-                          <p className="text-body-md">{msg.contenu}</p>
+                          <MessageContent contenu={msg.contenu} mine={msg.mine} />
                         </div>
                         <span className={`text-[10px] text-on-surface-variant/60 mt-1 ${msg.mine ? 'mr-1' : 'ml-1'}`}>
                           {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -210,13 +279,41 @@ export default function ChatPage() {
 
             {/* Input */}
             <div className="p-4 bg-white border-t border-outline-variant">
-              <div className="flex items-end gap-3 bg-[#f4f4f6] p-2 rounded-[24px] border border-outline-variant/30 focus-within:border-primary/50 focus-within:bg-white transition-all shadow-sm">
-                <button className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
-                  <span className="material-symbols-outlined">add</span>
+              <div className="flex items-end gap-2 bg-[#f4f4f6] p-2 rounded-[24px] border border-outline-variant/30 focus-within:border-primary/50 focus-within:bg-white transition-all shadow-sm">
+                {/* + fichier/photo */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors shrink-0 disabled:opacity-40"
+                  title="Joindre un fichier ou une photo"
+                >
+                  {uploading
+                    ? <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    : <span className="material-symbols-outlined">add</span>
+                  }
                 </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*,.pdf,.doc,.docx"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+
                 <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} rows={1}
                   className="flex-1 bg-transparent border-none resize-none py-2.5 px-1 text-body-md focus:ring-0 outline-none placeholder:text-on-surface-variant/50 min-h-[44px] max-h-[120px]"
                   placeholder="Écrivez votre message…" />
+
+                {/* Bouton emoji — positionné pour que le picker s'affiche en dehors du overflow-hidden */}
+                <button
+                  ref={emojiButtonRef}
+                  onClick={() => setShowEmoji(v => !v)}
+                  className={`w-10 h-10 flex items-center justify-center transition-colors shrink-0 ${showEmoji ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
+                  title="Emojis"
+                >
+                  <span className="material-symbols-outlined">mood</span>
+                </button>
+
                 <button onClick={sendMessage} disabled={!input.trim()}
                   className="w-10 h-10 bg-[#2d6a4f] text-white rounded-full flex items-center justify-center hover:bg-primary active:scale-95 transition-all shrink-0 shadow-lg disabled:opacity-40">
                   <span className="material-symbols-outlined filled-icon ml-0.5">send</span>
@@ -227,6 +324,16 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* Emoji picker EN DEHORS du conteneur overflow-hidden pour éviter le clipping */}
+      {showEmoji && (
+        <div ref={emojiPickerRef} className="absolute bottom-[88px] right-4 z-50">
+          <EmojiPicker
+            onSelect={(emoji) => setInput(prev => prev + emoji)}
+            onClose={() => setShowEmoji(false)}
+          />
+        </div>
+      )}
 
       {/* ── Modal Créer canal ────────────────────────────────────── */}
       {channelModal.open && (
@@ -273,7 +380,7 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* ── Modal Infos canal (3 points) ────────────────────────── */}
+      {/* ── Modal Infos canal ────────────────────────────────────── */}
       {infoModal.open && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setInfoModal({ open: false })}>
           <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
