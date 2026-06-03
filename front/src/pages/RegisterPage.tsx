@@ -26,6 +26,7 @@ export default function RegisterPage() {
       localStorage.setItem('userId', String(user.id))
       localStorage.setItem('prenom', user.prenom || user.nom || '')
       localStorage.setItem('role',   user.role || 'joueur')
+      // Redirige vers /join avec le code si déjà saisi
       navigate('/join', { replace: true })
     } catch (err: any) {
       const msg = err.response?.data?.message
@@ -120,8 +121,8 @@ export default function RegisterPage() {
               >
                 <option value="joueur">Joueur</option>
                 <option value="parent">Parent / Tuteur</option>
-                <option value="coach">Coach (code requis)</option>
-                <option value="dirigeant">Dirigeant (code requis)</option>
+                <option value="coach">Coach</option>
+                <option value="dirigeant">Dirigeant</option>
               </select>
               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
                 <span className="material-symbols-outlined">expand_more</span>

@@ -126,10 +126,9 @@ export default function JoinPage() {
                   : <><span className="material-symbols-outlined text-[20px]">login</span>Rejoindre</>
                 }
               </button>
-              <button type="button" onClick={() => navigate('/dashboard')}
-                className="w-full py-2 text-on-surface-variant text-label-md hover:text-on-surface transition-colors">
-                Je n'ai pas de code — accéder quand même
-              </button>
+              <p className="text-center text-body-sm text-on-surface-variant">
+                Le code est fourni par l'administrateur ou le dirigeant de votre club.
+              </p>
             </form>
           )}
 

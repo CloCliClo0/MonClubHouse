@@ -89,6 +89,21 @@ export default function AdminPage() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
+  const shareCode = (code: InviteCode) => {
+    const appUrl = window.location.origin
+    const label  = code.label || code.equipe?.nom || 'votre équipe'
+    const role   = ({ joueur: 'joueur', parent: 'parent', coach: 'coach', dirigeant: 'dirigeant' } as Record<string,string>)[code.role] ?? code.role
+    const text   = `🏆 Rejoignez ${label} sur MonClubHouse !\n\nVotre code d'accès (${role}) : ${code.code}\n\nInscription : ${appUrl}/register`
+
+    if (navigator.share) {
+      navigator.share({ title: 'Code MonClubHouse', text }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(text)
+      setCopiedId(code.id)
+      setTimeout(() => setCopiedId(null), 2000)
+    }
+  }
+
   const load = () => {
     setLoading(true)
     api.get('/admin/users')
@@ -264,11 +279,15 @@ export default function AdminPage() {
                       <span className="font-mono font-bold text-lg tracking-widest text-on-surface bg-surface-container-low px-3 py-1.5 rounded-lg">
                         {c.code}
                       </span>
-                      <button onClick={() => copyCode(c)} title="Copier"
+                      <button onClick={() => copyCode(c)} title="Copier le code"
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant">
                         <span className="material-symbols-outlined text-[18px]">
                           {copiedId === c.id ? 'check' : 'content_copy'}
                         </span>
+                      </button>
+                      <button onClick={() => shareCode(c)} title="Partager via SMS / réseaux"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-primary/10 hover:text-primary transition-colors text-on-surface-variant">
+                        <span className="material-symbols-outlined text-[18px]">share</span>
                       </button>
                     </div>
 

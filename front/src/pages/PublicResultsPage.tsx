@@ -47,6 +47,8 @@ export default function PublicResultsPage() {
   const [standings, setStandings] = useState<Standing[]>([])
   const [loading, setLoading]     = useState(true)
   const [clubName, setClubName]   = useState('MonClubHouse')
+  const [search, setSearch]       = useState('')
+  const [catFilter, setCatFilter] = useState('Toutes')
 
   useEffect(() => {
     const base = '/api'
@@ -71,6 +73,19 @@ export default function PublicResultsPage() {
   const wins   = matches.filter(m => getResult(m) === 'Victoire').length
   const draws  = matches.filter(m => getResult(m) === 'Nul').length
   const losses = matches.filter(m => getResult(m) === 'Défaite').length
+
+  // Catégories disponibles
+  const cats = ['Toutes', ...Array.from(new Set(matches.map(m => m.equipe?.categorie).filter(Boolean)))] as string[]
+
+  const filteredMatches = matches.filter(m => {
+    const matchSearch = search.trim().toLowerCase()
+    const matchesCat  = catFilter === 'Toutes' || m.equipe?.categorie === catFilter
+    const matchesSearch = !matchSearch ||
+      m.adversaire?.toLowerCase().includes(matchSearch) ||
+      m.equipe?.nom?.toLowerCase().includes(matchSearch) ||
+      m.championnat?.toLowerCase().includes(matchSearch)
+    return matchesCat && matchesSearch
+  })
 
   return (
     <div className="min-h-screen bg-[#f4f4f6]">
@@ -103,8 +118,19 @@ export default function PublicResultsPage() {
           <h1 className="text-display-lg text-white mb-2">Résultats & Classement</h1>
           <p className="text-white/60 text-body-lg">Performances de {clubName}</p>
 
+          {/* Recherche */}
+          <div className="mt-6 relative max-w-md">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-[20px]">search</span>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher un adversaire, équipe, compétition…"
+              className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-white/40 text-body-md"
+            />
+          </div>
+
           {!loading && matches.length > 0 && (
-            <div className="grid grid-cols-3 gap-4 mt-8 max-w-sm">
+            <div className="grid grid-cols-3 gap-4 mt-6 max-w-sm">
               <div className="bg-white/10 rounded-xl p-4 text-center">
                 <p className="text-2xl font-black text-green-400">{wins}</p>
                 <p className="text-white/60 text-label-md mt-0.5">Victoires</p>
@@ -144,15 +170,28 @@ export default function PublicResultsPage() {
 
           {!loading && tab === 'resultats' && (
             <div className="p-6">
-              {matches.length === 0 ? (
+              {/* Filtre par catégorie */}
+              {cats.length > 2 && (
+                <div className="flex gap-2 flex-wrap mb-5">
+                  {cats.map(cat => (
+                    <button key={cat} onClick={() => setCatFilter(cat)}
+                      className={`px-3 py-1.5 rounded-full text-label-md transition-all ${
+                        catFilter === cat ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant border border-outline-variant hover:border-primary/40'
+                      }`}>
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {filteredMatches.length === 0 ? (
                 <div className="py-16 text-center text-on-surface-variant">
                   <span className="material-symbols-outlined text-[48px] opacity-20 block mb-3">sports_soccer</span>
-                  <p className="text-headline-md text-on-surface mb-1">Aucun résultat disponible</p>
+                  <p className="text-headline-md text-on-surface mb-1">{search ? 'Aucun résultat pour cette recherche' : 'Aucun résultat disponible'}</p>
                   <p className="text-body-md">Les résultats apparaîtront ici une fois les matchs joués.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {matches.map(m => {
+                  {filteredMatches.map(m => {
                     const result = getResult(m)
                     const style = result ? statusStyle[result] : null
                     return (

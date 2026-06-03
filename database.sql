@@ -319,11 +319,11 @@ INSERT INTO `users`
   (`nom`, `prenom`, `email`, `password_hash`, `role`, `actif`, `created_at`, `updated_at`)
 VALUES
   ('Delaunay', 'Hugo', 'hugo22042006@gmail.com',
-   '$2a$12$7yNUiidpsGtQDkJ3pRzouOeslMzYCdfCYhDPC4k1LE1SmzFnSf/sG',
+   '$2a$12$i6U6aJMeha1xhI9qX3.v5.B.sACIpGcQqK4J4BVYVlavHKshlLLAm',
    'superadmin', 1, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
   `role`          = 'superadmin',
-  `password_hash` = '$2a$12$7yNUiidpsGtQDkJ3pRzouOeslMzYCdfCYhDPC4k1LE1SmzFnSf/sG',
+  `password_hash` = '$2a$12$i6U6aJMeha1xhI9qX3.v5.B.sACIpGcQqK4J4BVYVlavHKshlLLAm',
   `updated_at`    = NOW();
 
 

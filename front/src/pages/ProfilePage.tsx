@@ -4,37 +4,126 @@ import api from '../services/api'
 
 type Tab = 'mon-profil' | 'securite' | 'notifications' | 'mes-enfants'
 type Child = { id: number; nom: string; prenom: string; avatar?: string }
+type UserData = {
+  id: number; nom: string; prenom: string; email: string
+  telephone: string | null; date_naissance: string | null
+  role: string; avatar: string | null
+  notif_email: boolean; notif_push: boolean
+}
+type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; created_at: string }
 
-const notifs = [
-  { id: 1, icon: 'payments', title: 'Paiement reçu - Licence Sénior', body: 'Le paiement de M. Lucas Bernard pour la saison 2024/2025 a été validé.', time: 'Il y a 10 minutes', read: false },
-  { id: 2, icon: 'event', title: 'Nouvel événement créé', body: 'Tournoi inter-clubs U13 — Prévu le samedi 12 Octobre à 14:00.', time: 'Il y a 2 heures', read: false },
-  { id: 3, icon: 'campaign', title: 'Actualité publiée', body: 'L\'article "Résultats de la semaine" est en ligne sur le portail public.', time: 'Hier à 18:30', read: true },
-  { id: 4, icon: 'groups', title: 'Nouvelle demande d\'adhésion', body: 'Sophie Martin a soumis son dossier complet pour la section Tennis.', time: '3 Octobre 2024', read: true },
-]
+const ROLE_LABELS: Record<string, string> = {
+  superadmin: 'Super Administrateur', admin: 'Administrateur',
+  dirigeant: 'Dirigeant', coach: 'Coach',
+  joueur: 'Joueur', parent: 'Parent', visiteur: 'Visiteur',
+}
 
 export default function ProfilePage() {
-  const [tab, setTab] = useState<Tab>('mon-profil')
-  const [successBanner, setSuccessBanner] = useState(false)
+  const [tab, setTab]   = useState<Tab>('mon-profil')
   const role = localStorage.getItem('role') || 'joueur'
 
-  // Données parent-enfant
-  const [children, setChildren]       = useState<Child[]>([])
-  const [allPlayers, setAllPlayers]   = useState<Child[]>([])
+  // User data + form
+  const [user, setUser]     = useState<UserData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [prenom, setPrenom]   = useState('')
+  const [nom, setNom]         = useState('')
+  const [telephone, setTel]   = useState('')
+  const [dateNaiss, setDate]  = useState('')
+  const [notifEmail, setNotifEmail] = useState(true)
+  const [notifPush, setNotifPush]   = useState(true)
+  const [saving, setSaving]   = useState(false)
+
+  // Password
+  const [oldPwd, setOldPwd] = useState('')
+  const [newPwd, setNewPwd] = useState('')
+  const [confPwd, setConf]  = useState('')
+  const [pwdSaving, setPwdSaving] = useState(false)
+
+  // Notifications réelles
+  const [notifs, setNotifs]     = useState<Notif[]>([])
+  const [notifsLoad, setNotifsLoad] = useState(false)
+
+  // Parent-enfants
+  const [children, setChildren]     = useState<Child[]>([])
+  const [allPlayers, setAllPlayers] = useState<Child[]>([])
   const [selectedChild, setSelectedChild] = useState<number | null>(null)
-  const [linking, setLinking]         = useState(false)
-  const [linkMsg, setLinkMsg]         = useState('')
+  const [linking, setLinking] = useState(false)
+  const [linkMsg, setLinkMsg] = useState('')
+
+  // Feedback global
+  const [success, setSuccess] = useState('')
+  const [error, setError]     = useState('')
+
+  const flash = (msg: string, isErr = false) => {
+    if (isErr) { setError(msg); setSuccess('') }
+    else       { setSuccess(msg); setError('') }
+    setTimeout(() => { setSuccess(''); setError('') }, 4000)
+  }
+
+  const loadUser = async () => {
+    try {
+      const res = await api.get('/profil')
+      const u: UserData = res.data.data
+      setUser(u)
+      setPrenom(u.prenom || '')
+      setNom(u.nom || '')
+      setTel(u.telephone || '')
+      setDate(u.date_naissance || '')
+      setNotifEmail(u.notif_email !== false)
+      setNotifPush(u.notif_push !== false)
+    } catch {}
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { loadUser() }, [])
 
   useEffect(() => {
-    if (role === 'parent' && tab === 'mes-enfants') {
+    if (tab === 'notifications') {
+      setNotifsLoad(true)
+      api.get('/profil/notifications?limit=20')
+        .then(r => {
+          const d = r.data.data
+          setNotifs(Array.isArray(d) ? d : (d?.notifications ?? []))
+        })
+        .catch(() => {})
+        .finally(() => setNotifsLoad(false))
+    }
+    if (tab === 'mes-enfants' && role === 'parent') {
       api.get('/codes/my-children').then(r => setChildren(r.data.data || [])).catch(() => {})
       api.get('/codes/club-players').then(r => setAllPlayers(r.data.data || [])).catch(() => {})
     }
-  }, [tab, role])
+  }, [tab])
+
+  const handleSaveProfil = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      await api.put('/profil', { prenom, nom, telephone: telephone || null, date_naissance: dateNaiss || null, notif_email: notifEmail, notif_push: notifPush })
+      localStorage.setItem('prenom', prenom)
+      await loadUser()
+      flash('Profil mis à jour avec succès.')
+    } catch (err: any) {
+      flash(err.response?.data?.message || 'Erreur lors de la sauvegarde.', true)
+    } finally { setSaving(false) }
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newPwd.length < 8)  { flash('Nouveau mot de passe trop court (8 min.).', true); return }
+    if (newPwd !== confPwd) { flash('Les mots de passe ne correspondent pas.', true); return }
+    setPwdSaving(true)
+    try {
+      await api.put('/profil/password', { ancien_password: oldPwd, nouveau_password: newPwd })
+      setOldPwd(''); setNewPwd(''); setConf('')
+      flash('Mot de passe mis à jour.')
+    } catch (err: any) {
+      flash(err.response?.data?.message || 'Ancien mot de passe incorrect.', true)
+    } finally { setPwdSaving(false) }
+  }
 
   const linkChild = async () => {
     if (!selectedChild) return
-    setLinking(true)
-    setLinkMsg('')
+    setLinking(true); setLinkMsg('')
     try {
       const res = await api.post('/codes/link-child', { child_user_id: selectedChild })
       setLinkMsg(res.data.message)
@@ -42,9 +131,14 @@ export default function ProfilePage() {
       setSelectedChild(null)
     } catch (e: any) {
       setLinkMsg(e.response?.data?.message || 'Erreur')
-    } finally {
-      setLinking(false)
-    }
+    } finally { setLinking(false) }
+  }
+
+  const markAllRead = async () => {
+    try {
+      await api.patch('/profil/notifications/toutes-lues')
+      setNotifs(prev => prev.map(n => ({ ...n, lu: true })))
+    } catch {}
   }
 
   const tabs: { key: Tab; label: string }[] = [
@@ -58,128 +152,137 @@ export default function ProfilePage() {
     <div>
       <div className="mb-8">
         <h2 className="text-display-lg text-on-surface mb-2">Réglages du compte</h2>
-        <p className="text-on-surface-variant text-body-lg">
-          Gérez vos informations personnelles et vos préférences de sécurité.
-        </p>
+        <p className="text-on-surface-variant text-body-lg">Gérez vos informations personnelles et vos préférences.</p>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center border-b border-outline-variant mb-6">
         {tabs.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
+          <button key={key} onClick={() => { setTab(key); setError(''); setSuccess('') }}
             className={`px-6 py-4 text-label-lg transition-all ${
-              tab === key
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-on-surface-variant hover:text-primary'
-            }`}
-          >
+              tab === key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
+            }`}>
             {label}
           </button>
         ))}
       </div>
 
-      {/* Tab: Mon Profil */}
+      {/* Feedback */}
+      {success && (
+        <div className="mb-4 flex items-center gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-body-md">
+          <span className="material-symbols-outlined text-green-600">check_circle</span>
+          {success}
+        </div>
+      )}
+      {error && (
+        <div className="mb-4 flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-body-md">
+          <span className="material-symbols-outlined">error</span>
+          {error}
+        </div>
+      )}
+
+      {/* ── Mon Profil ──────────────────────────────────────────────────── */}
       {tab === 'mon-profil' && (
         <div className="space-y-6">
           <section className="bg-white border border-[#e8e8f0] rounded-lg p-6">
-            <div className="flex flex-col md:flex-row gap-8 items-start">
-              {/* Avatar card */}
-              <div className="w-full md:w-1/3 flex flex-col items-center text-center p-6 bg-surface-container-lowest rounded-xl border border-[#e8e8f0]">
-                <div className="mb-4">
-                  <PhotoUpload
-                    type="avatar"
-                    shape="circle"
-                    size={144}
-                    label="Changer la photo"
-                    onSuccess={(url) => api.put('/profil', { avatar: url }).catch(() => {})}
-                  />
-                </div>
-                <h4 className="text-headline-md">Jean-Marc Durand</h4>
-                <span className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-label-md">
-                  Administrateur Club
-                </span>
-                <div className="mt-4 flex flex-col items-center gap-2 text-on-surface-variant">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px]">mail</span>
-                    <span className="text-body-sm">jm.durand@mch-sports.fr</span>
+            {loading ? (
+              <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 bg-surface-container-low rounded-lg animate-pulse" />)}</div>
+            ) : (
+              <div className="flex flex-col md:flex-row gap-8 items-start">
+                {/* Avatar */}
+                <div className="w-full md:w-1/3 flex flex-col items-center text-center p-6 bg-surface-container-lowest rounded-xl border border-[#e8e8f0]">
+                  <div className="mb-4">
+                    <PhotoUpload
+                      type="avatar" shape="circle" size={144}
+                      currentUrl={user?.avatar || undefined}
+                      label="Changer la photo"
+                      onSuccess={async (url) => {
+                        await api.put('/profil', { avatar: url }).catch(() => {})
+                        await loadUser()
+                      }}
+                    />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px]">location_on</span>
-                    <span className="text-body-sm">Lyon, France</span>
+                  <h4 className="text-headline-md">{user?.prenom} {user?.nom}</h4>
+                  <span className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-label-md">
+                    {ROLE_LABELS[user?.role || ''] || user?.role}
+                  </span>
+                  <div className="mt-4 flex flex-col items-center gap-2 text-on-surface-variant">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px]">mail</span>
+                      <span className="text-body-sm">{user?.email}</span>
+                    </div>
+                    {user?.telephone && (
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px]">phone</span>
+                        <span className="text-body-sm">{user.telephone}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
 
-              {/* Form */}
-              <div className="flex-1">
-                <h5 className="text-headline-md mb-6">Informations personnelles</h5>
-                <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-label-md text-on-surface-variant">Prénom</label>
-                      <input
-                        defaultValue="Jean-Marc"
-                        className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md"
-                      />
+                {/* Form */}
+                <div className="flex-1">
+                  <h5 className="text-headline-md mb-6">Informations personnelles</h5>
+                  <form className="space-y-4" onSubmit={handleSaveProfil}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-label-md text-on-surface-variant">Prénom</label>
+                        <input value={prenom} onChange={e => setPrenom(e.target.value)}
+                          className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-label-md text-on-surface-variant">Nom</label>
+                        <input value={nom} onChange={e => setNom(e.target.value)}
+                          className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+                      </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-label-md text-on-surface-variant">Nom</label>
-                      <input
-                        defaultValue="Durand"
-                        className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md"
-                      />
+                      <label className="text-label-md text-on-surface-variant">Téléphone</label>
+                      <input value={telephone} onChange={e => setTel(e.target.value)} type="tel" placeholder="+33 6 12 34 56 78"
+                        className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
                     </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-label-md text-on-surface-variant">Numéro de téléphone</label>
-                    <input
-                      defaultValue="+33 6 12 34 56 78"
-                      type="tel"
-                      className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-label-md text-on-surface-variant">Date de naissance</label>
-                    <input
-                      defaultValue="1982-05-14"
-                      type="date"
-                      className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md"
-                    />
-                  </div>
-                  <div className="pt-4 border-t border-[#e8e8f0] mt-6">
-                    <h6 className="text-label-lg text-on-surface mb-4">Préférences de contact</h6>
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input defaultChecked type="checkbox" className="w-5 h-5 rounded border-outline-variant accent-primary" />
-                        <span className="text-body-md text-on-surface-variant">Recevoir les actualités du club par email</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input defaultChecked type="checkbox" className="w-5 h-5 rounded border-outline-variant accent-primary" />
-                        <span className="text-body-md text-on-surface-variant">Alertes de calendrier par SMS</span>
-                      </label>
+                    <div className="space-y-1">
+                      <label className="text-label-md text-on-surface-variant">Date de naissance</label>
+                      <input value={dateNaiss} onChange={e => setDate(e.target.value)} type="date"
+                        className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
                     </div>
-                  </div>
-                  <div className="pt-6 flex justify-end gap-3">
-                    <button type="button" className="px-6 py-2.5 border border-[#e8e8f0] rounded-lg text-label-lg hover:bg-surface-container-low transition-colors">
-                      Annuler
-                    </button>
-                    <button type="submit" className="px-6 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:brightness-110 active:scale-95 transition-all">
-                      Enregistrer
-                    </button>
-                  </div>
-                </form>
+                    <div className="pt-4 border-t border-[#e8e8f0] mt-2">
+                      <h6 className="text-label-lg text-on-surface mb-3">Préférences de contact</h6>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" checked={notifEmail} onChange={e => setNotifEmail(e.target.checked)}
+                            className="w-5 h-5 rounded border-outline-variant accent-primary" />
+                          <span className="text-body-md text-on-surface-variant">Recevoir les actualités du club par email</span>
+                        </label>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" checked={notifPush} onChange={e => setNotifPush(e.target.checked)}
+                            className="w-5 h-5 rounded border-outline-variant accent-primary" />
+                          <span className="text-body-md text-on-surface-variant">Alertes de calendrier (SMS / push)</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="pt-6 flex justify-end gap-3">
+                      <button type="button" onClick={loadUser}
+                        className="px-6 py-2.5 border border-[#e8e8f0] rounded-lg text-label-lg hover:bg-surface-container-low transition-colors">
+                        Annuler
+                      </button>
+                      <button type="submit" disabled={saving}
+                        className="px-6 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2">
+                        {saving && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
+                        Enregistrer
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
-            </div>
+            )}
           </section>
         </div>
       )}
 
-      {/* Tab: Mes enfants (parent uniquement) */}
+      {/* ── Mes enfants (parents) ────────────────────────────────────────── */}
       {tab === 'mes-enfants' && (
         <div className="space-y-6 max-w-2xl">
-          {/* Enfants déjà liés */}
           <section className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
             <div className="px-6 py-4 border-b border-[#e8e8f0]">
               <h5 className="text-headline-md">Mes enfants rattachés</h5>
@@ -196,9 +299,7 @@ export default function ProfilePage() {
                   <div key={c.id} className="px-6 py-3 flex items-center gap-3">
                     {c.avatar
                       ? <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" alt="" />
-                      : <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center font-bold text-white text-sm">
-                          {c.prenom?.[0]}{c.nom?.[0]}
-                        </div>
+                      : <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center font-bold text-white text-sm">{c.prenom?.[0]}{c.nom?.[0]}</div>
                     }
                     <p className="text-label-lg text-on-surface">{c.prenom} {c.nom}</p>
                     <span className="ml-auto px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-label-md">Joueur</span>
@@ -208,18 +309,15 @@ export default function ProfilePage() {
             )}
           </section>
 
-          {/* Lier un nouvel enfant */}
           <section className="bg-white border border-[#e8e8f0] rounded-xl p-6">
             <h5 className="text-headline-md mb-1">Rattacher un enfant</h5>
             <p className="text-body-sm text-on-surface-variant mb-4">Sélectionnez le joueur inscrit dans votre club.</p>
-
             {linkMsg && (
-              <div className={`mb-4 px-4 py-3 rounded-lg text-body-sm flex items-center gap-2 ${linkMsg.includes('Erreur') || linkMsg.includes('Réservé') ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'}`}>
-                <span className="material-symbols-outlined text-[16px]">{linkMsg.includes('Erreur') ? 'error' : 'check_circle'}</span>
+              <div className={`mb-4 px-4 py-3 rounded-lg text-body-sm flex items-center gap-2 ${linkMsg.toLowerCase().includes('erreur') ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'}`}>
+                <span className="material-symbols-outlined text-[16px]">{linkMsg.toLowerCase().includes('erreur') ? 'error' : 'check_circle'}</span>
                 {linkMsg}
               </div>
             )}
-
             <div className="space-y-2 max-h-56 overflow-y-auto mb-4">
               {allPlayers.filter(p => !children.find(c => c.id === p.id)).map(p => (
                 <button key={p.id} onClick={() => setSelectedChild(p.id)}
@@ -228,18 +326,13 @@ export default function ProfilePage() {
                   }`}>
                   {p.avatar
                     ? <img src={p.avatar} className="w-8 h-8 rounded-full object-cover" alt="" />
-                    : <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant text-xs font-bold">
-                        {p.prenom?.[0]}{p.nom?.[0]}
-                      </div>
+                    : <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant text-xs font-bold">{p.prenom?.[0]}{p.nom?.[0]}</div>
                   }
                   <span className="text-label-lg text-on-surface">{p.prenom} {p.nom}</span>
-                  {selectedChild === p.id && (
-                    <span className="ml-auto material-symbols-outlined text-primary text-[20px]">check_circle</span>
-                  )}
+                  {selectedChild === p.id && <span className="ml-auto material-symbols-outlined text-primary text-[20px]">check_circle</span>}
                 </button>
               ))}
             </div>
-
             <button onClick={linkChild} disabled={!selectedChild || linking}
               className="px-6 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:brightness-110 disabled:opacity-50 flex items-center gap-2 transition-all">
               {linking && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
@@ -250,132 +343,98 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Tab: Sécurité */}
+      {/* ── Sécurité ────────────────────────────────────────────────────── */}
       {tab === 'securite' && (
         <div className="space-y-6">
-          {successBanner && (
-            <div className="flex items-center gap-4 bg-green-50 border border-green-200 text-green-800 p-4 rounded-lg">
-              <span className="material-symbols-outlined text-green-700">check_circle</span>
-              <p className="text-body-md">Votre mot de passe a été mis à jour avec succès.</p>
-              <button onClick={() => setSuccessBanner(false)} className="ml-auto">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-          )}
           <section className="bg-white border border-[#e8e8f0] rounded-lg p-6 max-w-2xl">
-            <div className="mb-8">
-              <h5 className="text-headline-md mb-2">Changer le mot de passe</h5>
-              <p className="text-on-surface-variant text-body-md">
-                Assurez-vous d'utiliser un mot de passe fort d'au moins 12 caractères.
-              </p>
+            <div className="mb-6">
+              <h5 className="text-headline-md mb-1">Changer le mot de passe</h5>
+              <p className="text-on-surface-variant text-body-md">Utilisez un mot de passe fort d'au moins 8 caractères.</p>
             </div>
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault()
-                setSuccessBanner(true)
-              }}
-            >
-              {['Mot de passe actuel', 'Nouveau mot de passe', 'Confirmer le nouveau mot de passe'].map((label) => (
-                <div key={label} className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">{label}</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••••••"
-                    className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md"
-                  />
-                </div>
-              ))}
-              <div className="pt-6 flex justify-end">
-                <button type="submit" className="px-8 py-3 bg-primary text-white rounded-lg text-label-lg hover:brightness-110 active:scale-95 transition-all">
+            <form className="space-y-4" onSubmit={handleChangePassword}>
+              <div className="space-y-1">
+                <label className="text-label-md text-on-surface-variant">Mot de passe actuel</label>
+                <input type="password" value={oldPwd} onChange={e => setOldPwd(e.target.value)} placeholder="••••••••••••" required
+                  className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-label-md text-on-surface-variant">Nouveau mot de passe</label>
+                <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="••••••••••••" required
+                  className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-label-md text-on-surface-variant">Confirmer le nouveau mot de passe</label>
+                <input type="password" value={confPwd} onChange={e => setConf(e.target.value)} placeholder="••••••••••••" required
+                  className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-all text-body-md ${
+                    confPwd && confPwd !== newPwd ? 'border-error focus:border-error focus:ring-error/20' : 'border-[#e8e8f0] focus:border-primary focus:ring-primary/20'
+                  }`} />
+                {confPwd && confPwd !== newPwd && <p className="text-error text-body-sm">Les mots de passe ne correspondent pas</p>}
+              </div>
+              <div className="pt-4 flex justify-end">
+                <button type="submit" disabled={pwdSaving || !oldPwd || !newPwd || !confPwd}
+                  className="px-8 py-3 bg-primary text-white rounded-lg text-label-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2">
+                  {pwdSaving && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
                   Mettre à jour le mot de passe
                 </button>
               </div>
             </form>
           </section>
-
-          <section className="bg-white border border-[#e8e8f0] rounded-lg p-6 max-w-2xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h5 className="text-label-lg text-on-surface">Double Authentification (2FA)</h5>
-                <p className="text-body-sm text-on-surface-variant">
-                  Ajoutez une couche de sécurité supplémentaire à votre compte.
-                </p>
-              </div>
-              <Toggle />
-            </div>
-          </section>
         </div>
       )}
 
-      {/* Tab: Notifications */}
+      {/* ── Notifications ───────────────────────────────────────────────── */}
       {tab === 'notifications' && (
         <div className="space-y-6">
           <section className="bg-white border border-[#e8e8f0] rounded-lg overflow-hidden">
             <div className="p-6 border-b border-[#e8e8f0] flex justify-between items-center">
               <div>
                 <h5 className="text-headline-md">Mes notifications</h5>
-                <p className="text-on-surface-variant text-body-sm">
-                  Consultez l'historique de vos alertes et messages club.
-                </p>
+                <p className="text-on-surface-variant text-body-sm">Alertes et messages de votre club.</p>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 text-primary hover:bg-primary/5 rounded-lg text-label-md transition-colors">
-                <span className="material-symbols-outlined text-[18px]">done_all</span>
-                Tout marquer lu
-              </button>
+              {notifs.some(n => !n.lu) && (
+                <button onClick={markAllRead}
+                  className="flex items-center gap-2 px-4 py-2 text-primary hover:bg-primary/5 rounded-lg text-label-md transition-colors">
+                  <span className="material-symbols-outlined text-[18px]">done_all</span>
+                  Tout marquer lu
+                </button>
+              )}
             </div>
-            <div className="divide-y divide-[#e8e8f0]">
-              {notifs.map((n) => (
-                <div
-                  key={n.id}
-                  className={`p-6 flex gap-4 transition-colors cursor-pointer ${
-                    !n.read ? 'bg-[#f0f7f4] hover:bg-primary/5' : 'bg-white hover:bg-surface-container-low opacity-80'
-                  }`}
-                >
-                  <div
-                    className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                      !n.read ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined">{n.icon}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <h6 className="text-label-lg text-on-surface">{n.title}</h6>
-                      {!n.read ? (
-                        <span className="text-xs font-semibold text-primary uppercase tracking-wider">Nouveau</span>
-                      ) : (
-                        <span className="text-xs font-medium text-on-surface-variant">Lu</span>
-                      )}
+            {notifsLoad ? (
+              <div className="p-6 space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 bg-surface-container-low rounded-xl animate-pulse" />)}</div>
+            ) : notifs.length === 0 ? (
+              <div className="py-16 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">notifications_off</span>
+                <p className="text-body-md">Aucune notification pour le moment.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#e8e8f0]">
+                {notifs.map(n => (
+                  <div key={n.id}
+                    className={`p-5 flex gap-4 transition-colors cursor-pointer ${!n.lu ? 'bg-[#f0f7f4] hover:bg-primary/5' : 'bg-white hover:bg-surface-container-low opacity-80'}`}>
+                    <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${!n.lu ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'}`}>
+                      <span className="material-symbols-outlined">notifications</span>
                     </div>
-                    <p className="text-on-surface-variant text-body-md mb-2">{n.body}</p>
-                    <p className="text-[11px] text-on-surface-variant/60 font-medium">{n.time}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <h6 className="text-label-lg text-on-surface">{n.titre}</h6>
+                        {!n.lu ? (
+                          <span className="text-xs font-semibold text-primary uppercase tracking-wider">Nouveau</span>
+                        ) : (
+                          <span className="text-xs font-medium text-on-surface-variant">Lu</span>
+                        )}
+                      </div>
+                      <p className="text-on-surface-variant text-body-md mb-1">{n.contenu}</p>
+                      <p className="text-[11px] text-on-surface-variant/60 font-medium">
+                        {new Date(n.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <div className="p-4 bg-surface-container-low flex justify-center">
-              <button className="text-on-surface-variant text-label-md hover:text-primary transition-colors">
-                Afficher les notifications plus anciennes
-              </button>
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
       )}
     </div>
-  )
-}
-
-function Toggle() {
-  const [on, setOn] = useState(false)
-  return (
-    <button
-      onClick={() => setOn(!on)}
-      className={`relative inline-block w-12 h-6 rounded-full transition-colors ${on ? 'bg-primary' : 'bg-surface-container-highest'}`}
-    >
-      <div
-        className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${on ? 'left-7' : 'left-1'}`}
-      />
-    </button>
   )
 }
