@@ -31,8 +31,15 @@ export default function DashboardPage() {
           api.get('/profil/notifications?limit=3').catch(() => null),
         ])
         if (sRes)  setStats(sRes.data.data)
-        if (mRes)  setEvents(mRes.data.data || [])
-        if (nRes)  setNotifs(nRes.data.data || [])
+        if (mRes) {
+          const md = mRes.data.data
+          setEvents(Array.isArray(md) ? md : (md?.rows ?? md?.matchs ?? []))
+        }
+        if (nRes) {
+          const nd = nRes.data.data
+          // Le controller renvoie { notifications: [...], non_lues: N }
+          setNotifs(Array.isArray(nd) ? nd : (nd?.notifications ?? []))
+        }
       } finally {
         setLoading(false)
       }

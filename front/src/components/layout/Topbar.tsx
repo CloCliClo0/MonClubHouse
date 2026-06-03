@@ -19,7 +19,12 @@ export default function Topbar() {
 
   const loadNotifs = () => {
     api.get('/profil/notifications?limit=5&lu=false')
-      .then(r => setNotifs(r.data.data || []))
+      .then(r => {
+        const d = r.data.data
+        // Le controller renvoie { notifications: [...], non_lues: N } ou directement []
+        const list = Array.isArray(d) ? d : (d?.notifications ?? [])
+        setNotifs(list)
+      })
       .catch(() => {})
   }
 
