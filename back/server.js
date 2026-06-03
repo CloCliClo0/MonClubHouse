@@ -36,7 +36,13 @@ const server = http.createServer(app);
 // Socket.io
 const io = new Server(server, {
   cors: {
-    origin: process.env.SOCKET_CORS_ORIGIN || 'https://monclubhouse.fr',
+    origin: [
+      'https://monclubhouse.fr',
+      'http://monclubhouse.fr',
+      'https://www.monclubhouse.fr',
+      'http://localhost:5173',
+      ...(process.env.SOCKET_CORS_ORIGIN ? [process.env.SOCKET_CORS_ORIGIN] : []),
+    ],
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -57,17 +63,33 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-      connectSrc: ["'self'", 'wss://monclubhouse.fr', 'https://monclubhouse.fr']
+      connectSrc: ["'self'", 'wss://monclubhouse.fr', 'https://monclubhouse.fr', 'ws://monclubhouse.fr', 'http://monclubhouse.fr']
     }
   }
 }));
 
+// Accepte HTTP et HTTPS, et les deux sous-domaines courants
+const allowedOrigins = [
+  'https://monclubhouse.fr',
+  'http://monclubhouse.fr',
+  'https://www.monclubhouse.fr',
+  'http://www.monclubhouse.fr',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  ...(process.env.APP_URL ? [process.env.APP_URL] : []),
+];
 app.use(cors({
-  origin: process.env.APP_URL || 'https://monclubhouse.fr',
+  origin: (origin, callback) => {
+    // Autorise les requêtes sans origin (mobile, curl, Postman) et les origins connues
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(null, true); // En prod Hostinger on accepte tout (nginx filtre déjà)
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+// Répond immédiatement aux preflight OPTIONS
+app.options('*', cors());
 
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
@@ -103,6 +125,17 @@ app.use('/auth', authRoutes);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', app: process.env.APP_NAME, env: process.env.NODE_ENV });
+});
+
+// Diagnostic API — teste DB + retourne les infos de connexion
+app.get('/api/ping', async (req, res) => {
+  const { sequelize } = require('./models');
+  try {
+    await sequelize.authenticate();
+    res.json({ success: true, db: 'connected', env: process.env.NODE_ENV });
+  } catch (e) {
+    res.status(503).json({ success: false, db: 'error', message: e.message });
+  }
 });
 
 // SPA fallback
