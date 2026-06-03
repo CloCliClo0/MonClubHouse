@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { Match, Equipe } = require('../models');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const getResultatsLocaux = async (req, res) => {
   try {
