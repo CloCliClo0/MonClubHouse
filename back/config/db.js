@@ -1,14 +1,32 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
-// Sur Hostinger, MySQL écoute via socket Unix — on évite TCP/IP (127.0.0.1)
-// qui nécessite des droits distincts. Le socket bypasse ce problème.
-const SOCKET_PATH = process.env.DB_SOCKET || '/var/lib/mysql/mysql.sock';
-const USE_SOCKET  = !process.env.DB_HOST || process.env.DB_HOST === 'localhost';
+// Hostinger héberge MySQL via socket Unix — on évite la connexion TCP
+// qui est refusée depuis 127.0.0.1 par les droits du user MySQL.
+// Ordre de priorité pour le socket :
+//   1. DB_SOCKET (variable d'env personnalisée)
+//   2. /var/run/mysqld/mysqld.sock  (Ubuntu/Debian — Hostinger standard)
+//   3. /tmp/mysql.sock              (fallback)
+const { existsSync } = require('fs');
+
+function resolveSocket() {
+  if (process.env.DB_SOCKET) return process.env.DB_SOCKET;
+  const candidates = [
+    '/var/run/mysqld/mysqld.sock',
+    '/tmp/mysql.sock',
+    '/var/lib/mysql/mysql.sock',
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+const socketPath = resolveSocket();
 
 const sequelizeOptions = {
   dialect: 'mysql',
-  logging: process.env.NODE_ENV === 'development' ? console.log : false,
+  logging: false,
   pool: { max: 10, min: 0, acquire: 30000, idle: 10000 },
   define: {
     timestamps: true,
@@ -18,12 +36,12 @@ const sequelizeOptions = {
   },
 };
 
-if (USE_SOCKET) {
-  // Connexion par socket Unix (Hostinger shared hosting)
-  sequelizeOptions.dialectOptions = { socketPath: SOCKET_PATH };
+if (socketPath) {
+  console.log(`[DB] Connexion via socket : ${socketPath}`);
+  sequelizeOptions.dialectOptions = { socketPath };
 } else {
-  // Connexion TCP (ex: 127.0.0.1 ou hôte distant)
-  sequelizeOptions.host = process.env.DB_HOST;
+  console.log(`[DB] Connexion via TCP : ${process.env.DB_HOST}:${process.env.DB_PORT || 3306}`);
+  sequelizeOptions.host = process.env.DB_HOST || 'localhost';
   sequelizeOptions.port = parseInt(process.env.DB_PORT || '3306');
 }
 

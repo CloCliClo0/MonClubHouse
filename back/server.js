@@ -54,6 +54,9 @@ require('./sockets/chatSocket')(io);
 // Rendre io accessible dans les controllers
 app.set('io', io);
 
+// Hostinger utilise un reverse proxy — nécessaire pour rate-limit et IP réelle
+app.set('trust proxy', 1);
+
 // Middlewares globaux
 app.use(helmet({
   contentSecurityPolicy: {
