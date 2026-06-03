@@ -24,23 +24,29 @@ export default function JoinPage() {
     setError('')
     setLoading(true)
     try {
-      const res = await api.post('/codes/validate', { code: code.trim().toUpperCase() })
-      const data = res.data.data
+      // Valider le code (GET) pour prévisualiser
+      const previewRes = await api.get(`/clubs/codes/validate/${code.trim().toUpperCase()}`)
+      const data = previewRes.data.data
+
+      // Rejoindre effectivement le club
+      await api.post('/clubs/join', { code: code.trim().toUpperCase() })
       setJoinInfo(data)
       localStorage.setItem('role', data.role)
 
       if (data.role === 'parent') {
-        // Charger les joueurs du club pour lier à un enfant
         setStep('child')
         setLoadingPlayers(true)
-        const pRes = await api.get('/codes/club-players')
+        const pRes = await api.get('/clubs/players')
         setPlayers(pRes.data.data || [])
         setLoadingPlayers(false)
       } else {
         setStep('done')
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Code invalide ou expiré')
+      const status = err.response?.status
+      if (status === 404) setError('Code invalide ou inexistant.')
+      else if (status === 410) setError('Code expiré ou quota atteint.')
+      else setError(err.response?.data?.message || 'Code invalide ou expiré')
     } finally {
       setLoading(false)
     }
@@ -51,7 +57,7 @@ export default function JoinPage() {
     setLoading(true)
     setError('')
     try {
-      await api.post('/codes/link-child', { child_user_id: selectedChild })
+      await api.post('/clubs/link-child', { child_user_id: selectedChild })
       setStep('done')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de la liaison')

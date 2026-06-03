@@ -6,7 +6,7 @@ const InviteCode = sequelize.define('InviteCode', {
   code:       { type: DataTypes.STRING(30), allowNull: false, unique: true },
   equipe_id:  { type: DataTypes.INTEGER, allowNull: false },
   club_id:    { type: DataTypes.INTEGER, allowNull: false },
-  role:       { type: DataTypes.ENUM('joueur', 'parent'), defaultValue: 'joueur' },
+  role:       { type: DataTypes.ENUM('joueur','parent','coach','dirigeant'), defaultValue: 'joueur' },
   label:      { type: DataTypes.STRING(100), allowNull: true },
   created_by: { type: DataTypes.INTEGER, allowNull: true },
   max_uses:   { type: DataTypes.INTEGER, defaultValue: 50 },

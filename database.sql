@@ -293,7 +293,7 @@ CREATE TABLE IF NOT EXISTS `invite_codes` (
   `code`        VARCHAR(30) NOT NULL,
   `equipe_id`   INT         NOT NULL,
   `club_id`     INT         NOT NULL,
-  `role`        ENUM('joueur','parent') NOT NULL DEFAULT 'joueur',
+  `role`        ENUM('joueur','parent','coach','dirigeant') NOT NULL DEFAULT 'joueur',
   `label`       VARCHAR(100) DEFAULT NULL,
   `created_by`  INT         DEFAULT NULL,
   `max_uses`    INT         DEFAULT 50,
@@ -319,11 +319,11 @@ INSERT INTO `users`
   (`nom`, `prenom`, `email`, `password_hash`, `role`, `actif`, `created_at`, `updated_at`)
 VALUES
   ('Delaunay', 'Hugo', 'hugo22042006@gmail.com',
-   '$2a$12$nE4pdIlS3q.llAEwGPfA3ubv1VzjbfXQj3pqKNM7zEB4W0iHboXbG',
+   '$2a$12$7yNUiidpsGtQDkJ3pRzouOeslMzYCdfCYhDPC4k1LE1SmzFnSf/sG',
    'superadmin', 1, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
   `role`          = 'superadmin',
-  `password_hash` = '$2a$12$nE4pdIlS3q.llAEwGPfA3ubv1VzjbfXQj3pqKNM7zEB4W0iHboXbG',
+  `password_hash` = '$2a$12$7yNUiidpsGtQDkJ3pRzouOeslMzYCdfCYhDPC4k1LE1SmzFnSf/sG',
   `updated_at`    = NOW();
 
 

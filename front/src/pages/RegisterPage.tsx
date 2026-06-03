@@ -119,8 +119,9 @@ export default function RegisterPage() {
                 id="role" required value={form.role} onChange={e => set('role', e.target.value)}
               >
                 <option value="joueur">Joueur</option>
-                <option value="parent">Parent</option>
-                <option value="visiteur">Visiteur</option>
+                <option value="parent">Parent / Tuteur</option>
+                <option value="coach">Coach (code requis)</option>
+                <option value="dirigeant">Dirigeant (code requis)</option>
               </select>
               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
                 <span className="material-symbols-outlined">expand_more</span>

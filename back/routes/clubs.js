@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { getAll, getById, create, update, uploadLogo } = require('../controllers/clubController');
+const { validateCode, joinByCode, listCodes, createCode, deleteCode, getClubPlayers, linkChild } = require('../controllers/inviteCodeController');
 const { authenticate } = require('../middlewares/auth');
 const { requireMinRole } = require('../middlewares/rbac');
 const { validateClub } = require('../middlewares/validation');
@@ -22,10 +23,26 @@ const upload = multer({
   }
 });
 
+// Public: validate a code before joining
+router.get('/codes/validate/:code', validateCode);
+
+// Authenticated: join club using a code
+router.post('/join', authenticate, joinByCode);
+
+// Parent: list players to link child
+router.get('/players', authenticate, getClubPlayers);
+router.post('/link-child', authenticate, linkChild);
+
+// Admin/Dirigeant: manage codes
+router.get('/codes', authenticate, listCodes);
+router.post('/codes', authenticate, requireMinRole('dirigeant'), createCode);
+router.delete('/codes/:id', authenticate, requireMinRole('dirigeant'), deleteCode);
+
 router.get('/', getAll);
 router.get('/:id', getById);
 router.post('/', authenticate, requireMinRole('admin'), validateClub, create);
 router.put('/:id', authenticate, requireMinRole('admin'), update);
+router.patch('/:id', authenticate, requireMinRole('admin'), update);
 router.post('/:id/logo', authenticate, requireMinRole('admin'), upload.single('logo'), uploadLogo);
 
 module.exports = router;
