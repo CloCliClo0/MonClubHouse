@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS `SequelizeMeta` (
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `SequelizeMeta` (`name`) VALUES
+INSERT IGNORE INTO `SequelizeMeta` (`name`) VALUES
 ('001_create_clubs.js'),
 ('002_create_users.js'),
 ('003_create_sports_terrains.js'),
