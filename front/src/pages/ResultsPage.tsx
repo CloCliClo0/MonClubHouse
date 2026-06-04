@@ -28,7 +28,7 @@ type Standing = {
   current: boolean
 }
 
-const CATEGORIES = ['Tous', 'Seniors A', 'Seniors B', 'U19', 'U17', 'U15', 'U13', 'Féminines A']
+const MATCH_TYPES = ['match', 'amical', 'coupe', 'tournoi']
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
@@ -52,12 +52,17 @@ export default function ResultsPage() {
   const [tab, setTab]             = useState<'resultats' | 'classement'>('resultats')
 
   useEffect(() => {
-    api.get('/matchs').then(r => setMatches(r.data.data || [])).catch(() => setMatches([]))
+    api.get('/matchs')
+      .then(r => setMatches((r.data.data || []).filter((m: Match) => MATCH_TYPES.includes(m.type))))
+      .catch(() => setMatches([]))
     api.get('/resultats').then(r => setStandings(r.data.data || [])).catch(() => setStandings([])).finally(() => setLoading(false))
   }, [])
 
+  // Catégories dynamiques depuis les matchs réels
+  const categories = ['Tous', ...Array.from(new Set(matches.map(m => m.equipe?.categorie).filter(Boolean)))]
+
   const filtered = matches.filter(m =>
-    cat === 'Tous' || m.equipe?.categorie === cat || m.equipe?.nom?.includes(cat)
+    cat === 'Tous' || m.equipe?.categorie === cat
   )
 
   const played   = filtered.filter(m => m.statut === 'termine')
@@ -92,7 +97,7 @@ export default function ResultsPage() {
 
       {/* Catégories */}
       <div className="flex gap-2 flex-wrap mb-5">
-        {CATEGORIES.map(c => (
+        {categories.map(c => (
           <button key={c} onClick={() => setCat(c)}
             className={`px-4 py-2 rounded-full text-label-md font-semibold transition-all ${
               cat === c ? 'bg-primary text-white shadow-sm' : 'bg-white border border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
@@ -157,7 +162,7 @@ export default function ResultsPage() {
                           <span className="text-label-md text-on-surface-variant">{m.championnat || m.equipe?.categorie}</span>
                           <span className="text-on-surface-variant/40">•</span>
                           <span className="text-label-md text-on-surface-variant">
-                            {new Date(m.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            {(() => { const d = new Date((m.date||'').replace(' ','T')); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) })()}
                           </span>
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                             m.domicile_exterieur === 'domicile' ? 'bg-primary/10 text-primary' : 'bg-surface-container text-on-surface-variant'

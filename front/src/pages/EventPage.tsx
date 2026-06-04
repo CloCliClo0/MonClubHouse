@@ -58,8 +58,17 @@ export default function EventPage() {
 
   const [event, setEvent]     = useState<MatchEvent | null>(null)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab]         = useState<'presences' | 'resultat'>('presences')
+  const [tab, setTab]         = useState<'presences' | 'resultat' | 'modifier'>('presences')
   const [responding, setResponding] = useState(false)
+  const [deleting, setDeleting]     = useState(false)
+
+  // Formulaire d'édition
+  const [editForm, setEditForm]   = useState<{ date: string; heure: string; terrain_id: string; adversaire: string; notes: string }>({
+    date: '', heure: '', terrain_id: '', adversaire: '', notes: ''
+  })
+  const [terrains, setTerrains]   = useState<{ id: number; nom: string }[]>([])
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editMsg, setEditMsg]       = useState('')
 
   // Score edit (coach/dirigeant)
   const [scoreHome, setScoreHome] = useState<number | null>(null)
@@ -81,6 +90,26 @@ export default function EventPage() {
 
   useEffect(() => { load() }, [id])
 
+  // Charger les terrains pour le formulaire d'édition
+  useEffect(() => {
+    if (isCoachOrMore) {
+      api.get('/clubs/terrains').then(r => setTerrains(r.data.data || [])).catch(() => {})
+    }
+  }, [])
+
+  // Synchroniser le formulaire d'édition quand l'event est chargé
+  useEffect(() => {
+    if (!event) return
+    const dt = new Date((event.date || '').replace(' ', 'T'))
+    setEditForm({
+      date:       isNaN(dt.getTime()) ? '' : dt.toISOString().slice(0, 10),
+      heure:      isNaN(dt.getTime()) ? '' : dt.toTimeString().slice(0, 5),
+      terrain_id: String(event.terrain ? (event as any).terrain_id ?? '' : ''),
+      adversaire: event.adversaire || '',
+      notes:      event.notes || '',
+    })
+  }, [event])
+
   // Ma propre convocation (joueur/parent)
   const myConvoc = event?.convocations.find(c => c.joueur?.id === userId)
 
@@ -97,6 +126,40 @@ export default function EventPage() {
   const updatePlayerStatut = async (convocId: number, joueurId: number, statut: string) => {
     await api.patch(`/matchs/${id}/reponse`, { statut, joueur_id: joueurId }).catch(() => {})
     load()
+  }
+
+  const deleteEvent = async () => {
+    if (!confirm('Supprimer cet événement ? Cette action est irréversible.')) return
+    setDeleting(true)
+    try {
+      await api.patch(`/matchs/${id}/disable`)
+      navigate('/calendrier')
+    } catch {
+      alert('Erreur lors de la suppression')
+      setDeleting(false)
+    }
+  }
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingEdit(true)
+    setEditMsg('')
+    try {
+      const payload: Record<string, any> = {
+        date:      `${editForm.date}T${editForm.heure}:00`,
+        adversaire: editForm.adversaire || null,
+        notes:     editForm.notes || null,
+      }
+      if (editForm.terrain_id) payload.terrain_id = parseInt(editForm.terrain_id)
+      await api.put(`/matchs/${id}`, payload)
+      setEditMsg('Modifications enregistrées !')
+      setTimeout(() => setEditMsg(''), 2500)
+      load()
+    } catch {
+      setEditMsg('Erreur lors de la sauvegarde')
+    } finally {
+      setSavingEdit(false)
+    }
   }
 
   const saveScore = async () => {
@@ -129,8 +192,9 @@ export default function EventPage() {
 
   const info  = TYPE_INFO[event.type] ?? TYPE_INFO['autre']
   const isMatch = ['match', 'amical', 'coupe', 'tournoi'].includes(event.type)
-  const dateStr = new Date(event.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const timeStr = new Date(event.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const _dt    = new Date((event.date || '').replace(' ', 'T'))
+  const dateStr = isNaN(_dt.getTime()) ? '—' : _dt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const timeStr = isNaN(_dt.getTime()) ? '—' : _dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 
   const present   = event.convocations.filter(c => c.statut === 'present').length
   const absent    = event.convocations.filter(c => c.statut === 'absent').length
@@ -296,6 +360,20 @@ export default function EventPage() {
                 Résultat
               </button>
             )}
+            <button onClick={() => setTab('modifier')}
+              className={`flex items-center gap-2 px-5 py-3 text-label-lg transition-all ${tab === 'modifier' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'}`}>
+              <span className="material-symbols-outlined text-[18px]">edit</span>
+              Modifier
+            </button>
+            {/* Bouton supprimer */}
+            <button
+              onClick={deleteEvent}
+              disabled={deleting}
+              className="ml-auto flex items-center gap-1.5 px-3 py-2 text-error hover:bg-red-50 rounded-lg text-label-md transition-colors disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+              <span className="hidden sm:inline">Supprimer</span>
+            </button>
           </div>
 
           {/* Présences */}
@@ -363,6 +441,60 @@ export default function EventPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Modifier */}
+          {tab === 'modifier' && (
+            <div className="bg-white border border-[#e8e8f0] rounded-2xl p-6">
+              <form onSubmit={saveEdit} className="space-y-4 max-w-lg">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-label-md text-on-surface-variant">Date *</label>
+                    <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} required
+                      className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-label-md text-on-surface-variant">Heure *</label>
+                    <input type="time" value={editForm.heure} onChange={e => setEditForm(f => ({ ...f, heure: e.target.value }))} required
+                      className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Terrain</label>
+                  <select value={editForm.terrain_id} onChange={e => setEditForm(f => ({ ...f, terrain_id: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary bg-white">
+                    <option value="">Aucun terrain</option>
+                    {terrains.map(t => <option key={t.id} value={t.id}>{t.nom}</option>)}
+                  </select>
+                </div>
+
+                {isMatch && (
+                  <div className="space-y-1.5">
+                    <label className="text-label-md text-on-surface-variant">Adversaire</label>
+                    <input type="text" value={editForm.adversaire} onChange={e => setEditForm(f => ({ ...f, adversaire: e.target.value }))}
+                      placeholder="Ex : Red Star FC"
+                      className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Instructions / Notes</label>
+                  <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={3}
+                    placeholder="Consignes pour les joueurs…"
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary resize-none" />
+                </div>
+
+                <div className="flex items-center gap-4 pt-1">
+                  <button type="submit" disabled={savingEdit}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-label-lg hover:bg-primary-container disabled:opacity-50 transition-colors">
+                    {savingEdit ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <span className="material-symbols-outlined text-[18px]">save</span>}
+                    Enregistrer
+                  </button>
+                  {editMsg && <p className={`text-body-md ${editMsg.includes('Erreur') ? 'text-error' : 'text-green-600'}`}>{editMsg}</p>}
+                </div>
+              </form>
             </div>
           )}
 

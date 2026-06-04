@@ -79,8 +79,9 @@ export default function MatchDetailPage() {
   )
   if (!match) return null
 
-  const dateStr  = new Date(match.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const timeStr  = new Date(match.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const _d       = new Date((match.date || '').replace(' ', 'T'))
+  const dateStr  = isNaN(_d.getTime()) ? '—' : _d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const timeStr  = isNaN(_d.getTime()) ? '—' : _d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   const isMatch  = ['match', 'amical', 'coupe', 'tournoi'].includes(match.type)
   const present  = match.convocations.filter(c => c.statut === 'present').length
 
