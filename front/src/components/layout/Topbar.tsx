@@ -105,17 +105,28 @@ export default function Topbar({ onMenuToggle }: Props) {
           <span className="font-semibold">{lang === 'fr' ? 'EN' : 'FR'}</span>
         </button>
 
-        {/* Bouton installer l'app — visible uniquement si le navigateur propose l'install */}
-        {installPrompt && !installed && (
-          <button
-            onClick={handleInstall}
-            title="Install app"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-label-md transition-colors mr-1"
-          >
-            <span className="material-symbols-outlined text-[18px]">install_mobile</span>
-            <span className="hidden md:inline">{lang === 'fr' ? 'Installer' : 'Install'}</span>
-          </button>
-        )}
+        {/* Bouton installer l'app — toujours visible */}
+        <button
+          onClick={handleInstall}
+          disabled={!installPrompt || installed}
+          title={installed ? (lang === 'fr' ? 'Application installée' : 'App installed') : (lang === 'fr' ? "Installer l'application" : 'Install app')}
+          className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-label-md transition-colors mr-1 ${
+            installed
+              ? 'bg-green-50 text-green-600 cursor-default'
+              : installPrompt
+              ? 'bg-primary/10 hover:bg-primary/20 text-primary cursor-pointer'
+              : 'bg-surface-container-low text-on-surface-variant/50 cursor-default'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">
+            {installed ? 'check_circle' : 'install_mobile'}
+          </span>
+          <span className="hidden md:inline">
+            {installed
+              ? (lang === 'fr' ? 'Installée' : 'Installed')
+              : (lang === 'fr' ? 'Installer' : 'Install')}
+          </span>
+        </button>
 
         <div className="flex items-center gap-1 lg:gap-2 border-r border-outline-variant pr-3 lg:pr-6">
 
