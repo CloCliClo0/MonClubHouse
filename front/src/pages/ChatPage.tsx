@@ -267,7 +267,10 @@ export default function ChatPage() {
                           <MessageContent contenu={msg.contenu} mine={msg.mine} />
                         </div>
                         <span className={`text-[10px] text-on-surface-variant/60 mt-1 ${msg.mine ? 'mr-1' : 'ml-1'}`}>
-                          {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          {(() => {
+                            const d = new Date((msg.created_at || '').replace(' ', 'T'))
+                            return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                          })()}
                         </span>
                       </div>
                     </div>

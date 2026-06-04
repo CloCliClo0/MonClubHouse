@@ -31,7 +31,7 @@ export default function MatchDetailPage() {
 
   const [match, setMatch]     = useState<Match | null>(null)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab]         = useState<'presences' | 'score'>('score')
+  const [tab, setTab]         = useState<'presences' | 'score'>('presences')
 
   const [scoreHome, setScoreHome] = useState<number>(0)
   const [scoreAway, setScoreAway] = useState<number>(0)
@@ -178,8 +178,8 @@ export default function MatchDetailPage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-surface-container-low rounded-xl p-1 mb-5">
         {[
-          { key: 'score',     label: 'Score & Résultat', icon: 'scoreboard'   },
-          { key: 'presences', label: 'Présences',         icon: 'how_to_reg'   },
+          ...(isMatch ? [{ key: 'score', label: 'Score & Résultat', icon: 'scoreboard' }] : []),
+          { key: 'presences', label: 'Présences', icon: 'how_to_reg' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-label-md font-semibold transition-all ${

@@ -37,30 +37,28 @@ export default function CreateEventPage() {
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState('')
 
-  const [equipes, setEquipes]   = useState<Equipe[]>([])
-  const [terrains, setTerrains] = useState<Terrain[]>([])
+  const [equipes, setEquipes]       = useState<Equipe[]>([])
+  const [terrains, setTerrains]     = useState<Terrain[]>([])
+  const [adversaires, setAdversaires] = useState<{ id: number; nom: string }[]>([])
 
   useEffect(() => {
     api.get('/equipes').then(r => {
       const list: Equipe[] = r.data.data || []
-      // Pour un coach, pré-sélectionner son équipe
       if (role === 'coach' && userId) {
-        api.get('/equipes').then(er => {
-          const all: any[] = er.data.data || []
-          const mine = all.find(e => e.coach_id === userId)
-          if (mine) setEquipeId(String(mine.id))
-        }).catch(() => {})
+        const mine = list.find((e: any) => e.coach_id === userId)
+        if (mine) setEquipeId(String(mine.id))
       }
       setEquipes(list)
     }).catch(() => {})
 
     api.get('/clubs/terrains').then(r => setTerrains(r.data.data || [])).catch(() => {})
+    api.get('/adversaires').then(r => setAdversaires(r.data.data || [])).catch(() => {})
   }, [])
 
   const canNext = () => {
     if (step === 1) return !!type
     if (step === 2) return !!equipeId && !!date && !!heure
-    if (step === 3) return type !== 'match' || !!adversaire
+    if (step === 3) return !(['match','coupe'].includes(type || '')) || (!!adversaire && adversaire !== '__autre__')
     return true
   }
 
@@ -235,13 +233,41 @@ export default function CreateEventPage() {
               {type === 'match' ? 'Détails du match' : type === 'tournoi' ? 'Détails du tournoi' : 'Détails de l\'événement'}
             </h3>
 
-            {(type === 'match' || type === 'tournoi' || type === 'plateau') && (
+            {(type === 'match' || type === 'amical' || type === 'tournoi' || type === 'plateau' || type === 'coupe') && (
               <>
                 <div className="space-y-1.5">
-                  <label className="text-label-md text-on-surface-variant">Adversaire {type === 'match' ? '*' : ''}</label>
-                  <input type="text" value={adversaire} onChange={e => setAdversaire(e.target.value)}
-                    placeholder="Ex : Red Star FC"
-                    className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                  <label className="text-label-md text-on-surface-variant">
+                    Adversaire {(type === 'match' || type === 'coupe') ? '*' : ''}
+                  </label>
+
+                  {/* Match officiel / coupe : select depuis les adversaires connus */}
+                  {(type === 'match' || type === 'coupe') ? (
+                    <div className="relative">
+                      <select
+                        value={adversaire}
+                        onChange={e => setAdversaire(e.target.value)}
+                        className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10 bg-white"
+                      >
+                        <option value="">Sélectionner un adversaire</option>
+                        {adversaires.map(a => (
+                          <option key={a.id} value={a.nom}>{a.nom}</option>
+                        ))}
+                        <option value="__autre__">Autre (saisie libre)…</option>
+                      </select>
+                      <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+                    </div>
+                  ) : null}
+
+                  {/* Si "Autre" sélectionné dans le select, ou amical/tournoi/plateau : texte libre */}
+                  {(type === 'amical' || type === 'tournoi' || type === 'plateau' || adversaire === '__autre__') && (
+                    <input
+                      type="text"
+                      value={adversaire === '__autre__' ? '' : adversaire}
+                      onChange={e => setAdversaire(e.target.value)}
+                      placeholder="Ex : Red Star FC"
+                      className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all mt-2"
+                    />
+                  )}
                 </div>
 
                 {type === 'match' && (
@@ -301,7 +327,7 @@ export default function CreateEventPage() {
                 { icon: 'calendar_today', label: 'Date', val: date ? new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—' },
                 { icon: 'schedule', label: 'Heure', val: heure || '—' },
                 { icon: 'location_on', label: 'Terrain', val: terrains.find(t => String(t.id) === terrainId)?.nom || 'Non précisé' },
-                adversaire ? { icon: 'sports_soccer', label: 'Adversaire', val: `vs ${adversaire}` } : null,
+                (adversaire && adversaire !== '__autre__') ? { icon: 'sports_soccer', label: 'Adversaire', val: `vs ${adversaire}` } : null,
                 competition ? { icon: 'emoji_events', label: 'Compétition', val: competition } : null,
               ].filter(Boolean).map((item: any, i) => (
                 <div key={i} className="flex items-center gap-3">
