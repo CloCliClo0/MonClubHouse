@@ -24,14 +24,14 @@ const validateClub = [
 const validateEquipe = [
   body('nom').trim().notEmpty().isLength({ max: 200 }).withMessage('Nom requis'),
   body('categorie').notEmpty().withMessage('Catégorie requise'),
-  body('sport_id').isInt({ min: 1 }).withMessage('Sport requis'),
-  body('genre').isIn(['masculin', 'feminin', 'mixte', 'handisport']).withMessage('Genre invalide')
+  body('sport_id').optional().isInt({ min: 1 }).withMessage('Sport invalide'),
+  body('genre').optional().isIn(['masculin', 'feminin', 'mixte', 'handisport']).withMessage('Genre invalide')
 ];
 
 const validateMatch = [
   body('equipe_id').isInt({ min: 1 }).withMessage('Équipe requise'),
   body('date').isISO8601().withMessage('Date invalide'),
-  body('type').isIn(['match', 'entrainement', 'tournoi', 'amical', 'coupe']).withMessage('Type invalide')
+  body('type').isIn(['match', 'entrainement', 'tournoi', 'amical', 'coupe', 'plateau', 'reunion', 'autre']).withMessage('Type invalide')
 ];
 
 const validateMessage = [

@@ -42,7 +42,14 @@ const create = async (req, res) => {
 
   try {
     const data = { ...req.body };
+    // Injecter club_id depuis l'utilisateur si non fourni
     if (!data.club_id && req.user.club_id) data.club_id = req.user.club_id;
+    // Résoudre sport_id : prendre le premier sport disponible si absent
+    if (!data.sport_id) {
+      const defaultSport = await Sport.findOne({ order: [['id', 'ASC']] });
+      if (!defaultSport) return res.status(400).json({ success: false, message: 'Aucun sport configuré — ajoutez-en un d\'abord.' });
+      data.sport_id = defaultSport.id;
+    }
 
     const equipe = await Equipe.create(data);
     return res.status(201).json({ success: true, data: equipe });
