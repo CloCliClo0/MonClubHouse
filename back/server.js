@@ -191,11 +191,22 @@ server.listen(PORT, () => {
   console.log(`[Server] URL: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
 });
 
+const runMigrations = async () => {
+  try {
+    // Rend equipe_id nullable (codes dirigeant sans équipe)
+    await sequelize.query('ALTER TABLE invite_codes MODIFY COLUMN equipe_id INT NULL;');
+    console.log('[Migration] invite_codes.equipe_id → nullable');
+  } catch (e) {
+    // Déjà nullable ou table inexistante — silencieux
+  }
+};
+
 const connectDB = async (retries = 10, delay = 5000) => {
   for (let i = 1; i <= retries; i++) {
     try {
       await sequelize.authenticate();
       console.log('[DB] Connexion MySQL réussie');
+      await runMigrations();
       if (process.env.NODE_ENV === 'development') {
         await sequelize.sync({ alter: false });
         console.log('[DB] Modèles synchronisés');
