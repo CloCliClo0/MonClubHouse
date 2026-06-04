@@ -119,7 +119,7 @@ export default function AdminPage() {
   }
 
   const deleteCode = async (id: number) => {
-    await api.delete(`/codes/${id}`).catch(() => {})
+    await api.patch(`/codes/${id}/disable`).catch(() => {})
     loadCodes()
   }
 
@@ -189,7 +189,7 @@ export default function AdminPage() {
     if (modal.type !== 'delete') return
     setSaving(true)
     try {
-      await api.delete(`/admin/users/${modal.user.id}`)
+      await api.patch(`/admin/users/${modal.user.id}/actif`, { actif: false })
       load()
       setModal({ type: 'none' })
     } catch (e: any) {
@@ -690,7 +690,7 @@ export default function AdminPage() {
                             Membres
                           </button>
                           <button
-                            onClick={async () => { if (confirm(`Désactiver ${c.nom} ?`)) { await api.delete(`/clubs/${c.id}`).catch(() => {}); loadClubs() } }}
+                            onClick={async () => { if (confirm(`Désactiver ${c.nom} ?`)) { await api.patch(`/clubs/${c.id}/disable`).catch(() => {}); loadClubs() } }}
                             className="p-1.5 text-error hover:bg-red-50 rounded-lg transition-colors">
                             <span className="material-symbols-outlined text-[18px]">delete</span>
                           </button>

@@ -13,7 +13,7 @@ router.get('/:id', authenticate, getById);
 router.post('/', authenticate, requireMinRole('coach'), validateMatch, create);
 router.put('/:id', authenticate, requireMinRole('coach'), update);
 router.patch('/:id/score', authenticate, requireMinRole('dirigeant'), saisirScore);
-router.delete('/:id', authenticate, requireMinRole('dirigeant'), remove);
+router.patch('/:id/disable', authenticate, requireMinRole('dirigeant'), remove);
 
 // Convocations
 router.get('/:matchId/convocations', authenticate, getByMatch);

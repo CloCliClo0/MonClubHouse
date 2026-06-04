@@ -79,7 +79,7 @@ export default function ClubPage() {
   }
 
   const handleDeleteTerrain = async (id: number) => {
-    await api.delete(`/clubs/terrains/${id}`).catch(() => {})
+    await api.patch(`/clubs/terrains/${id}/disable`).catch(() => {})
     load()
     setDeleteConfirm(null)
   }

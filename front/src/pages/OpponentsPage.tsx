@@ -51,9 +51,8 @@ export default function OpponentsPage() {
     }
   }
 
-  const handleDelete = async (id: number) => {
-    await api.delete(`/adversaires/${id}`).catch(() => {})
-    load()
+  const handleDelete = async (_id: number) => {
+    // Les adversaires sont calculés depuis les matchs — suppression non applicable
     setDeleteConfirm(null)
   }
 

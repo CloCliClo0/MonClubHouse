@@ -12,7 +12,7 @@ const isAdmin = requireRole('superadmin', 'admin', 'dirigeant');
 // Admin : gestion des codes
 router.get('/',       authenticate, isAdmin, listCodes);
 router.post('/',      authenticate, isAdmin, createCode);
-router.delete('/:id', authenticate, isAdmin, deleteCode);
+router.patch('/:id/disable', authenticate, isAdmin, deleteCode);
 
 // Utilisateur : rejoindre avec un code
 router.post('/validate', authenticate, validateCode);

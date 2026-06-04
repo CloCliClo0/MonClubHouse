@@ -9,6 +9,6 @@ router.get('/', authenticate, getAll);
 router.get('/:id', authenticate, getById);
 router.post('/', authenticate, requireMinRole('dirigeant'), validateEquipe, create);
 router.put('/:id', authenticate, requireMinRole('dirigeant'), update);
-router.delete('/:id', authenticate, requireMinRole('admin'), remove);
+router.patch('/:id/disable', authenticate, requireMinRole('admin'), remove);
 
 module.exports = router;
