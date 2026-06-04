@@ -77,7 +77,10 @@ const createCode = async (req, res) => {
 // DELETE /api/codes/:id — désactiver un code
 const deleteCode = async (req, res) => {
   try {
-    const code = await InviteCode.findOne({ where: { id: req.params.id, club_id: req.user.club_id } });
+    const where = { id: req.params.id };
+    // Superadmin peut supprimer n'importe quel code ; les autres sont limités à leur club
+    if (req.user.role !== 'superadmin') where.club_id = req.user.club_id;
+    const code = await InviteCode.findOne({ where });
     if (!code) return res.status(404).json({ success: false, message: 'Code introuvable' });
     await code.update({ actif: false });
     return res.json({ success: true });
