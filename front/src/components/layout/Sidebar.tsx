@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { logout } from '../../services/auth'
 import Logo from '../Logo'
@@ -49,12 +50,31 @@ const NAV_BY_ROLE: Record<string, NavGroup[]> = {
   ],
 }
 
+const HELP_ITEMS = [
+  { path: '/aide/documentation', icon: 'menu_book',   label: 'Documentation'       },
+  { path: '/aide/support',       icon: 'headset_mic', label: 'Contacter le support' },
+  { path: '/aide/tutoriels',     icon: 'school',      label: 'Tutoriels'            },
+  { path: '/aide/raccourcis',    icon: 'keyboard',    label: 'Raccourcis clavier'   },
+]
+
 export default function Sidebar() {
   const navigate = useNavigate()
   const role = localStorage.getItem('role') || 'joueur'
   const groups = NAV_BY_ROLE[role] ?? NAV_BY_ROLE['joueur']
-
   const canCreateEvent = ['dirigeant', 'coach'].includes(role)
+
+  const [showHelp, setShowHelp] = useState(false)
+  const helpRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (helpRef.current && !helpRef.current.contains(e.target as Node)) {
+        setShowHelp(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[260px] bg-sidebar flex flex-col z-50">
@@ -110,18 +130,43 @@ export default function Sidebar() {
           </button>
         )}
 
-        {/* Aide & Ressources */}
-        <NavLink
-          to="/aide"
-          className={({ isActive }) =>
-            isActive
-              ? 'flex items-center gap-3 px-4 py-2.5 text-primary-fixed bg-primary/15 border-l-4 border-primary rounded-r-lg'
-              : 'flex items-center gap-3 px-4 py-2.5 text-white/50 hover:text-white transition-colors rounded-lg'
-          }
-        >
-          <span className="material-symbols-outlined text-[20px]">help</span>
-          <span className="text-body-md">Aide &amp; Ressources</span>
-        </NavLink>
+        {/* Aide & Ressources — popover */}
+        <div className="relative" ref={helpRef}>
+          {showHelp && (
+            <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-2xl shadow-2xl border border-[#e8e8f0] overflow-hidden z-50">
+              <div className="px-4 py-3 border-b border-[#e8e8f0]">
+                <p className="text-label-lg text-on-surface font-bold">Aide &amp; Ressources</p>
+              </div>
+              <div className="py-1">
+                {HELP_ITEMS.map(item => (
+                  <button
+                    key={item.path}
+                    onClick={() => { navigate(item.path); setShowHelp(false) }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-left"
+                  >
+                    <span className="material-symbols-outlined text-on-surface-variant text-[20px]">{item.icon}</span>
+                    <span className="text-body-md text-on-surface">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="px-4 py-2.5 border-t border-[#e8e8f0] text-center">
+                <p className="text-[11px] text-on-surface-variant">MonClubHouse v1.0</p>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setShowHelp(v => !v)}
+            className={`flex items-center gap-3 px-4 py-2.5 w-full transition-colors rounded-lg ${
+              showHelp ? 'text-white bg-white/10' : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">help</span>
+            <span className="text-body-md">Aide &amp; Ressources</span>
+            <span className={`material-symbols-outlined text-[16px] ml-auto transition-transform ${showHelp ? 'rotate-180' : ''}`}>
+              expand_more
+            </span>
+          </button>
+        </div>
 
         <NavLink
           to="/profil"
