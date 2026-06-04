@@ -2,15 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import { logout } from '../../services/auth'
+import { useLang } from '../../i18n/LangContext'
 
 type Notif = { id: number; titre: string; contenu: string; lu: boolean; created_at: string }
 
-const HELP_LINKS = [
-  { icon: 'menu_book',     label: 'Documentation',       path: '/aide/documentation' },
-  { icon: 'headset_mic',   label: 'Contacter le support', path: '/aide/support'       },
-  { icon: 'school',        label: 'Tutoriels',            path: '/aide/tutoriels'     },
-  { icon: 'keyboard',      label: 'Raccourcis clavier',   path: '/aide/raccourcis'    },
-]
+// Help links are built dynamically in the component using t
 
 interface Props { onMenuToggle: () => void }
 
@@ -25,6 +21,7 @@ export default function Topbar({ onMenuToggle }: Props) {
   const notifRef = useRef<HTMLDivElement>(null)
   const helpRef  = useRef<HTMLDivElement>(null)
 
+  const { lang, setLang, t } = useLang()
   const prenom = localStorage.getItem('prenom') || 'Utilisateur'
   const role   = localStorage.getItem('role')   || ''
 
@@ -98,15 +95,25 @@ export default function Topbar({ onMenuToggle }: Props) {
 
       {/* Droite */}
       <div className="flex items-center gap-2 lg:gap-4 shrink-0">
+        {/* Bouton langue FR/EN */}
+        <button
+          onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+          title={t.common.language}
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:border-primary hover:text-primary transition-colors mr-1"
+        >
+          <span className="text-[15px]">{lang === 'fr' ? '🇬🇧' : '🇫🇷'}</span>
+          <span className="font-semibold">{lang === 'fr' ? 'EN' : 'FR'}</span>
+        </button>
+
         {/* Bouton installer l'app — visible uniquement si le navigateur propose l'install */}
         {installPrompt && !installed && (
           <button
             onClick={handleInstall}
-            title="Installer l'application"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-label-md transition-colors mr-2"
+            title="Install app"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-label-md transition-colors mr-1"
           >
             <span className="material-symbols-outlined text-[18px]">install_mobile</span>
-            <span className="hidden md:inline">Installer l'app</span>
+            <span className="hidden md:inline">{lang === 'fr' ? 'Installer' : 'Install'}</span>
           </button>
         )}
 
@@ -177,10 +184,15 @@ export default function Topbar({ onMenuToggle }: Props) {
             {showHelp && (
               <div className="absolute right-0 mt-2 w-[220px] bg-white rounded-2xl shadow-2xl border border-[#e8e8f0] overflow-hidden z-50">
                 <div className="px-4 py-3 border-b border-[#e8e8f0]">
-                  <p className="text-label-lg text-on-surface font-bold">Aide &amp; Ressources</p>
+                  <p className="text-label-lg text-on-surface font-bold">{t.nav.aide}</p>
                 </div>
                 <div className="py-1">
-                  {HELP_LINKS.map(l => (
+                  {[
+                    { icon: 'menu_book',   label: t.help.docs,      path: '/aide/documentation' },
+                    { icon: 'headset_mic', label: t.help.support,   path: '/aide/support'       },
+                    { icon: 'school',      label: t.help.tutorials, path: '/aide/tutoriels'     },
+                    { icon: 'keyboard',    label: t.help.shortcuts, path: '/aide/raccourcis'    },
+                  ].map(l => (
                     <button
                       key={l.path}
                       onClick={() => { navigate(l.path); setShowHelp(false) }}
@@ -192,7 +204,7 @@ export default function Topbar({ onMenuToggle }: Props) {
                   ))}
                 </div>
                 <div className="px-4 py-2.5 border-t border-[#e8e8f0] text-center">
-                  <p className="text-[11px] text-on-surface-variant">MonClubHouse v1.0</p>
+                  <p className="text-[11px] text-on-surface-variant">{t.help.version}</p>
                 </div>
               </div>
             )}
