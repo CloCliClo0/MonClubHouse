@@ -43,6 +43,7 @@ export default function GoogleCompletePage() {
 
   useEffect(() => {
     if (step === 'done') {
+      // Mettre à jour le rôle en localStorage après join réussi
       setTimeout(() => navigate('/dashboard', { replace: true }), 1500)
     }
   }, [step])
@@ -223,13 +224,9 @@ export default function GoogleCompletePage() {
                 }
               </button>
 
-              <button
-                type="button"
-                onClick={() => navigate('/resultats-club', { replace: true })}
-                className="w-full py-2.5 text-on-surface-variant text-body-sm hover:text-primary transition-colors"
-              >
-                Voir les résultats sans rejoindre
-              </button>
+              <p className="text-center text-body-sm text-on-surface-variant/60">
+                Un code d'invitation est requis pour accéder à l'application.
+              </p>
             </form>
           )}
 

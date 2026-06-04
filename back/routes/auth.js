@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const passport = require('../config/passport');
 const { register, login, refresh, logout, googleCallback, me, forgotPassword, resetPassword } = require('../controllers/authController');
-const { authenticate } = require('../middlewares/auth');
+const { authenticate, optionalAuth } = require('../middlewares/auth');
 const { validateRegister, validateLogin } = require('../middlewares/validation');
 
-router.post('/register',        validateRegister, register);
+router.post('/register',        optionalAuth, validateRegister, register);
 router.post('/login',           validateLogin, login);
 router.post('/refresh',         refresh);
 router.post('/logout',          authenticate, logout);

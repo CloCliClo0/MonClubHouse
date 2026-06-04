@@ -1,4 +1,5 @@
-const { User } = require('../models');
+const { User, InviteCode, Equipe, Licencie } = require('../models');
+const { Op } = require('sequelize');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../config/jwt');
 const { validationResult } = require('express-validator');
 const crypto = require('crypto');
@@ -27,36 +28,105 @@ const register = async (req, res) => {
   }
 
   try {
-    const { nom, prenom, email, password, role } = req.body;
+    const { nom, prenom, email, password, invite_code } = req.body;
 
-    const existing = await User.findOne({ where: { email } });
-    if (existing) {
-      return res.status(409).json({ success: false, message: 'Email déjà utilisé' });
+    // Les admins peuvent créer des comptes directement sans code
+    const isAdminRequest = req.user && ['superadmin', 'admin', 'dirigeant'].includes(req.user.role);
+
+    // Pour une inscription publique, le code est obligatoire
+    if (!isAdminRequest) {
+      if (!invite_code) {
+        return res.status(400).json({ success: false, message: 'Un code d\'invitation est requis pour créer un compte.' });
+      }
+
+      const invite = await InviteCode.findOne({
+        where: {
+          code:  invite_code.toUpperCase().trim(),
+          actif: true,
+          [Op.or]: [{ expires_at: null }, { expires_at: { [Op.gt]: new Date() } }],
+        },
+        include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'], required: false }],
+      });
+
+      if (!invite) {
+        return res.status(400).json({ success: false, message: 'Code d\'invitation invalide ou expiré.' });
+      }
+      if (invite.uses_count >= invite.max_uses) {
+        return res.status(400).json({ success: false, message: 'Ce code a atteint sa limite d\'utilisation.' });
+      }
+
+      const existing = await User.findOne({ where: { email } });
+      if (existing) {
+        return res.status(409).json({ success: false, message: 'Email déjà utilisé.' });
+      }
+
+      // Créer le compte avec le rôle et club du code
+      const user = await User.create({
+        nom, prenom: prenom || '', email,
+        password_hash: password,
+        role:    invite.role,
+        club_id: invite.club_id,
+        actif:   true,
+      });
+
+      // Licencié si joueur/parent
+      if ((invite.role === 'joueur' || invite.role === 'parent') && invite.equipe_id) {
+        await Licencie.upsert({
+          user_id:  user.id,
+          equipe_id: invite.equipe_id,
+          statut:   'actif',
+          date_inscription: new Date().toISOString().slice(0, 10),
+        }, { conflictFields: ['user_id'] });
+      }
+
+      // Affecter le coach
+      if (invite.role === 'coach' && invite.equipe_id) {
+        await Equipe.update({ coach_id: user.id }, { where: { id: invite.equipe_id } });
+      }
+
+      await invite.increment('uses_count');
+
+      const payload = { id: user.id, role: user.role, club_id: user.club_id };
+      const accessToken  = generateAccessToken(payload);
+      const refreshToken = generateRefreshToken(payload);
+      await user.update({ refresh_token: refreshToken });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Inscription réussie',
+        data: {
+          user: user.toSafeJSON(),
+          access_token:  accessToken,
+          refresh_token: refreshToken,
+          invite_role:   invite.role,
+        },
+      });
     }
 
-    const safeRole = ['joueur', 'parent', 'visiteur'].includes(role) ? role : 'joueur';
+    // ── Création admin : sans code, rôle libre ──────────────────────
+    const { role } = req.body;
+    const existing = await User.findOne({ where: { email } });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Email déjà utilisé.' });
+    }
 
+    const safeRole = ['joueur', 'parent', 'coach', 'dirigeant', 'admin', 'visiteur'].includes(role) ? role : 'joueur';
     const user = await User.create({
       nom, prenom: prenom || '', email,
       password_hash: password,
       role: safeRole,
-      actif: true
+      actif: true,
     });
 
     const payload = { id: user.id, role: user.role, club_id: user.club_id };
-    const accessToken = generateAccessToken(payload);
+    const accessToken  = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
-
     await user.update({ refresh_token: refreshToken });
 
     return res.status(201).json({
       success: true,
       message: 'Inscription réussie',
-      data: {
-        user: user.toSafeJSON(),
-        access_token: accessToken,
-        refresh_token: refreshToken
-      }
+      data: { user: user.toSafeJSON(), access_token: accessToken, refresh_token: refreshToken },
     });
   } catch (err) {
     console.error('Register error:', err);

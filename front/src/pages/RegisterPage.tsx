@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ prenom: '', nom: '', email: '', password: '', role: 'joueur' })
+  const [form, setForm] = useState({
+    prenom: '', nom: '', email: '', password: '', invite_code: '',
+  })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
@@ -18,20 +20,35 @@ export default function RegisterPage() {
       setError('Le mot de passe doit contenir au moins 8 caractères.')
       return
     }
+    if (!form.invite_code.trim()) {
+      setError('Un code d\'invitation est requis.')
+      return
+    }
     setLoading(true)
     try {
-      const res = await api.post('/auth/register', form)
-      const { access_token, user } = res.data.data
-      localStorage.setItem('token',  access_token)
-      localStorage.setItem('userId', String(user.id))
-      localStorage.setItem('prenom', user.prenom || user.nom || '')
-      localStorage.setItem('role',   user.role || 'joueur')
-      // Redirige vers /join avec le code si déjà saisi
-      navigate('/join', { replace: true })
+      const res = await api.post('/auth/register', {
+        ...form,
+        invite_code: form.invite_code.trim().toUpperCase(),
+      })
+      const { access_token, refresh_token, user, invite_role } = res.data.data
+      localStorage.setItem('token',         access_token)
+      localStorage.setItem('refresh_token', refresh_token || '')
+      localStorage.setItem('userId',        String(user.id))
+      localStorage.setItem('prenom',        user.prenom || user.nom || '')
+      localStorage.setItem('role',          user.role || 'joueur')
+
+      // Si parent, aller lier l'enfant
+      if (invite_role === 'parent') {
+        navigate('/join', { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message
       if (err.response?.status === 409) {
         setError('Cette adresse email est déjà utilisée.')
+      } else if (err.response?.status === 400) {
+        setError(msg || 'Code d\'invitation invalide ou expiré.')
       } else if (err.response?.status === 503 || !err.response) {
         setError('Serveur ou base de données indisponible.')
       } else {
@@ -66,7 +83,7 @@ export default function RegisterPage() {
         <form className="w-full flex flex-col gap-5" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
-              <label className="text-label-md text-on-surface-variant" htmlFor="prenom">Prénom</label>
+              <label className="text-label-md text-on-surface-variant" htmlFor="prenom">Prénom *</label>
               <input
                 className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 id="prenom" type="text" placeholder="Jean" required
@@ -74,7 +91,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-label-md text-on-surface-variant" htmlFor="nom">Nom</label>
+              <label className="text-label-md text-on-surface-variant" htmlFor="nom">Nom *</label>
               <input
                 className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 id="nom" type="text" placeholder="Dupont" required
@@ -84,7 +101,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-label-md text-on-surface-variant" htmlFor="email">Email</label>
+            <label className="text-label-md text-on-surface-variant" htmlFor="email">Email *</label>
             <input
               className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
               id="email" type="email" placeholder="jean.dupont@email.com" required
@@ -94,7 +111,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-label-md text-on-surface-variant" htmlFor="password">Mot de passe</label>
+            <label className="text-label-md text-on-surface-variant" htmlFor="password">Mot de passe *</label>
             <div className="relative">
               <input
                 className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10"
@@ -112,22 +129,22 @@ export default function RegisterPage() {
             <p className="text-body-sm text-on-surface-variant/70 italic">8 car. min.</p>
           </div>
 
+          {/* Code d'invitation */}
           <div className="flex flex-col gap-2">
-            <label className="text-label-md text-on-surface-variant" htmlFor="role">Rôle</label>
-            <div className="relative">
-              <select
-                className="w-full appearance-none px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10"
-                id="role" required value={form.role} onChange={e => set('role', e.target.value)}
-              >
-                <option value="joueur">Joueur</option>
-                <option value="parent">Parent / Tuteur</option>
-                <option value="coach">Coach</option>
-                <option value="dirigeant">Dirigeant</option>
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
-                <span className="material-symbols-outlined">expand_more</span>
-              </div>
-            </div>
+            <label className="text-label-md text-on-surface-variant" htmlFor="invite_code">
+              Code d'invitation *
+            </label>
+            <input
+              className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono tracking-widest text-center uppercase"
+              id="invite_code" type="text"
+              placeholder="Ex : U15-A3F2B1"
+              required
+              value={form.invite_code}
+              onChange={e => set('invite_code', e.target.value.toUpperCase())}
+            />
+            <p className="text-body-sm text-on-surface-variant/70">
+              Fourni par le dirigeant ou l'administrateur de votre club.
+            </p>
           </div>
 
           <button
