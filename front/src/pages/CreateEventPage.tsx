@@ -2,19 +2,21 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 
-type EventType = 'match' | 'entrainement' | 'tournoi' | 'plateau' | 'reunion' | 'autre'
+type EventType = 'match' | 'amical' | 'coupe' | 'entrainement' | 'tournoi' | 'plateau' | 'reunion' | 'autre'
 type Step = 1 | 2 | 3 | 4
 
 type Equipe  = { id: number; nom: string; categorie: string }
 type Terrain = { id: number; nom: string; type: string }
 
 const EVENT_TYPES: { key: EventType; label: string; icon: string; color: string; desc: string }[] = [
-  { key: 'match',        label: 'Match',        icon: 'sports_soccer',  color: 'border-green-500 bg-green-50',   desc: 'Match officiel contre un adversaire' },
-  { key: 'entrainement', label: 'Entraînement', icon: 'fitness_center', color: 'border-blue-500 bg-blue-50',     desc: 'Séance d\'entraînement d\'équipe' },
-  { key: 'tournoi',      label: 'Tournoi',      icon: 'emoji_events',   color: 'border-yellow-500 bg-yellow-50', desc: 'Tournoi multi-équipes' },
-  { key: 'plateau',      label: 'Plateau',      icon: 'view_quilt',     color: 'border-purple-500 bg-purple-50', desc: 'Plateau sportif (U7–U11)' },
-  { key: 'reunion',      label: 'Réunion',      icon: 'groups',         color: 'border-slate-500 bg-slate-50',   desc: 'Réunion d\'équipe ou de bureau' },
-  { key: 'autre',        label: 'Autre',        icon: 'event',          color: 'border-gray-400 bg-gray-50',     desc: 'Autre type d\'événement' },
+  { key: 'match',        label: 'Match officiel', icon: 'sports_soccer',  color: 'border-green-500 bg-green-50',    desc: 'Match de championnat officiel' },
+  { key: 'amical',       label: 'Match amical',   icon: 'handshake',      color: 'border-teal-500 bg-teal-50',      desc: 'Rencontre amicale hors championnat' },
+  { key: 'coupe',        label: 'Coupe',          icon: 'emoji_events',   color: 'border-yellow-500 bg-yellow-50',  desc: 'Match de coupe ou compétition' },
+  { key: 'entrainement', label: 'Entraînement',   icon: 'fitness_center', color: 'border-blue-500 bg-blue-50',      desc: 'Séance d\'entraînement d\'équipe' },
+  { key: 'tournoi',      label: 'Tournoi',        icon: 'workspace_premium', color: 'border-purple-500 bg-purple-50', desc: 'Tournoi multi-équipes' },
+  { key: 'plateau',      label: 'Plateau',        icon: 'view_quilt',     color: 'border-indigo-500 bg-indigo-50',  desc: 'Plateau sportif (U7–U11)' },
+  { key: 'reunion',      label: 'Réunion',        icon: 'groups',         color: 'border-slate-500 bg-slate-50',    desc: 'Réunion d\'équipe ou de bureau' },
+  { key: 'autre',        label: 'Autre',          icon: 'event',          color: 'border-gray-400 bg-gray-50',      desc: 'Autre type d\'événement' },
 ]
 
 export default function CreateEventPage() {
@@ -58,7 +60,7 @@ export default function CreateEventPage() {
   const canNext = () => {
     if (step === 1) return !!type
     if (step === 2) return !!equipeId && !!date && !!heure
-    if (step === 3) return !(['match','coupe'].includes(type || '')) || (!!adversaire && adversaire !== '__autre__')
+    if (step === 3) return !(type === 'match' || type === 'coupe') || (!!adversaire && adversaire !== '__autre__')
     return true
   }
 
