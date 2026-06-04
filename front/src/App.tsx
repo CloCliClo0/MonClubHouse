@@ -23,6 +23,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import JoinPage from './pages/JoinPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import GoogleCompletePage from './pages/GoogleCompletePage'
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/join"               element={<JoinPage />} />
         <Route path="/forgot-password"    element={<ForgotPasswordPage />} />
         <Route path="/reset-password"     element={<ResetPasswordPage />} />
+        <Route path="/google-complete"    element={<GoogleCompletePage />} />
 
         {/* Pages authentifiées */}
         <Route element={<AppLayout />}>

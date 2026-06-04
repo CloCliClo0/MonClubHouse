@@ -33,25 +33,31 @@ passport.use(new GoogleStrategy(
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
+      let isNew = false;
       let user = await User.findOne({ where: { google_id: profile.id } });
 
       if (!user) {
         user = await User.findOne({ where: { email: profile.emails[0].value } });
         if (user) {
+          // Compte existant via email — on lie le Google ID
           await user.update({ google_id: profile.id });
         } else {
+          // Nouveau compte — role 'visiteur' en attente de code d'accès
           user = await User.create({
-            nom: profile.displayName,
-            prenom: profile.name.givenName || '',
+            nom: profile.displayName || profile.name?.familyName || '',
+            prenom: profile.name?.givenName || '',
             email: profile.emails[0].value,
             google_id: profile.id,
             avatar: profile.photos[0]?.value || null,
-            role: 'joueur',
+            role: 'visiteur',
             actif: true
           });
+          isNew = true;
         }
       }
 
+      // Attacher le flag au user pour que googleCallback puisse l'utiliser
+      user.dataValues._isNew = isNew;
       return done(null, user);
     } catch (err) {
       return done(err, false);

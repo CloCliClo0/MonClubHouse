@@ -6,12 +6,22 @@ const crypto = require('crypto');
 const makeCode = (prefix = 'MCH') =>
   `${prefix}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
-// GET /api/codes — liste les codes du club (admin)
+// GET /api/codes — liste les codes (tous les clubs pour superadmin)
 const listCodes = async (req, res) => {
   try {
+    const where = {};
+    // superadmin voit tous les codes ; sinon filtre par club
+    if (req.user.role !== 'superadmin' && req.user.club_id) {
+      where.club_id = req.user.club_id;
+    }
+    if (req.query.club_id) where.club_id = req.query.club_id;
+
     const codes = await InviteCode.findAll({
-      where: { club_id: req.user.club_id },
-      include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] }],
+      where,
+      include: [
+        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] },
+        { model: Club,   as: 'club',   attributes: ['id', 'nom'] },
+      ],
       order: [['created_at', 'DESC']],
     });
     return res.json({ success: true, data: codes });

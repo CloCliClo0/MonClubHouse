@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { getAll, getById, create, update, uploadLogo } = require('../controllers/clubController');
+const { getAll, getById, create, update, uploadLogo, getStats, getTerrains, createTerrain, updateTerrain, deleteTerrain, deleteClub } = require('../controllers/clubController');
 const { validateCode, joinByCode, listCodes, createCode, deleteCode, getClubPlayers, linkChild } = require('../controllers/inviteCodeController');
 const { authenticate } = require('../middlewares/auth');
 const { requireMinRole } = require('../middlewares/rbac');
@@ -38,11 +38,19 @@ router.get('/codes', authenticate, listCodes);
 router.post('/codes', authenticate, requireMinRole('dirigeant'), createCode);
 router.delete('/codes/:id', authenticate, requireMinRole('dirigeant'), deleteCode);
 
+// Stats et terrains (avant /:id pour éviter le conflit)
+router.get('/stats',          authenticate, getStats);
+router.get('/terrains',       authenticate, getTerrains);
+router.post('/terrains',      authenticate, requireMinRole('dirigeant'), createTerrain);
+router.put('/terrains/:id',   authenticate, requireMinRole('dirigeant'), updateTerrain);
+router.delete('/terrains/:id',authenticate, requireMinRole('dirigeant'), deleteTerrain);
+
 router.get('/', getAll);
 router.get('/:id', getById);
 router.post('/', authenticate, requireMinRole('admin'), validateClub, create);
 router.put('/:id', authenticate, requireMinRole('admin'), update);
 router.patch('/:id', authenticate, requireMinRole('admin'), update);
+router.delete('/:id', authenticate, requireMinRole('superadmin'), deleteClub);
 router.post('/:id/logo', authenticate, requireMinRole('admin'), upload.single('logo'), uploadLogo);
 
 module.exports = router;

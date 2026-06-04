@@ -158,6 +158,7 @@ const logout = async (req, res) => {
 const googleCallback = async (req, res) => {
   try {
     const user = req.user;
+    const isNew = user.dataValues._isNew === true;
     const payload = { id: user.id, role: user.role, club_id: user.club_id };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
@@ -167,7 +168,8 @@ const googleCallback = async (req, res) => {
       derniere_connexion: new Date()
     });
 
-    const redirectUrl = `${process.env.APP_URL}/auth/callback?token=${accessToken}&refresh=${refreshToken}`;
+    const base = `${process.env.APP_URL}/auth/callback?token=${accessToken}&refresh=${refreshToken}`;
+    const redirectUrl = isNew ? `${base}&new=1` : base;
     return res.redirect(redirectUrl);
   } catch (err) {
     return res.redirect(`${process.env.APP_URL}/login?error=oauth_failed`);

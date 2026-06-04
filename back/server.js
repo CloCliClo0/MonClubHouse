@@ -122,6 +122,28 @@ app.use('/api/admin',  adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/codes',  codesRoutes);
 
+// Route adversaires — opponents déduits des matchs
+const { authenticate: _auth } = require('./middlewares/auth');
+const { Match: _Match, Equipe: _Equipe } = require('./models');
+app.get('/api/adversaires', _auth, async (req, res) => {
+  try {
+    const where = {};
+    if (req.user.club_id) {
+      const eqs = await _Equipe.findAll({ where: { club_id: req.user.club_id, actif: true }, attributes: ['id'] });
+      if (eqs.length) where.equipe_id = eqs.map(e => e.id);
+    }
+    const matchs = await _Match.findAll({ where, attributes: ['adversaire'], group: ['adversaire'], raw: true });
+    const adversaires = matchs
+      .map(m => m.adversaire)
+      .filter(Boolean)
+      .sort()
+      .map((nom, i) => ({ id: i + 1, nom }));
+    return res.json({ success: true, data: adversaires });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Auth Google (hors /api pour le redirect OAuth)
 app.use('/auth', authRoutes);
 

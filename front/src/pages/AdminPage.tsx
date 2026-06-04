@@ -3,9 +3,11 @@ import api from '../services/api'
 
 // ── Types codes ───────────────────────────────────────────────
 type InviteCode = {
-  id: number; code: string; role: 'joueur' | 'parent'; label?: string
+  id: number; code: string
+  role: 'joueur' | 'parent' | 'coach' | 'dirigeant'; label?: string
   uses_count: number; max_uses: number; expires_at?: string; actif: boolean
   equipe?: { id: number; nom: string; categorie: string }
+  club?:   { id: number; nom: string }
 }
 type Equipe = { id: number; nom: string; categorie: string }
 // ─────────────────────────────────────────────────────────────
@@ -33,8 +35,32 @@ type ModalState =
 
 const BLANK = { nom: '', prenom: '', email: '', role: 'joueur' as Role, password: '' }
 
+type Club = { id: number; nom: string; logo?: string; ville?: string; email?: string; actif: boolean }
+
+const CODE_ROLES = [
+  { v: 'joueur',    l: 'Joueur',    color: 'bg-green-100 text-green-700'   },
+  { v: 'parent',    l: 'Parent',    color: 'bg-orange-100 text-orange-700' },
+  { v: 'coach',     l: 'Coach',     color: 'bg-primary/10 text-primary'    },
+  { v: 'dirigeant', l: 'Dirigeant', color: 'bg-blue-100 text-blue-700'     },
+]
+
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'users' | 'codes'>('users')
+  const isSuperAdmin = localStorage.getItem('role') === 'superadmin'
+  const [activeTab, setActiveTab] = useState<'users' | 'codes' | 'clubs'>('users')
+
+  // ── Clubs (superadmin) ────────────────────────────────────
+  const [clubs, setClubs]             = useState<Club[]>([])
+  const [clubsLoading, setClubsLoading] = useState(false)
+  const [clubSearch, setClubSearch]   = useState('')
+  const [clubFilter, setClubFilter]   = useState<number | 'all'>('all')
+
+  const loadClubs = () => {
+    setClubsLoading(true)
+    api.get('/clubs').then(r => setClubs(r.data.data || [])).catch(() => setClubs([]))
+      .finally(() => setClubsLoading(false))
+  }
+
+  useEffect(() => { if (activeTab === 'clubs' && isSuperAdmin) loadClubs() }, [activeTab])
 
   // ── État utilisateurs ─────────────────────────────────────
   const [users, setUsers]     = useState<User[]>([])
@@ -104,9 +130,10 @@ export default function AdminPage() {
     }
   }
 
-  const load = () => {
+  const load = (cId?: number) => {
     setLoading(true)
-    api.get('/admin/users')
+    const params = cId ? `?club_id=${cId}` : ''
+    api.get(`/admin/users${params}`)
       .then(r => setUsers(r.data.data || []))
       .catch(() => setUsers([]))
       .finally(() => setLoading(false))
@@ -194,12 +221,39 @@ export default function AdminPage() {
       </div>
 
       {/* Onglets */}
+      {/* Header superadmin */}
+      {isSuperAdmin && (
+        <div className="mb-6 flex items-center gap-3 bg-red-50 border border-red-200 px-4 py-3 rounded-xl">
+          <span className="material-symbols-outlined text-red-600">admin_panel_settings</span>
+          <div>
+            <p className="text-label-lg text-red-800">Mode Super Administrateur</p>
+            <p className="text-body-sm text-red-600">Accès global à tous les clubs, utilisateurs et codes.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Filtre par club (superadmin uniquement) */}
+      {isSuperAdmin && clubs.length > 0 && activeTab === 'users' && (
+        <div className="mb-4 flex items-center gap-3 flex-wrap">
+          <span className="text-label-md text-on-surface-variant">Filtrer par club :</span>
+          {[{ id: 'all', nom: 'Tous les clubs' } as any, ...clubs].map(c => (
+            <button key={c.id} onClick={() => { setClubFilter(c.id); load(c.id === 'all' ? undefined : c.id) }}
+              className={`px-3 py-1.5 rounded-full text-label-md transition-all ${
+                clubFilter === c.id ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant border border-outline-variant hover:border-primary/40'
+              }`}>
+              {c.nom}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center border-b border-outline-variant mb-6">
         {[
-          { key: 'users', label: 'Utilisateurs', icon: 'groups' },
-          { key: 'codes', label: 'Codes d\'accès', icon: 'key' },
+          { key: 'users', label: 'Utilisateurs',    icon: 'groups'              },
+          { key: 'codes', label: 'Codes d\'accès',  icon: 'key'                 },
+          ...(isSuperAdmin ? [{ key: 'clubs', label: 'Clubs', icon: 'home_work' }] : []),
         ].map(t => (
-          <button key={t.key} onClick={() => setActiveTab(t.key as any)}
+          <button key={t.key} onClick={() => { setActiveTab(t.key as any); if (t.key === 'clubs') loadClubs() }}
             className={`flex items-center gap-2 px-5 py-3 text-label-lg transition-all ${
               activeTab === t.key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
             }`}>
@@ -229,8 +283,7 @@ export default function AdminPage() {
                   <label className="text-label-md text-on-surface-variant">Rôle autorisé</label>
                   <select value={newCode.role} onChange={e => setNewCode(f => ({ ...f, role: e.target.value }))}
                     className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
-                    <option value="joueur">Joueur</option>
-                    <option value="parent">Parent</option>
+                    {CODE_ROLES.map(r => <option key={r.v} value={r.v}>{r.l}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -528,6 +581,83 @@ export default function AdminPage() {
         </div>
       )}
       </>)} {/* fin onglet users */}
+
+      {/* ── Onglet Clubs (superadmin) ─────────────────────────────── */}
+      {activeTab === 'clubs' && isSuperAdmin && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+              <input value={clubSearch} onChange={e => setClubSearch(e.target.value)}
+                placeholder="Rechercher un club…"
+                className="pl-9 pr-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary w-72" />
+            </div>
+            <button onClick={() => window.location.href = '/setup-club'}
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
+              <span className="material-symbols-outlined text-[20px]">add</span>
+              Nouveau club
+            </button>
+          </div>
+
+          <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+            {clubsLoading ? (
+              <div className="p-6 space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 bg-surface-container-low rounded-lg animate-pulse" />)}</div>
+            ) : clubs.filter(c => c.nom.toLowerCase().includes(clubSearch.toLowerCase())).length === 0 ? (
+              <div className="py-16 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">home_work</span>
+                <p className="text-headline-md">Aucun club</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-surface-container-low border-b border-[#e8e8f0]">
+                    {['Club','Ville','Email','Statut','Actions'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-label-md text-on-surface-variant">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e8e8f0]">
+                  {clubs.filter(c => c.nom.toLowerCase().includes(clubSearch.toLowerCase())).map(c => (
+                    <tr key={c.id} className="hover:bg-surface-container-low transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {c.logo
+                            ? <img src={c.logo} className="w-9 h-9 rounded-lg object-cover" alt="" />
+                            : <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">{c.nom.slice(0,2).toUpperCase()}</div>
+                          }
+                          <span className="text-label-lg text-on-surface font-medium">{c.nom}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-body-md text-on-surface-variant">{c.ville || '—'}</td>
+                      <td className="px-4 py-3 text-body-md text-on-surface-variant">{c.email || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-label-md ${c.actif ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {c.actif ? 'Actif' : 'Inactif'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setClubFilter(c.id); setActiveTab('users'); load(c.id) }}
+                            className="px-3 py-1.5 text-primary text-label-md hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px]">groups</span>
+                            Membres
+                          </button>
+                          <button
+                            onClick={async () => { if (confirm(`Désactiver ${c.nom} ?`)) { await api.delete(`/clubs/${c.id}`).catch(() => {}); loadClubs() } }}
+                            className="p-1.5 text-error hover:bg-red-50 rounded-lg transition-colors">
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -8,10 +8,11 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const token   = params.get('token')
     const refresh = params.get('refresh')
+    const isNew   = params.get('new') === '1'
     if (token) {
       localStorage.setItem('token', token)
       if (refresh) localStorage.setItem('refresh_token', refresh)
-      navigate('/dashboard', { replace: true })
+      navigate(isNew ? '/google-complete' : '/dashboard', { replace: true })
     } else {
       navigate('/login?error=oauth_failed', { replace: true })
     }
