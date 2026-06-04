@@ -225,10 +225,10 @@ export default function GoogleCompletePage() {
 
               <button
                 type="button"
-                onClick={() => navigate('/dashboard', { replace: true })}
+                onClick={() => navigate('/resultats-club', { replace: true })}
                 className="w-full py-2.5 text-on-surface-variant text-body-sm hover:text-primary transition-colors"
               >
-                Continuer sans code (visiteur)
+                Voir les résultats sans rejoindre
               </button>
             </form>
           )}
