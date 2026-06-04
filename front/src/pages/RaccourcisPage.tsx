@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const SECTIONS = [
@@ -53,32 +53,41 @@ function Kbd({ children }: { children: string }) {
 
 export default function RaccourcisPage() {
   const navigate = useNavigate()
+  const [lastKey, setLastKey] = useState<string | null>(null)
 
-  // Active les vrais raccourcis
   useEffect(() => {
-    let g = false
+    let gPressed = false
+    let gTimer: ReturnType<typeof setTimeout>
+
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return
 
-      if (g) {
-        g = false
-        if (e.key === 'c') navigate('/calendrier')
-        else if (e.key === 'm') navigate('/messages')
-        else if (e.key === 'r') navigate('/resultats')
-        else if (e.key === 'p') navigate('/profil')
-        else if (e.key === 'a') navigate('/admin')
+      if (gPressed) {
+        gPressed = false
+        clearTimeout(gTimer)
+        setLastKey(null)
+        if (e.key === 'c') { navigate('/calendrier'); return }
+        if (e.key === 'm') { navigate('/messages');   return }
+        if (e.key === 'r') { navigate('/resultats');  return }
+        if (e.key === 'p') { navigate('/profil');     return }
+        if (e.key === 'a') { navigate('/admin');      return }
         return
       }
 
-      if (e.key === 'g') { g = true; setTimeout(() => { g = false }, 1500); return }
-      if (e.key === 'n') navigate('/evenements/creer')
-      if (e.key === '?' || e.key === '/') navigate('/aide/raccourcis')
-      if (e.key === 'Escape') window.history.back()
-      if (e.key === 't' && !e.ctrlKey) navigate('/calendrier')
+      if (e.key === 'g') {
+        gPressed = true
+        setLastKey('G')
+        gTimer = setTimeout(() => { gPressed = false; setLastKey(null) }, 1500)
+        return
+      }
+      if (e.key === 'n') { navigate('/evenements/creer');  return }
+      if (e.key === '?') { navigate('/aide/raccourcis');   return }
+      if (e.key === 'Escape') { window.history.back();     return }
     }
+
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    return () => { window.removeEventListener('keydown', handler); clearTimeout(gTimer) }
   }, [navigate])
 
   return (
@@ -97,6 +106,11 @@ export default function RaccourcisPage() {
           <strong className="text-on-surface">Cette page est interactive.</strong> Les raccourcis listés ci-dessous sont déjà actifs — essayez-les maintenant !
           <br />
           <span className="italic">Ex : appuyez sur <Kbd>G</Kbd> puis <Kbd>C</Kbd> pour aller au Calendrier.</span>
+          {lastKey && (
+            <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded text-[11px] font-bold">
+              En attente de la 2e touche…
+            </span>
+          )}
         </div>
       </div>
 
