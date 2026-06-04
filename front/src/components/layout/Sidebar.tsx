@@ -22,38 +22,30 @@ const PROFIL     : NavItem = { path: '/profil',             icon: 'account_circl
 // ── Navigation par rôle ───────────────────────────────────────────────────────
 const NAV_BY_ROLE: Record<string, NavGroup[]> = {
   superadmin: [
-    { label: 'Principal',    items: [DASHBOARD, CALENDRIER, MESSAGES] },
-    { label: 'Équipes',      items: [EQUIPES, CONVOCS, COMPO, ADVERSAIRES] },
-    { label: 'Compétitions', items: [RESULTATS, STATS] },
-    { label: 'Club',         items: [MON_CLUB, ADMIN] },
+    { label: 'Administration', items: [ADMIN] },
   ],
   admin: [
-    { label: 'Principal',    items: [DASHBOARD, CALENDRIER, MESSAGES] },
-    { label: 'Équipes',      items: [EQUIPES, CONVOCS, COMPO, ADVERSAIRES] },
-    { label: 'Compétitions', items: [RESULTATS, STATS] },
-    { label: 'Club',         items: [MON_CLUB, ADMIN] },
+    { label: 'Administration', items: [ADMIN] },
   ],
   dirigeant: [
-    { label: 'Principal',    items: [DASHBOARD, CALENDRIER, MESSAGES] },
-    { label: 'Équipes',      items: [EQUIPES, CONVOCS, COMPO, ADVERSAIRES] },
-    { label: 'Compétitions', items: [RESULTATS, STATS] },
-    { label: 'Club',         items: [MON_CLUB] },
+    { label: 'Club',          items: [MON_CLUB, EQUIPES] },
+    { label: 'Planning',      items: [CALENDRIER] },
+    { label: 'Compétition',   items: [ADVERSAIRES, RESULTATS, STATS] },
+    { label: 'Communication', items: [MESSAGES] },
   ],
   coach: [
-    { label: 'Principal',    items: [DASHBOARD, CALENDRIER, MESSAGES] },
-    { label: 'Mes équipes',  items: [EQUIPES, CONVOCS, COMPO, ADVERSAIRES] },
-    { label: 'Compétitions', items: [RESULTATS, STATS] },
+    { label: 'Mon équipe',    items: [CALENDRIER, CONVOCS, COMPO] },
+    { label: 'Compétition',   items: [RESULTATS, STATS] },
+    { label: 'Communication', items: [MESSAGES] },
   ],
   joueur: [
-    { label: 'Principal',    items: [DASHBOARD, CALENDRIER, MESSAGES] },
-    { label: 'Mon activité', items: [CONVOCS, RESULTATS] },
+    { label: 'Mon activité',  items: [CONVOCS, MESSAGES] },
   ],
   parent: [
-    { label: 'Principal',    items: [DASHBOARD, CALENDRIER, MESSAGES] },
-    { label: 'Mon enfant',   items: [CONVOCS, RESULTATS] },
+    { label: 'Mon enfant',    items: [CONVOCS, MESSAGES] },
   ],
   visiteur: [
-    { label: 'Public',       items: [RESULTATS] },
+    { label: 'Public',        items: [RESULTATS] },
   ],
 }
 
@@ -62,7 +54,7 @@ export default function Sidebar() {
   const role = localStorage.getItem('role') || 'joueur'
   const groups = NAV_BY_ROLE[role] ?? NAV_BY_ROLE['joueur']
 
-  const canCreateEvent = ['superadmin', 'admin', 'dirigeant', 'coach'].includes(role)
+  const canCreateEvent = ['dirigeant', 'coach'].includes(role)
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[260px] bg-sidebar flex flex-col z-50">

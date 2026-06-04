@@ -77,7 +77,7 @@ export default function AdminPage() {
   const [equipes, setEquipes]     = useState<Equipe[]>([])
   const [codesLoading, setCodesLoading] = useState(false)
   const [showCodeForm, setShowCodeForm] = useState(false)
-  const [newCode, setNewCode]     = useState({ equipe_id: '', role: 'joueur', label: '', max_uses: '50' })
+  const [newCode, setNewCode]     = useState({ equipe_id: '', role: 'joueur', label: '', max_uses: '50', club_id: '' })
   const [creatingCode, setCreatingCode] = useState(false)
   const [copiedId, setCopiedId]   = useState<number | null>(null)
 
@@ -86,20 +86,34 @@ export default function AdminPage() {
     api.get('/codes').then(r => setCodes(r.data.data || [])).catch(() => setCodes([]))
       .finally(() => setCodesLoading(false))
   }
-  const loadEquipes = () => {
-    api.get('/equipes').then(r => setEquipes(r.data.data || [])).catch(() => setEquipes([]))
+  const loadEquipes = (clubId?: string) => {
+    const params = clubId ? `?club_id=${clubId}` : ''
+    api.get(`/equipes${params}`).then(r => setEquipes(r.data.data || [])).catch(() => setEquipes([]))
   }
 
-  useEffect(() => { if (activeTab === 'codes') { loadCodes(); loadEquipes() } }, [activeTab])
+  useEffect(() => {
+    if (activeTab === 'codes') {
+      loadCodes()
+      if (!isSuperAdmin) loadEquipes()
+      else if (clubs.length === 0) loadClubs()
+    }
+  }, [activeTab])
 
   const createCode = async (e: React.FormEvent) => {
     e.preventDefault()
     setCreatingCode(true)
     try {
-      await api.post('/codes', { ...newCode, equipe_id: parseInt(newCode.equipe_id), max_uses: parseInt(newCode.max_uses) })
+      const payload: Record<string, any> = {
+        role:     newCode.role,
+        label:    newCode.label || undefined,
+        max_uses: parseInt(newCode.max_uses),
+      }
+      if (newCode.equipe_id) payload.equipe_id = parseInt(newCode.equipe_id)
+      if (isSuperAdmin && newCode.club_id) payload.club_id = parseInt(newCode.club_id)
+      await api.post('/codes', payload)
       loadCodes()
       setShowCodeForm(false)
-      setNewCode({ equipe_id: '', role: 'joueur', label: '', max_uses: '50' })
+      setNewCode({ equipe_id: '', role: 'joueur', label: '', max_uses: '50', club_id: '' })
     } catch {}
     finally { setCreatingCode(false) }
   }
@@ -271,21 +285,49 @@ export default function AdminPage() {
             <div className="bg-white border border-[#e8e8f0] rounded-xl p-5">
               <h3 className="text-headline-md mb-4">Nouveau code d'invitation</h3>
               <form onSubmit={createCode} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-label-md text-on-surface-variant">Équipe *</label>
-                  <select value={newCode.equipe_id} onChange={e => setNewCode(f => ({ ...f, equipe_id: e.target.value }))}
-                    required className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
-                    <option value="">Choisir une équipe</option>
-                    {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.nom} — {eq.categorie}</option>)}
-                  </select>
-                </div>
+
+                {/* Club selector (superadmin uniquement) */}
+                {isSuperAdmin && (
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-label-md text-on-surface-variant">Club *</label>
+                    <select
+                      value={newCode.club_id}
+                      onChange={e => {
+                        setNewCode(f => ({ ...f, club_id: e.target.value, equipe_id: '' }))
+                        if (e.target.value) loadEquipes(e.target.value)
+                        else setEquipes([])
+                      }}
+                      required
+                      className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
+                    >
+                      <option value="">Choisir un club</option>
+                      {clubs.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {/* Rôle */}
                 <div className="space-y-1.5">
                   <label className="text-label-md text-on-surface-variant">Rôle autorisé</label>
-                  <select value={newCode.role} onChange={e => setNewCode(f => ({ ...f, role: e.target.value }))}
+                  <select value={newCode.role} onChange={e => setNewCode(f => ({ ...f, role: e.target.value, equipe_id: '' }))}
                     className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
                     {CODE_ROLES.map(r => <option key={r.v} value={r.v}>{r.l}</option>)}
                   </select>
                 </div>
+
+                {/* Équipe/catégorie — seulement pour joueur / parent / coach */}
+                {['joueur', 'parent', 'coach'].includes(newCode.role) && (
+                  <div className="space-y-1.5">
+                    <label className="text-label-md text-on-surface-variant">Catégorie / Équipe *</label>
+                    <select value={newCode.equipe_id} onChange={e => setNewCode(f => ({ ...f, equipe_id: e.target.value }))}
+                      required
+                      className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
+                      <option value="">Choisir une catégorie</option>
+                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
+                    </select>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <label className="text-label-md text-on-surface-variant">Libellé (optionnel)</label>
                   <input value={newCode.label} onChange={e => setNewCode(f => ({ ...f, label: e.target.value }))}
@@ -301,7 +343,11 @@ export default function AdminPage() {
                 <div className="md:col-span-2 flex justify-end gap-3">
                   <button type="button" onClick={() => setShowCodeForm(false)}
                     className="px-4 py-2 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
-                  <button type="submit" disabled={creatingCode || !newCode.equipe_id}
+                  <button type="submit" disabled={
+                    creatingCode ||
+                    (isSuperAdmin && !newCode.club_id) ||
+                    (['joueur', 'parent', 'coach'].includes(newCode.role) && !newCode.equipe_id)
+                  }
                     className="px-5 py-2 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40 flex items-center gap-2">
                     {creatingCode && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
                     Générer

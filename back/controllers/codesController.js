@@ -34,12 +34,23 @@ const listCodes = async (req, res) => {
 const createCode = async (req, res) => {
   try {
     const { equipe_id, role = 'joueur', label, max_uses = 50, expires_at } = req.body;
-    if (!equipe_id) return res.status(400).json({ success: false, message: 'equipe_id requis' });
+    // Pour superadmin, accepter un club_id dans le body ; sinon utiliser celui de l'utilisateur
+    const club_id = req.user.role === 'superadmin' ? (req.body.club_id || req.user.club_id) : req.user.club_id;
 
-    const equipe = await Equipe.findOne({ where: { id: equipe_id, club_id: req.user.club_id } });
-    if (!equipe) return res.status(404).json({ success: false, message: 'Équipe introuvable' });
+    if (!club_id) return res.status(400).json({ success: false, message: 'club_id requis' });
 
-    const prefix = equipe.categorie?.replace(/\s+/g, '').slice(0, 4).toUpperCase() || 'MCH';
+    // equipe_id requis uniquement pour les rôles liés à une équipe
+    if (['joueur', 'parent', 'coach'].includes(role) && !equipe_id) {
+      return res.status(400).json({ success: false, message: 'equipe_id requis pour ce rôle' });
+    }
+
+    let equipe = null;
+    if (equipe_id) {
+      equipe = await Equipe.findOne({ where: { id: equipe_id, club_id } });
+      if (!equipe) return res.status(404).json({ success: false, message: 'Équipe introuvable' });
+    }
+
+    const prefix = equipe?.categorie?.replace(/\s+/g, '').slice(0, 4).toUpperCase() || 'MCH';
     let code, exists = true;
     while (exists) {
       code = makeCode(prefix);
@@ -48,8 +59,8 @@ const createCode = async (req, res) => {
 
     const newCode = await InviteCode.create({
       code,
-      equipe_id,
-      club_id: req.user.club_id,
+      equipe_id: equipe_id || null,
+      club_id,
       role,
       label,
       created_by: req.user.id,

@@ -48,8 +48,8 @@ router.delete('/terrains/:id',authenticate, requireMinRole('dirigeant'), deleteT
 router.get('/', getAll);
 router.get('/:id', getById);
 router.post('/', authenticate, requireMinRole('admin'), validateClub, create);
-router.put('/:id', authenticate, requireMinRole('admin'), update);
-router.patch('/:id', authenticate, requireMinRole('admin'), update);
+router.put('/:id', authenticate, requireMinRole('dirigeant'), update);
+router.patch('/:id', authenticate, requireMinRole('dirigeant'), update);
 router.delete('/:id', authenticate, requireMinRole('superadmin'), deleteClub);
 router.post('/:id/logo', authenticate, requireMinRole('admin'), upload.single('logo'), uploadLogo);
 

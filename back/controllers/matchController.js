@@ -9,7 +9,12 @@ const getAll = async (req, res) => {
     if (req.query.type) where.type = req.query.type;
     if (req.query.statut) where.statut = req.query.statut;
 
-    if (req.query.mois && req.query.annee) {
+    if (req.query.month) {
+      const [annee, mois] = req.query.month.split('-').map(Number);
+      const debut = new Date(annee, mois - 1, 1);
+      const fin   = new Date(annee, mois, 0, 23, 59, 59);
+      where.date  = { [Op.between]: [debut, fin] };
+    } else if (req.query.mois && req.query.annee) {
       const debut = new Date(req.query.annee, req.query.mois - 1, 1);
       const fin = new Date(req.query.annee, req.query.mois, 0, 23, 59, 59);
       where.date = { [Op.between]: [debut, fin] };

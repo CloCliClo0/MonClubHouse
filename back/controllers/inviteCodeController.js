@@ -69,7 +69,7 @@ const validateCode = async (req, res) => {
       success: true,
       data: {
         club:      { nom: invite.club.nom, couleur_primaire: invite.club.couleur_primaire },
-        equipe:    { nom: invite.equipe.nom, categorie: invite.equipe.categorie },
+        equipe:    invite.equipe ? { nom: invite.equipe.nom, categorie: invite.equipe.categorie } : null,
         role:      invite.role,
         label:     invite.label,
         remaining: invite.max_uses - invite.uses_count
@@ -120,7 +120,7 @@ const joinByCode = async (req, res) => {
     }
 
     // Affectation du coach à l'équipe
-    if (invite.role === 'coach') {
+    if (invite.role === 'coach' && invite.equipe_id) {
       await Equipe.update(
         { coach_id: req.user.id },
         { where: { id: invite.equipe_id } }
@@ -136,7 +136,7 @@ const joinByCode = async (req, res) => {
       data: {
         role:   invite.role,
         club:   { nom: invite.club.nom },
-        equipe: { nom: invite.equipe.nom }
+        equipe: invite.equipe ? { nom: invite.equipe.nom } : null
       }
     });
   } catch (err) {
@@ -182,8 +182,9 @@ const createCode = async (req, res) => {
       });
     }
 
-    if (!equipe_id) {
-      return res.status(400).json({ success: false, message: 'equipe_id requis' });
+    // equipe_id requis uniquement pour les rôles liés à une équipe
+    if (['joueur', 'parent', 'coach'].includes(role) && !equipe_id) {
+      return res.status(400).json({ success: false, message: 'equipe_id requis pour ce rôle' });
     }
 
     // Génération d'un code unique

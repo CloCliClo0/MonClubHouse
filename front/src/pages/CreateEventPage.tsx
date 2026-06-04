@@ -1,72 +1,98 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../services/api'
 
 type EventType = 'match' | 'entrainement' | 'tournoi' | 'plateau' | 'reunion' | 'autre'
-
 type Step = 1 | 2 | 3 | 4
 
+type Equipe  = { id: number; nom: string; categorie: string }
+type Terrain = { id: number; nom: string; type: string }
+
 const EVENT_TYPES: { key: EventType; label: string; icon: string; color: string; desc: string }[] = [
-  { key: 'match',       label: 'Match',         icon: 'sports_soccer',  color: 'border-green-500 bg-green-50',   desc: 'Match officiel contre un adversaire' },
-  { key: 'entrainement',label: 'Entraînement',  icon: 'fitness_center', color: 'border-blue-500 bg-blue-50',     desc: 'Séance d\'entraînement d\'équipe' },
-  { key: 'tournoi',     label: 'Tournoi',       icon: 'emoji_events',   color: 'border-yellow-500 bg-yellow-50', desc: 'Tournoi multi-équipes' },
-  { key: 'plateau',     label: 'Plateau',       icon: 'view_quilt',     color: 'border-purple-500 bg-purple-50', desc: 'Plateau sportif (U7–U11)' },
-  { key: 'reunion',     label: 'Réunion',       icon: 'groups',         color: 'border-slate-500 bg-slate-50',   desc: 'Réunion d\'équipe ou de bureau' },
-  { key: 'autre',       label: 'Autre',         icon: 'event',          color: 'border-gray-400 bg-gray-50',     desc: 'Autre type d\'événement' },
-]
-
-const TEAMS = ['Seniors A', 'Seniors B', 'U19', 'U17', 'U15 A', 'U15 B', 'U13', 'U11', 'U9', 'U7', 'Féminines A']
-const TERRAINS = ['Stade Municipal', 'Terrain Annexe A', 'Terrain Annexe B', 'Salle Multi-sports', 'Terrain extérieur']
-
-const PLAYERS = [
-  { id: 1, name: 'Lucas Bertin',    number: 9,  position: 'Attaquant' },
-  { id: 2, name: 'Cédric Lefebvre', number: 8,  position: 'Milieu'    },
-  { id: 3, name: 'Antoine Moreau',  number: 4,  position: 'Défenseur' },
-  { id: 4, name: 'Marc Rousseau',   number: 1,  position: 'Gardien'   },
-  { id: 5, name: 'Baptiste Girard', number: 5,  position: 'Défenseur' },
-  { id: 6, name: 'Julien Fontaine', number: 6,  position: 'Milieu'    },
-  { id: 7, name: 'Nicolas Perrin',  number: 11, position: 'Attaquant' },
-  { id: 8, name: 'Théo Blanchard',  number: 10, position: 'Milieu'    },
-  { id: 9, name: 'Sébastien Mard',  number: 3,  position: 'Défenseur' },
-  { id: 10, name: 'Kevin Arnaud',   number: 7,  position: 'Milieu'    },
-  { id: 11, name: 'Franck Morel',   number: 2,  position: 'Défenseur' },
+  { key: 'match',        label: 'Match',        icon: 'sports_soccer',  color: 'border-green-500 bg-green-50',   desc: 'Match officiel contre un adversaire' },
+  { key: 'entrainement', label: 'Entraînement', icon: 'fitness_center', color: 'border-blue-500 bg-blue-50',     desc: 'Séance d\'entraînement d\'équipe' },
+  { key: 'tournoi',      label: 'Tournoi',      icon: 'emoji_events',   color: 'border-yellow-500 bg-yellow-50', desc: 'Tournoi multi-équipes' },
+  { key: 'plateau',      label: 'Plateau',      icon: 'view_quilt',     color: 'border-purple-500 bg-purple-50', desc: 'Plateau sportif (U7–U11)' },
+  { key: 'reunion',      label: 'Réunion',      icon: 'groups',         color: 'border-slate-500 bg-slate-50',   desc: 'Réunion d\'équipe ou de bureau' },
+  { key: 'autre',        label: 'Autre',        icon: 'event',          color: 'border-gray-400 bg-gray-50',     desc: 'Autre type d\'événement' },
 ]
 
 export default function CreateEventPage() {
-  const navigate = useNavigate()
-  const [step, setStep]           = useState<Step>(1)
-  const [type, setType]           = useState<EventType | null>(null)
-  const [team, setTeam]           = useState('')
-  const [date, setDate]           = useState('')
-  const [heure, setHeure]         = useState('15:00')
-  const [terrain, setTerrain]     = useState('')
+  const navigate  = useNavigate()
+  const role      = localStorage.getItem('role') || 'coach'
+  const userId    = parseInt(localStorage.getItem('userId') || '0')
+
+  const [step, setStep]             = useState<Step>(1)
+  const [type, setType]             = useState<EventType | null>(null)
+  const [equipeId, setEquipeId]     = useState('')
+  const [date, setDate]             = useState('')
+  const [heure, setHeure]           = useState('')
+  const [terrainId, setTerrainId]   = useState('')
   const [adversaire, setAdversaire] = useState('')
   const [competition, setCompetition] = useState('')
-  const [domicile, setDomicile]   = useState(true)
+  const [domicile, setDomicile]     = useState(true)
   const [instructions, setInstructions] = useState('')
-  const [sendEmail, setSendEmail] = useState(true)
-  const [selectedPlayers, setSelectedPlayers] = useState<number[]>(PLAYERS.map(p => p.id))
-  const [submitted, setSubmitted] = useState(false)
+  const [sendEmail, setSendEmail]   = useState(true)
+  const [submitted, setSubmitted]   = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState('')
 
-  const togglePlayer = (id: number) =>
-    setSelectedPlayers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  const [equipes, setEquipes]   = useState<Equipe[]>([])
+  const [terrains, setTerrains] = useState<Terrain[]>([])
+
+  useEffect(() => {
+    api.get('/equipes').then(r => {
+      const list: Equipe[] = r.data.data || []
+      // Pour un coach, pré-sélectionner son équipe
+      if (role === 'coach' && userId) {
+        api.get('/equipes').then(er => {
+          const all: any[] = er.data.data || []
+          const mine = all.find(e => e.coach_id === userId)
+          if (mine) setEquipeId(String(mine.id))
+        }).catch(() => {})
+      }
+      setEquipes(list)
+    }).catch(() => {})
+
+    api.get('/clubs/terrains').then(r => setTerrains(r.data.data || [])).catch(() => {})
+  }, [])
 
   const canNext = () => {
     if (step === 1) return !!type
-    if (step === 2) return !!team && !!date && !!heure && !!terrain
+    if (step === 2) return !!equipeId && !!date && !!heure
     if (step === 3) return type !== 'match' || !!adversaire
     return true
   }
 
-  const handleSubmit = () => {
-    setSubmitted(true)
-    setTimeout(() => navigate('/calendrier'), 1800)
+  const handleSubmit = async () => {
+    setError('')
+    setSaving(true)
+    try {
+      const payload: Record<string, any> = {
+        equipe_id:   parseInt(equipeId),
+        type,
+        date:        `${date}T${heure}:00`,
+        domicile,
+        adversaire:  adversaire || null,
+        competition: competition || null,
+        statut:      'programme',
+        notes:       instructions || null,
+      }
+      if (terrainId) payload.terrain_id = parseInt(terrainId)
+      await api.post('/matchs', payload)
+      setSubmitted(true)
+      setTimeout(() => navigate('/calendrier'), 1800)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erreur lors de la création')
+      setSaving(false)
+    }
   }
 
   const STEPS = [
     { n: 1, label: 'Type'         },
     { n: 2, label: 'Informations' },
     { n: 3, label: 'Détails'      },
-    { n: 4, label: 'Joueurs'      },
+    { n: 4, label: 'Confirmer'    },
   ]
 
   if (submitted) {
@@ -76,9 +102,7 @@ export default function CreateEventPage() {
           <span className="material-symbols-outlined text-green-600 text-[44px]">check_circle</span>
         </div>
         <h2 className="text-headline-lg text-on-surface mb-2">Événement créé !</h2>
-        <p className="text-body-lg text-on-surface-variant mb-6">
-          Les convocations ont été envoyées aux {selectedPlayers.length} joueurs sélectionnés.
-        </p>
+        <p className="text-body-lg text-on-surface-variant mb-6">L'événement a été ajouté au calendrier.</p>
         <div className="animate-pulse text-body-md text-on-surface-variant">Redirection vers le calendrier…</div>
       </div>
     )
@@ -118,6 +142,13 @@ export default function CreateEventPage() {
           </div>
         ))}
       </div>
+
+      {error && (
+        <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-body-sm">
+          <span className="material-symbols-outlined text-[18px]">error</span>
+          {error}
+        </div>
+      )}
 
       <div className="bg-white border border-[#e8e8f0] rounded-2xl overflow-hidden shadow-sm">
 
@@ -159,22 +190,24 @@ export default function CreateEventPage() {
               <div className="space-y-1.5">
                 <label className="text-label-md text-on-surface-variant">Équipe *</label>
                 <div className="relative">
-                  <select value={team} onChange={e => setTeam(e.target.value)}
+                  <select value={equipeId} onChange={e => setEquipeId(e.target.value)} required
                     className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10">
                     <option value="">Sélectionner une équipe</option>
-                    {TEAMS.map(t => <option key={t}>{t}</option>)}
+                    {equipes.map(eq => (
+                      <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>
+                    ))}
                   </select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Terrain *</label>
+                <label className="text-label-md text-on-surface-variant">Terrain</label>
                 <div className="relative">
-                  <select value={terrain} onChange={e => setTerrain(e.target.value)}
+                  <select value={terrainId} onChange={e => setTerrainId(e.target.value)}
                     className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10">
                     <option value="">Sélectionner un terrain</option>
-                    {TERRAINS.map(t => <option key={t}>{t}</option>)}
+                    {terrains.map(t => <option key={t.id} value={t.id}>{t.nom}</option>)}
                   </select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
                 </div>
@@ -182,13 +215,13 @@ export default function CreateEventPage() {
 
               <div className="space-y-1.5">
                 <label className="text-label-md text-on-surface-variant">Date *</label>
-                <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} required
                   className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-label-md text-on-surface-variant">Heure *</label>
-                <input type="time" value={heure} onChange={e => setHeure(e.target.value)}
+                <input type="time" value={heure} onChange={e => setHeure(e.target.value)} required
                   className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
               </div>
             </div>
@@ -257,43 +290,30 @@ export default function CreateEventPage() {
           </div>
         )}
 
-        {/* ── Étape 4 : Joueurs ────────────────────────────────────── */}
+        {/* ── Étape 4 : Récap ──────────────────────────────────────── */}
         {step === 4 && (
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-headline-md">Sélection des joueurs</h3>
-              <button onClick={() => setSelectedPlayers(
-                selectedPlayers.length === PLAYERS.length ? [] : PLAYERS.map(p => p.id)
-              )} className="text-primary text-label-md hover:underline">
-                {selectedPlayers.length === PLAYERS.length ? 'Tout désélectionner' : 'Tout sélectionner'}
-              </button>
-            </div>
-
-            <div className="mb-4 flex items-center gap-3 p-3 bg-surface-container-low rounded-xl">
-              <span className="material-symbols-outlined text-primary">groups</span>
-              <span className="text-body-md text-on-surface">
-                <strong>{selectedPlayers.length}</strong> joueur(s) sélectionné(s) sur {PLAYERS.length}
-              </span>
-            </div>
-
-            <div className="divide-y divide-[#e8e8f0] border border-[#e8e8f0] rounded-xl overflow-hidden">
-              {PLAYERS.map(p => {
-                const selected = selectedPlayers.includes(p.id)
-                return (
-                  <label key={p.id} className={`flex items-center gap-4 p-3.5 cursor-pointer transition-colors ${selected ? 'bg-primary/5' : 'hover:bg-surface-container-low'}`}>
-                    <input type="checkbox" checked={selected} onChange={() => togglePlayer(p.id)}
-                      className="w-4 h-4 accent-primary shrink-0" />
-                    <div className="w-9 h-9 rounded-full bg-primary-container text-white font-bold text-sm flex items-center justify-center shrink-0">
-                      #{p.number}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-label-lg text-on-surface">{p.name}</p>
-                      <p className="text-body-sm text-on-surface-variant">{p.position}</p>
-                    </div>
-                    {selected && <span className="material-symbols-outlined text-primary text-[20px]">check_circle</span>}
-                  </label>
-                )
-              })}
+          <div className="p-6 space-y-4">
+            <h3 className="text-headline-md mb-4">Récapitulatif</h3>
+            <div className="bg-surface-container-low rounded-xl p-5 space-y-3">
+              {[
+                { icon: EVENT_TYPES.find(e => e.key === type)?.icon || 'event', label: 'Type', val: EVENT_TYPES.find(e => e.key === type)?.label },
+                { icon: 'groups', label: 'Équipe', val: equipes.find(e => String(e.id) === equipeId)?.nom || '—' },
+                { icon: 'calendar_today', label: 'Date', val: date ? new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—' },
+                { icon: 'schedule', label: 'Heure', val: heure || '—' },
+                { icon: 'location_on', label: 'Terrain', val: terrains.find(t => String(t.id) === terrainId)?.nom || 'Non précisé' },
+                adversaire ? { icon: 'sports_soccer', label: 'Adversaire', val: `vs ${adversaire}` } : null,
+                competition ? { icon: 'emoji_events', label: 'Compétition', val: competition } : null,
+              ].filter(Boolean).map((item: any, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-primary text-[18px]">{item.icon}</span>
+                  </div>
+                  <div>
+                    <p className="text-label-md text-on-surface-variant">{item.label}</p>
+                    <p className="text-body-md text-on-surface font-medium">{item.val}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -306,9 +326,7 @@ export default function CreateEventPage() {
             {step === 1 ? 'Annuler' : 'Précédent'}
           </button>
 
-          <div className="flex items-center gap-2">
-            <span className="text-label-md text-on-surface-variant">Étape {step} / 4</span>
-          </div>
+          <span className="text-label-md text-on-surface-variant">Étape {step} / 4</span>
 
           {step < 4 ? (
             <button onClick={() => canNext() && setStep((step + 1) as Step)}
@@ -318,33 +336,17 @@ export default function CreateEventPage() {
               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </button>
           ) : (
-            <button onClick={handleSubmit}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container transition-colors shadow-sm">
-              <span className="material-symbols-outlined text-[18px]">check</span>
+            <button onClick={handleSubmit} disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container transition-colors shadow-sm disabled:opacity-60">
+              {saving
+                ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                : <span className="material-symbols-outlined text-[18px]">check</span>
+              }
               Créer l'événement
             </button>
           )}
         </div>
       </div>
-
-      {/* Récap flottant */}
-      {type && step > 1 && (
-        <div className="mt-4 bg-white border border-[#e8e8f0] rounded-xl p-4 flex flex-wrap items-center gap-4 text-body-sm text-on-surface-variant shadow-sm">
-          {[
-            { icon: EVENT_TYPES.find(e => e.key === type)?.icon || 'event', val: EVENT_TYPES.find(e => e.key === type)?.label },
-            team     && { icon: 'groups', val: team },
-            date     && { icon: 'calendar_today', val: new Date(date).toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) },
-            heure    && { icon: 'schedule', val: heure },
-            terrain  && { icon: 'location_on', val: terrain },
-            adversaire && { icon: 'sports_soccer', val: `vs ${adversaire}` },
-          ].filter(Boolean).map((item: any, i) => (
-            <span key={i} className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-primary">{item.icon}</span>
-              {item.val}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
