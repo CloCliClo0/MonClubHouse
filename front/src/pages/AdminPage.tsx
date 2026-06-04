@@ -509,43 +509,68 @@ export default function AdminPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-surface-container-low border-b border-[#e8e8f0]">
-                <th className="px-6 py-3 text-left text-label-md text-on-surface-variant">Utilisateur</th>
-                <th className="px-6 py-3 text-left text-label-md text-on-surface-variant hidden md:table-cell">Email</th>
-                <th className="px-6 py-3 text-left text-label-md text-on-surface-variant">Rôle</th>
-                <th className="px-6 py-3 text-left text-label-md text-on-surface-variant hidden lg:table-cell">Dernière connexion</th>
-                <th className="px-6 py-3 text-left text-label-md text-on-surface-variant">Actions</th>
+                <th className="px-4 py-3 text-left text-label-md text-on-surface-variant">Utilisateur</th>
+                <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden md:table-cell">Email</th>
+                <th className="px-4 py-3 text-left text-label-md text-on-surface-variant">Rôle</th>
+                {isSuperAdmin && <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden xl:table-cell">Club</th>}
+                <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden lg:table-cell">Connexion</th>
+                <th className="px-4 py-3 text-left text-label-md text-on-surface-variant">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e8e8f0]">
               {filtered.map(u => (
                 <tr key={u.id} className="hover:bg-surface-container-low transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-white font-bold text-sm shrink-0">
                         {u.prenom?.[0]}{u.nom?.[0]}
                       </div>
-                      <span className="text-label-lg text-on-surface">{u.prenom} {u.nom}</span>
+                      <div className="min-w-0">
+                        <p className="text-label-lg text-on-surface truncate">{u.prenom} {u.nom}</p>
+                        {isSuperAdmin && u.club_id && (
+                          <p className="text-[11px] text-primary truncate xl:hidden">
+                            {clubs.find(c => c.id === u.club_id)?.nom ?? `Club #${u.club_id}`}
+                          </p>
+                        )}
+                        {isSuperAdmin && !u.club_id && (
+                          <p className="text-[11px] text-orange-500 xl:hidden">Sans club</p>
+                        )}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-body-md text-on-surface-variant hidden md:table-cell">{u.email}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3 text-body-md text-on-surface-variant hidden md:table-cell">{u.email}</td>
+                  <td className="px-4 py-3">
                     <select value={u.role} onChange={e => updateRole(u.id, e.target.value as Role)}
                       className={`px-3 py-1 rounded-full text-label-md font-semibold border-none focus:outline-none cursor-pointer ${roleColors[u.role]}`}>
                       {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </td>
-                  <td className="px-6 py-4 text-body-md text-on-surface-variant hidden lg:table-cell">
+                  {isSuperAdmin && (
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      {u.club_id
+                        ? <span className="text-body-sm text-primary font-medium">{clubs.find(c => c.id === u.club_id)?.nom ?? `#${u.club_id}`}</span>
+                        : <span className="text-body-sm text-orange-500">Sans club</span>
+                      }
+                    </td>
+                  )}
+                  <td className="px-4 py-3 text-body-sm text-on-surface-variant hidden lg:table-cell">
                     {u.derniere_connexion ? new Date(u.derniere_connexion).toLocaleDateString('fr-FR') : 'Jamais'}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       {isSuperAdmin && (
-                        <button onClick={() => openAssign(u)} title="Affecter à un club"
-                          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-label-md transition-colors ${
-                            u.club_id ? 'text-primary hover:bg-primary/10' : 'text-orange-600 hover:bg-orange-50'
-                          }`}>
-                          <span className="material-symbols-outlined text-[16px]">home_work</span>
-                          <span className="hidden lg:inline">{u.club_id ? 'Club' : 'Affecter'}</span>
+                        <button
+                          onClick={() => openAssign(u)}
+                          title={u.club_id ? 'Changer de club' : 'Affecter à un club'}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                            u.club_id
+                              ? 'text-primary hover:bg-primary/10'
+                              : 'text-orange-500 hover:bg-orange-50'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[20px]">
+                            {u.club_id ? 'home_work' : 'add_home'}
+                          </span>
                         </button>
                       )}
                       <button onClick={() => openEdit(u)}
