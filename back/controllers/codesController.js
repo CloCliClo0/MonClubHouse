@@ -19,8 +19,8 @@ const listCodes = async (req, res) => {
     const codes = await InviteCode.findAll({
       where,
       include: [
-        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] },
-        { model: Club,   as: 'club',   attributes: ['id', 'nom'] },
+        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'], required: false },
+        { model: Club,   as: 'club',   attributes: ['id', 'nom'],             required: false },
       ],
       order: [['created_at', 'DESC']],
     });
@@ -131,9 +131,11 @@ const validateCode = async (req, res) => {
 
     return res.json({
       success: true,
-      message: `Vous avez rejoint ${inviteCode.equipe.nom} en tant que ${inviteCode.role}`,
+      message: inviteCode.equipe
+        ? `Vous avez rejoint ${inviteCode.equipe.nom} en tant que ${inviteCode.role}`
+        : `Bienvenue en tant que ${inviteCode.role}`,
       data: {
-        equipe:  inviteCode.equipe,
+        equipe:  inviteCode.equipe || null,
         role:    inviteCode.role,
         club_id: inviteCode.club_id,
       },

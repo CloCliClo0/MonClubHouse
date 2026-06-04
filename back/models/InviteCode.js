@@ -4,7 +4,7 @@ const sequelize = require('../config/db');
 const InviteCode = sequelize.define('InviteCode', {
   id:         { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   code:       { type: DataTypes.STRING(30), allowNull: false, unique: true },
-  equipe_id:  { type: DataTypes.INTEGER, allowNull: false },
+  equipe_id:  { type: DataTypes.INTEGER, allowNull: true },
   club_id:    { type: DataTypes.INTEGER, allowNull: false },
   role:       { type: DataTypes.ENUM('joueur','parent','coach','dirigeant'), defaultValue: 'joueur' },
   label:      { type: DataTypes.STRING(100), allowNull: true },

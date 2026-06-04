@@ -26,8 +26,8 @@ const findActiveCode = async (code) => {
   return InviteCode.findOne({
     where: { code, actif: true },
     include: [
-      { model: Club,  as: 'club',   attributes: ['id', 'nom', 'couleur_primaire'] },
-      { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] }
+      { model: Club,   as: 'club',   attributes: ['id', 'nom', 'couleur_primaire'], required: false },
+      { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'],        required: false }
     ]
   });
 };
