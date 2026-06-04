@@ -77,4 +77,30 @@ const toggleUserActif = async (req, res) => {
   }
 };
 
-module.exports = { getDashboard, getUsers, updateUserRole, toggleUserActif };
+const updateUser = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+
+    const { nom, prenom, role, club_id } = req.body;
+    const updates = {};
+    if (nom    !== undefined) updates.nom    = nom;
+    if (prenom !== undefined) updates.prenom = prenom;
+    if (role   !== undefined) {
+      const allowed = ['dirigeant', 'coach', 'joueur', 'parent', 'visiteur'];
+      if (req.user.role === 'superadmin') allowed.push('superadmin', 'admin');
+      if (allowed.includes(role)) updates.role = role;
+    }
+    // Seul le superadmin peut changer le club d'un utilisateur
+    if (club_id !== undefined && req.user.role === 'superadmin') {
+      updates.club_id = club_id || null;
+    }
+
+    await user.update(updates);
+    return res.json({ success: true, data: user.toSafeJSON() });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getDashboard, getUsers, updateUser, updateUserRole, toggleUserActif };

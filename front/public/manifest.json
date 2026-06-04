@@ -1,0 +1,20 @@
+{
+  "name": "MonClubHouse",
+  "short_name": "MCH",
+  "description": "La plateforme de gestion de club sportif",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1b4332",
+  "theme_color": "#1b4332",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["sports", "productivity"]
+}

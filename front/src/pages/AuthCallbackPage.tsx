@@ -12,6 +12,12 @@ export default function AuthCallbackPage() {
     if (token) {
       localStorage.setItem('token', token)
       if (refresh) localStorage.setItem('refresh_token', refresh)
+      // Décoder le JWT pour stocker rôle + userId sans appel API
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        if (payload.id)   localStorage.setItem('userId', String(payload.id))
+        if (payload.role) localStorage.setItem('role',   payload.role)
+      } catch {}
       navigate(isNew ? '/google-complete' : '/dashboard', { replace: true })
     } else {
       navigate('/login?error=oauth_failed', { replace: true })

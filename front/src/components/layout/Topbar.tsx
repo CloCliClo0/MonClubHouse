@@ -20,6 +20,8 @@ export default function Topbar({ onMenuToggle }: Props) {
   const [showNotifs, setShowNotifs] = useState(false)
   const [showHelp, setShowHelp]     = useState(false)
   const [search, setSearch]         = useState('')
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
+  const [installed, setInstalled]   = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
   const helpRef  = useRef<HTMLDivElement>(null)
 
@@ -36,7 +38,22 @@ export default function Topbar({ onMenuToggle }: Props) {
       .catch(() => {})
   }
 
-  useEffect(() => { loadNotifs() }, [])
+  useEffect(() => {
+    loadNotifs()
+    // Écoute l'événement d'installation PWA
+    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e) }
+    window.addEventListener('beforeinstallprompt', handler)
+    // Détecte si déjà installée
+    window.addEventListener('appinstalled', () => { setInstalled(true); setInstallPrompt(null) })
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') { setInstalled(true); setInstallPrompt(null) }
+  }
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -81,6 +98,18 @@ export default function Topbar({ onMenuToggle }: Props) {
 
       {/* Droite */}
       <div className="flex items-center gap-2 lg:gap-4 shrink-0">
+        {/* Bouton installer l'app — visible uniquement si le navigateur propose l'install */}
+        {installPrompt && !installed && (
+          <button
+            onClick={handleInstall}
+            title="Installer l'application"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-label-md transition-colors mr-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">install_mobile</span>
+            <span className="hidden md:inline">Installer l'app</span>
+          </button>
+        )}
+
         <div className="flex items-center gap-1 lg:gap-2 border-r border-outline-variant pr-3 lg:pr-6">
 
           {/* Notifications */}

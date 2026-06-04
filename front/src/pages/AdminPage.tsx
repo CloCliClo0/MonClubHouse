@@ -25,13 +25,14 @@ const roleColors: Record<Role, string> = {
   visiteur:   'bg-slate-100 text-slate-700',
 }
 
-type User = { id: number; nom: string; prenom: string; email: string; role: Role; derniere_connexion: string | null; actif: boolean }
+type User = { id: number; nom: string; prenom: string; email: string; role: Role; club_id: number | null; derniere_connexion: string | null; actif: boolean }
 
 type ModalState =
   | { type: 'none' }
   | { type: 'create' }
   | { type: 'edit'; user: User }
   | { type: 'delete'; user: User }
+  | { type: 'assign'; user: User }
 
 const BLANK = { nom: '', prenom: '', email: '', role: 'joueur' as Role, password: '' }
 
@@ -60,6 +61,9 @@ export default function AdminPage() {
       .finally(() => setClubsLoading(false))
   }
 
+  useEffect(() => {
+    if (isSuperAdmin && clubs.length === 0) loadClubs()
+  }, [])
   useEffect(() => { if (activeTab === 'clubs' && isSuperAdmin) loadClubs() }, [activeTab])
 
   // ── État utilisateurs ─────────────────────────────────────
@@ -71,6 +75,8 @@ export default function AdminPage() {
   const [form, setForm]       = useState(BLANK)
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState('')
+  const [assignForm, setAssignForm] = useState({ club_id: '', role: 'joueur' as Role, equipe_id: '' })
+  const [assignEquipes, setAssignEquipes] = useState<Equipe[]>([])
 
   // ── État codes ────────────────────────────────────────────
   const [codes, setCodes]         = useState<InviteCode[]>([])
@@ -164,6 +170,13 @@ export default function AdminPage() {
   const openCreate = () => { setForm(BLANK); setError(''); setModal({ type: 'create' }) }
   const openEdit   = (u: User) => { setForm({ nom: u.nom, prenom: u.prenom, email: u.email, role: u.role, password: '' }); setError(''); setModal({ type: 'edit', user: u }) }
   const openDelete = (u: User) => setModal({ type: 'delete', user: u })
+  const openAssign = (u: User) => {
+    setAssignForm({ club_id: String(u.club_id || ''), role: u.role, equipe_id: '' })
+    setAssignEquipes([])
+    if (u.club_id) api.get(`/equipes?club_id=${u.club_id}`).then(r => setAssignEquipes(r.data.data || [])).catch(() => {})
+    setError('')
+    setModal({ type: 'assign', user: u })
+  }
 
   const handleSave = async () => {
     setError('')
@@ -175,6 +188,13 @@ export default function AdminPage() {
         setModal({ type: 'none' })
       } else if (modal.type === 'edit') {
         await api.patch(`/admin/users/${modal.user.id}`, { nom: form.nom, prenom: form.prenom, role: form.role })
+        load()
+        setModal({ type: 'none' })
+      } else if (modal.type === 'assign') {
+        await api.patch(`/admin/users/${modal.user.id}`, {
+          club_id: assignForm.club_id ? parseInt(assignForm.club_id) : null,
+          role:    assignForm.role,
+        })
         load()
         setModal({ type: 'none' })
       }
@@ -519,13 +539,22 @@ export default function AdminPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1">
+                      {isSuperAdmin && (
+                        <button onClick={() => openAssign(u)} title="Affecter à un club"
+                          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-label-md transition-colors ${
+                            u.club_id ? 'text-primary hover:bg-primary/10' : 'text-orange-600 hover:bg-orange-50'
+                          }`}>
+                          <span className="material-symbols-outlined text-[16px]">home_work</span>
+                          <span className="hidden lg:inline">{u.club_id ? 'Club' : 'Affecter'}</span>
+                        </button>
+                      )}
                       <button onClick={() => openEdit(u)}
                         className="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors" title="Modifier">
                         <span className="material-symbols-outlined text-[18px]">edit</span>
                       </button>
                       <button onClick={() => openDelete(u)}
-                        className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-on-surface-variant hover:text-error transition-colors" title="Supprimer">
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                        className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-on-surface-variant hover:text-error transition-colors" title="Désactiver">
+                        <span className="material-symbols-outlined text-[18px]">block</span>
                       </button>
                     </div>
                   </td>
@@ -596,6 +625,91 @@ export default function AdminPage() {
                 className="px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40 flex items-center gap-2">
                 {saving ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : null}
                 {modal.type === 'create' ? 'Créer' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Affecter au club ─────────────────────────────────── */}
+      {modal.type === 'assign' && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setModal({ type: 'none' })}>
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-[#e8e8f0] flex items-center justify-between">
+              <div>
+                <h3 className="text-headline-md">Affecter au club</h3>
+                <p className="text-body-sm text-on-surface-variant mt-0.5">{modal.user.prenom} {modal.user.nom} — {modal.user.email}</p>
+              </div>
+              <button onClick={() => setModal({ type: 'none' })} className="text-on-surface-variant hover:text-on-surface">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {error && <p className="text-error text-body-sm bg-error/10 border border-error/30 px-3 py-2 rounded-lg">{error}</p>}
+
+              {/* Club actuel */}
+              {modal.user.club_id && (
+                <div className="flex items-center gap-2 bg-surface-container-low rounded-lg px-3 py-2.5 text-body-sm text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[16px] text-primary">home_work</span>
+                  Club actuel : <strong className="text-on-surface">{clubs.find(c => c.id === modal.user.club_id)?.nom ?? `#${modal.user.club_id}`}</strong>
+                </div>
+              )}
+
+              {/* Sélecteur de club */}
+              <div className="space-y-1.5">
+                <label className="text-label-md text-on-surface-variant">Club *</label>
+                <select
+                  value={assignForm.club_id}
+                  onChange={e => {
+                    const cid = e.target.value
+                    setAssignForm(f => ({ ...f, club_id: cid, equipe_id: '' }))
+                    if (cid) api.get(`/equipes?club_id=${cid}`).then(r => setAssignEquipes(r.data.data || [])).catch(() => setAssignEquipes([]))
+                    else setAssignEquipes([])
+                  }}
+                  className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
+                >
+                  <option value="">Aucun club (retirer)</option>
+                  {clubs.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                </select>
+              </div>
+
+              {/* Rôle */}
+              <div className="space-y-1.5">
+                <label className="text-label-md text-on-surface-variant">Rôle</label>
+                <select
+                  value={assignForm.role}
+                  onChange={e => setAssignForm(f => ({ ...f, role: e.target.value as Role }))}
+                  className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
+                >
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+
+              {/* Équipe (optionnel, pour joueur/coach/parent) */}
+              {['joueur', 'coach', 'parent'].includes(assignForm.role) && assignEquipes.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Catégorie / Équipe <span className="text-on-surface-variant/60">(optionnel)</span></label>
+                  <select
+                    value={assignForm.equipe_id}
+                    onChange={e => setAssignForm(f => ({ ...f, equipe_id: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
+                  >
+                    <option value="">Sans équipe spécifique</option>
+                    {assignEquipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="p-5 border-t border-[#e8e8f0] flex justify-end gap-3">
+              <button onClick={() => setModal({ type: 'none' })}
+                className="px-4 py-2.5 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40 flex items-center gap-2"
+              >
+                {saving ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : null}
+                Enregistrer
               </button>
             </div>
           </div>
