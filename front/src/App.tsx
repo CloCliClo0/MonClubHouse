@@ -24,6 +24,7 @@ import JoinPage from './pages/JoinPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import GoogleCompletePage from './pages/GoogleCompletePage'
+import HelpPage from './pages/HelpPage'
 
 export default function App() {
   return (
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/evenements/creer"   element={<CreateEventPage />} />
           <Route path="/adversaires"        element={<OpponentsPage />} />
           <Route path="/statistiques"       element={<StatsPage />} />
+          <Route path="/aide"               element={<HelpPage />} />
         </Route>
 
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

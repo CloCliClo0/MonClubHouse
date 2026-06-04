@@ -110,6 +110,19 @@ export default function Sidebar() {
           </button>
         )}
 
+        {/* Aide & Ressources */}
+        <NavLink
+          to="/aide"
+          className={({ isActive }) =>
+            isActive
+              ? 'flex items-center gap-3 px-4 py-2.5 text-primary-fixed bg-primary/15 border-l-4 border-primary rounded-r-lg'
+              : 'flex items-center gap-3 px-4 py-2.5 text-white/50 hover:text-white transition-colors rounded-lg'
+          }
+        >
+          <span className="material-symbols-outlined text-[20px]">help</span>
+          <span className="text-body-md">Aide &amp; Ressources</span>
+        </NavLink>
+
         <NavLink
           to="/profil"
           className={({ isActive }) =>
@@ -129,6 +142,9 @@ export default function Sidebar() {
           <span className="material-symbols-outlined text-[20px]">logout</span>
           <span className="text-body-md">Déconnexion</span>
         </button>
+
+        {/* Version */}
+        <p className="px-4 pt-2 text-[10px] text-white/20 text-center">MonClubHouse v1.0</p>
       </div>
     </aside>
   )
