@@ -10,7 +10,10 @@ const getAll = async (req, res) => {
     const licencies = await Licencie.findAll({
       where,
       include: [
-        { model: User, as: 'user', attributes: ['id', 'nom', 'prenom', 'email', 'avatar', 'telephone'] },
+        {
+          model: User, as: 'user', attributes: ['id', 'nom', 'prenom', 'email', 'avatar', 'telephone', 'parent_id'],
+          include: [{ model: User, as: 'parent', attributes: ['id', 'nom', 'prenom', 'email', 'telephone'], required: false }]
+        },
         { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] }
       ]
     });

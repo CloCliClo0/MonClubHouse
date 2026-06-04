@@ -7,11 +7,13 @@ import DashboardPage from './pages/DashboardPage'
 import CalendarPage from './pages/CalendarPage'
 import TeamsPage from './pages/TeamsPage'
 import CreateTeamPage from './pages/CreateTeamPage'
+import TeamDetailPage from './pages/TeamDetailPage'
 import ChatPage from './pages/ChatPage'
 import ConvocationsPage from './pages/ConvocationsPage'
 import CompositionPage from './pages/CompositionPage'
 import ResultsPage from './pages/ResultsPage'
 import MatchDetailPage from './pages/MatchDetailPage'
+import EventPage from './pages/EventPage'
 import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
 import ClubPage from './pages/ClubPage'
@@ -51,11 +53,13 @@ export default function App() {
           <Route path="/calendrier"         element={<CalendarPage />} />
           <Route path="/equipes"            element={<TeamsPage />} />
           <Route path="/equipes/creer"      element={<CreateTeamPage />} />
+          <Route path="/equipes/:id"        element={<TeamDetailPage />} />
           <Route path="/messages"           element={<ChatPage />} />
           <Route path="/convocations"       element={<ConvocationsPage />} />
           <Route path="/composition"        element={<CompositionPage />} />
           <Route path="/resultats"          element={<ResultsPage />} />
           <Route path="/resultats/:matchId" element={<MatchDetailPage />} />
+          <Route path="/evenements/:id"    element={<EventPage />} />
           <Route path="/profil"             element={<ProfilePage />} />
           <Route path="/admin"              element={<AdminPage />} />
           <Route path="/mon-club"           element={<ClubPage />} />

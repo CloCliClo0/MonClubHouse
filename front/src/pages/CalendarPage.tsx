@@ -179,7 +179,7 @@ export default function CalendarPage() {
                 <div className="mt-1 space-y-1">
                   {dayEvents.map(ev => (
                     <div key={ev.id}
-                      onClick={() => navigate(`/resultats/${ev.id}`)}
+                      onClick={() => navigate(`/evenements/${ev.id}`)}
                       className={`px-1.5 py-0.5 rounded text-[11px] font-semibold cursor-pointer truncate transition-colors ${
                         ev.type === 'match' || ev.type === 'amical' || ev.type === 'coupe'
                           ? 'bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20'
