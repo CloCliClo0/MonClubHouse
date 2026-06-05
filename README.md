@@ -56,29 +56,7 @@ npm run dev           # port 5173 → http://localhost:5173
 > l'accès distant MySQL dans le panel Hostinger ou lancer un container Docker :
 > `docker run -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=mch_db --name mch mysql:8`
 
-## Variables d'environnement (`back/.env`)
-
-```env
-APP_URL=https://monclubhouse.fr
-DB_HOST=localhost
-DB_NAME=u555371370_mch_db
-DB_USER=u555371370_root
-DB_PASS=...
-JWT_SECRET=...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_CALLBACK_URL=https://monclubhouse.fr/auth/google/callback
-GOOGLE_DRIVE_FOLDER_ID=1V26qhNMhw1n_A3PycHyYdBpMUge_Fktj
-GOOGLE_DRIVE_REFRESH_TOKEN=   # obtenir via : node back/scripts/getDriveToken.js
-```
-
 ## Base de données
 
 Importer `database.sql` dans phpMyAdmin (Hostinger) pour créer toutes les tables.
 Le fichier inclut le compte superadmin initial.
-
-## Compte superadmin
-
-| Email | Mot de passe |
-|-------|--------------|
-| hugo22042006@gmail.com | Hugo220406@ |
