@@ -6,7 +6,13 @@ import { useLang } from '../../i18n/LangContext'
 
 type Notif = { id: number; titre: string; contenu: string; lu: boolean; created_at: string }
 
-// Help links are built dynamically in the component using t
+const detectIOS = () =>
+  /ipad|iphone|ipod/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+const detectStandalone = () =>
+  Boolean((window.navigator as any).standalone) ||
+  window.matchMedia('(display-mode: standalone)').matches
 
 interface Props { onMenuToggle: () => void }
 
@@ -18,6 +24,8 @@ export default function Topbar({ onMenuToggle }: Props) {
   const [search, setSearch]         = useState('')
   const [installPrompt, setInstallPrompt] = useState<any>(null)
   const [installed, setInstalled]   = useState(false)
+  const [showIOSModal, setShowIOSModal] = useState(false)
+  const [iosDevice] = useState(detectIOS)
   const notifRef = useRef<HTMLDivElement>(null)
   const helpRef  = useRef<HTMLDivElement>(null)
 
@@ -36,16 +44,17 @@ export default function Topbar({ onMenuToggle }: Props) {
   }
 
   useEffect(() => {
+    if (detectStandalone()) setInstalled(true)
     loadNotifs()
-    // Écoute l'événement d'installation PWA
     const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e) }
     window.addEventListener('beforeinstallprompt', handler)
-    // Détecte si déjà installée
     window.addEventListener('appinstalled', () => { setInstalled(true); setInstallPrompt(null) })
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
   const handleInstall = async () => {
+    if (installed) return
+    if (iosDevice) { setShowIOSModal(true); return }
     if (!installPrompt) return
     installPrompt.prompt()
     const { outcome } = await installPrompt.userChoice
@@ -69,6 +78,7 @@ export default function Topbar({ onMenuToggle }: Props) {
   const unreadCount = notifs.filter(n => !n.lu).length
 
   return (
+    <>
     <header className="fixed top-0 left-0 right-0 lg:left-[260px] h-[64px] bg-white border-b border-outline-variant flex items-center justify-between px-4 lg:px-6 z-40">
 
       {/* Gauche : hamburger mobile + recherche */}
@@ -105,28 +115,34 @@ export default function Topbar({ onMenuToggle }: Props) {
           <span className="font-semibold">{lang === 'fr' ? 'EN' : 'FR'}</span>
         </button>
 
-        {/* Bouton installer l'app — toujours visible */}
-        <button
-          onClick={handleInstall}
-          disabled={!installPrompt || installed}
-          title={installed ? (lang === 'fr' ? 'Application installée' : 'App installed') : (lang === 'fr' ? "Installer l'application" : 'Install app')}
-          className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-label-md transition-colors mr-1 ${
-            installed
-              ? 'bg-green-50 text-green-600 cursor-default'
-              : installPrompt
-              ? 'bg-primary/10 hover:bg-primary/20 text-primary cursor-pointer'
-              : 'bg-surface-container-low text-on-surface-variant/50 cursor-default'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            {installed ? 'check_circle' : 'install_mobile'}
-          </span>
-          <span className="hidden md:inline">
-            {installed
-              ? (lang === 'fr' ? 'Installée' : 'Installed')
-              : (lang === 'fr' ? 'Installer' : 'Install')}
-          </span>
-        </button>
+        {/* Bouton installer l'app */}
+        {(installPrompt || iosDevice || installed) && (
+          <button
+            onClick={handleInstall}
+            disabled={installed}
+            title={
+              installed
+                ? (lang === 'fr' ? 'Application installée' : 'App installed')
+                : iosDevice
+                ? (lang === 'fr' ? "Installer sur iPhone/iPad" : 'Install on iPhone/iPad')
+                : (lang === 'fr' ? "Installer l'application" : 'Install app')
+            }
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-label-md transition-colors mr-1 ${
+              installed
+                ? 'bg-green-50 text-green-600 cursor-default'
+                : 'bg-primary/10 hover:bg-primary/20 text-primary cursor-pointer'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {installed ? 'check_circle' : 'install_mobile'}
+            </span>
+            <span className="hidden md:inline">
+              {installed
+                ? (lang === 'fr' ? 'Installée' : 'Installed')
+                : (lang === 'fr' ? 'Installer' : 'Install')}
+            </span>
+          </button>
+        )}
 
         <div className="flex items-center gap-1 lg:gap-2 border-r border-outline-variant pr-3 lg:pr-6">
 
@@ -240,5 +256,82 @@ export default function Topbar({ onMenuToggle }: Props) {
         </button>
       </div>
     </header>
+
+    {/* Modal installation iOS */}
+    {showIOSModal && (
+      <div
+        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 p-4"
+        onClick={e => { if (e.target === e.currentTarget) setShowIOSModal(false) }}
+      >
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e8f0]">
+            <h3 className="text-label-lg font-bold text-on-surface">
+              {lang === 'fr' ? "Installer l'application" : 'Install the app'}
+            </h3>
+            <button
+              onClick={() => setShowIOSModal(false)}
+              className="p-1 rounded-lg hover:bg-surface-container-low transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px] text-on-surface-variant">close</span>
+            </button>
+          </div>
+
+          <div className="px-5 py-5 space-y-4">
+            <p className="text-body-md text-on-surface-variant">
+              {lang === 'fr'
+                ? 'Pour installer MonClubHouse sur votre iPhone ou iPad :'
+                : 'To install MonClubHouse on your iPhone or iPad:'}
+            </p>
+
+            {[
+              {
+                icon: 'ios_share',
+                label: lang === 'fr' ? "Tapez l'icône Partager" : 'Tap the Share icon',
+                sub: lang === 'fr' ? 'Rectangle avec une flèche vers le haut, en bas de Safari' : 'Rectangle with arrow at the bottom of Safari',
+              },
+              {
+                icon: 'add_box',
+                label: lang === 'fr' ? '"Sur l\'écran d\'accueil"' : '"Add to Home Screen"',
+                sub: lang === 'fr' ? 'Faites défiler le menu et sélectionnez cette option' : 'Scroll the menu and select this option',
+              },
+              {
+                icon: 'check_circle',
+                label: lang === 'fr' ? 'Confirmez avec "Ajouter"' : 'Confirm with "Add"',
+                sub: lang === 'fr' ? "L'app s'installera sur votre écran d'accueil" : 'The app will be added to your home screen',
+              },
+            ].map((step, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-primary text-[20px]">{step.icon}</span>
+                </div>
+                <div className="pt-0.5">
+                  <p className="text-label-md text-on-surface font-semibold">{step.label}</p>
+                  <p className="text-body-sm text-on-surface-variant mt-0.5">{step.sub}</p>
+                </div>
+              </div>
+            ))}
+
+            <div className="bg-blue-50 rounded-xl p-3 flex items-start gap-2">
+              <span className="material-symbols-outlined text-blue-500 text-[18px] shrink-0 mt-0.5">info</span>
+              <p className="text-body-sm text-blue-700">
+                {lang === 'fr'
+                  ? 'Utilisez Safari pour une installation optimale. Sur Chrome iOS, le menu est accessible via les 3 points.'
+                  : 'Use Safari for best results. On Chrome iOS, use the 3-dot menu instead.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="px-5 pb-5">
+            <button
+              onClick={() => setShowIOSModal(false)}
+              className="w-full py-2.5 bg-primary text-white rounded-xl text-label-md font-semibold hover:bg-primary/90 transition-colors"
+            >
+              {lang === 'fr' ? 'Compris !' : 'Got it!'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

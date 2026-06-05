@@ -22,7 +22,7 @@ export default function AppLayout() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <Topbar onMenuToggle={() => setSidebarOpen(v => !v)} />
 
-      <main className="lg:ml-[260px] pt-[64px] p-4 lg:p-6 min-h-screen">
+      <main className="lg:ml-[260px] px-4 lg:px-6 pt-[64px] pb-4 lg:pb-6 min-h-screen">
         <div className="max-w-[1280px] mx-auto">
           <Outlet />
         </div>
