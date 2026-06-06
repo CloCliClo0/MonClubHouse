@@ -111,7 +111,7 @@ export default function ConvocationsPage() {
         prenom:      c.joueur?.prenom,
         statut:      c.statut === 'convoque' ? 'sans_reponse' : c.statut,
         notif_email: c.joueur?.notif_email ?? true,
-        licencie:    c.joueur?.licencie,
+        licencie:    c.joueur?.licence,
       }))
       setPlayers(mapped)
 
@@ -177,7 +177,7 @@ export default function ConvocationsPage() {
         prenom:      c.joueur?.prenom,
         statut:      c.statut === 'convoque' ? 'sans_reponse' : c.statut,
         notif_email: c.joueur?.notif_email ?? true,
-        licencie:    c.joueur?.licencie,
+        licencie:    c.joueur?.licence,
       })))
       setPendingAdd(new Set())
       setShowAddPanel(false)

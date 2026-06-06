@@ -40,9 +40,9 @@ const getById = async (req, res) => {
 
 const create = async (req, res) => {
   try {
-    const existing = await Licencie.findOne({ where: { user_id: req.body.user_id } });
+    const existing = await Licencie.findOne({ where: { user_id: req.body.user_id, equipe_id: req.body.equipe_id } });
     if (existing) {
-      return res.status(409).json({ success: false, message: 'Cet utilisateur est déjà licencié' });
+      return res.status(409).json({ success: false, message: 'Ce joueur est déjà dans cette équipe' });
     }
     const licencie = await Licencie.create(req.body);
     return res.status(201).json({ success: true, data: licencie });

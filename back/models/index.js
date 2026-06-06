@@ -35,7 +35,8 @@ Equipe.hasMany(Match, { foreignKey: 'equipe_id', as: 'matchs' });
 Match.belongsTo(Equipe, { foreignKey: 'equipe_id', as: 'equipe' });
 
 // Associations User / Licencie
-User.hasOne(Licencie, { foreignKey: 'user_id', as: 'licence' });
+User.hasOne(Licencie,  { foreignKey: 'user_id', as: 'licence' });          // profil (équipe principale)
+User.hasMany(Licencie, { foreignKey: 'user_id', as: 'licencies_equipes' }); // multi-équipes
 Licencie.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
 // Parent-Enfant

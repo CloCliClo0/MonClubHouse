@@ -4,6 +4,9 @@ const { sendBulkConvocationEmails } = require('../services/emailService');
 
 const getByMatch = async (req, res) => {
   try {
+    const match = await Match.findByPk(req.params.matchId, { attributes: ['id', 'equipe_id'] });
+    if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
+
     const convocations = await Convocation.findAll({
       where: { match_id: req.params.matchId },
       include: [{
@@ -12,6 +15,7 @@ const getByMatch = async (req, res) => {
         include: [{
           model: Licencie, as: 'licence',
           attributes: ['numero_maillot', 'poste'],
+          where: { equipe_id: match.equipe_id },
           required: false,
         }],
       }],
