@@ -9,3 +9,5 @@ npm-debug.log*
 coverage/
 .cache/
 database.sql
+test.sql
+sup-test.sql
