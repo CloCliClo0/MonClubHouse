@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../services/api'
 
 type Player = {
   id: number
@@ -17,12 +18,64 @@ type BenchPlayer = {
   position: string
 }
 
-const UPCOMING_MATCHES = [
-  { id: 1,  label: 'MCH Seniors A vs Red Star FC',      date: 'Sam. 7 juin 2025 · 15:30', equipe: 'Seniors A',   terrain: 'Stade Municipal',   competition: 'Division 3'   },
-  { id: 6,  label: 'MCH Seniors A vs Paris FC B',        date: 'Sam. 14 juin 2025 · 14:00',equipe: 'Seniors A',   terrain: 'Stade Annexe',      competition: 'Division 3'   },
-  { id: 9,  label: 'MCH U19 vs Red Star U19',            date: 'Dim. 8 juin 2025 · 10:00', equipe: 'U19',         terrain: 'Terrain A',         competition: 'U19 Régional' },
-  { id: 11, label: 'MCH U15 vs ES Décines',              date: 'Sam. 7 juin 2025 · 11:00', equipe: 'U15',         terrain: 'Terrain B',         competition: 'U15 District' },
-]
+type ApiMatch = {
+  id: number
+  date: string
+  heure_rdv: string | null
+  adversaire: string | null
+  lieu: string | null
+  type: string
+  championnat: string | null
+  statut: string
+  equipe: { id: number; nom: string; categorie: string }
+  terrain: { id: number; nom: string; adresse: string } | null
+}
+
+type MatchDisplay = {
+  id: number
+  label: string
+  date: string
+  equipe: string
+  terrain: string
+  competition: string
+  type: string
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  match:   'Match',
+  tournoi: 'Tournoi',
+  coupe:   'Coupe',
+  amical:  'Amical',
+  plateau: 'Plateau',
+}
+
+const TYPE_ICONS: Record<string, string> = {
+  match:   'sports_soccer',
+  tournoi: 'emoji_events',
+  coupe:   'military_tech',
+  amical:  'handshake',
+  plateau: 'stadium',
+}
+
+const COMPETITION_TYPES = new Set(['match', 'tournoi', 'coupe', 'amical', 'plateau'])
+
+function formatDate(date: string, heure: string | null): string {
+  const d = new Date(date)
+  const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+  return heure ? `${label} · ${heure.slice(0, 5)}` : label
+}
+
+function toDisplay(m: ApiMatch): MatchDisplay {
+  return {
+    id:          m.id,
+    label:       m.adversaire ? `${m.equipe.nom} vs ${m.adversaire}` : m.equipe.nom,
+    date:        formatDate(m.date, m.heure_rdv),
+    equipe:      m.equipe.nom,
+    terrain:     m.terrain?.nom ?? m.lieu ?? '—',
+    competition: m.championnat ?? TYPE_LABELS[m.type] ?? m.type,
+    type:        m.type,
+  }
+}
 
 const FIELD_POSITIONS: Record<string, Player[]> = {
   '4-3-3': [
@@ -112,7 +165,25 @@ export default function CompositionPage() {
   const [selected, setSelected]         = useState<Selection | null>(null)
   const [saved, setSaved]               = useState(false)
 
-  const match = UPCOMING_MATCHES.find(m => m.id === selectedMatchId)
+  const [matches, setMatches]   = useState<MatchDisplay[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [fetchError, setFetchError] = useState(false)
+
+  useEffect(() => {
+    api.get<{ data: ApiMatch[] }>('/matchs?statut=programme')
+      .then(r => {
+        const list = Array.isArray(r.data) ? r.data : (r.data?.data ?? [])
+        const today = new Date(); today.setHours(0, 0, 0, 0)
+        const filtered = list
+          .filter(m => COMPETITION_TYPES.has(m.type) && new Date(m.date) >= today)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        setMatches(filtered.map(toDisplay))
+      })
+      .catch(() => setFetchError(true))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const match = matches.find(m => m.id === selectedMatchId)
 
   const changeFormation = (f: string) => {
     setFormation(f)
@@ -210,42 +281,75 @@ export default function CompositionPage() {
           <p className="text-body-md text-on-surface-variant mt-1">Choisissez le match pour lequel préparer la composition</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {UPCOMING_MATCHES.map(m => (
-            <button
-              key={m.id}
-              onClick={() => setSelectedMatchId(m.id)}
-              className="bg-white border border-[#e8e8f0] rounded-xl p-5 text-left hover:border-primary/50 hover:shadow-md transition-all group"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex flex-col items-center justify-center text-primary shrink-0 group-hover:bg-primary group-hover:text-white transition-all">
-                  <span className="material-symbols-outlined text-[20px]">sports_soccer</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-label-lg text-on-surface font-bold truncate">{m.label}</p>
-                  <p className="text-body-sm text-on-surface-variant mt-1">{m.date}</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant">{m.equipe}</span>
-                    <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant">{m.competition}</span>
-                    <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[12px]">location_on</span>
-                      {m.terrain}
-                    </span>
-                  </div>
-                </div>
-                <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">arrow_forward</span>
-              </div>
-            </button>
-          ))}
-        </div>
+        {loading && (
+          <div className="flex items-center justify-center py-20 text-on-surface-variant">
+            <span className="material-symbols-outlined text-[36px] animate-spin mr-3">progress_activity</span>
+            Chargement des matchs…
+          </div>
+        )}
 
-        <div className="mt-6 bg-surface-container-low border border-outline-variant rounded-xl p-4 flex items-center gap-3 text-body-sm text-on-surface-variant">
-          <span className="material-symbols-outlined text-primary">info</span>
-          Seuls les matchs avec des convocations actives apparaissent ici.
-          <button onClick={() => navigate('/evenements/creer')} className="ml-auto text-primary hover:underline text-label-md">
-            Créer un match →
-          </button>
-        </div>
+        {fetchError && (
+          <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-body-sm">
+            <span className="material-symbols-outlined text-[20px]">error</span>
+            Impossible de charger les matchs. Vérifiez votre connexion.
+          </div>
+        )}
+
+        {!loading && !fetchError && matches.length === 0 && (
+          <div className="flex flex-col items-center py-20 text-on-surface-variant gap-3">
+            <span className="material-symbols-outlined text-[48px] opacity-30">sports_soccer</span>
+            <p className="text-body-md">Aucun match, tournoi ou coupe à venir.</p>
+            <button onClick={() => navigate('/evenements/creer')} className="text-primary hover:underline text-label-md">
+              Créer un événement →
+            </button>
+          </div>
+        )}
+
+        {!loading && !fetchError && matches.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {matches.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setSelectedMatchId(m.id)}
+                  className="bg-white border border-[#e8e8f0] rounded-xl p-5 text-left hover:border-primary/50 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-xl flex flex-col items-center justify-center text-primary shrink-0 group-hover:bg-primary group-hover:text-white transition-all">
+                      <span className="material-symbols-outlined text-[20px]">{TYPE_ICONS[m.type] ?? 'sports_soccer'}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-label-lg text-on-surface font-bold truncate">{m.label}</p>
+                      <p className="text-body-sm text-on-surface-variant mt-1">{m.date}</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant">{m.equipe}</span>
+                        <span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-label-md">{TYPE_LABELS[m.type] ?? m.type}</span>
+                        {m.competition !== TYPE_LABELS[m.type] && (
+                          <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant">{m.competition}</span>
+                        )}
+                        {m.terrain !== '—' && (
+                          <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[12px]">location_on</span>
+                            {m.terrain}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors shrink-0">arrow_forward</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 bg-surface-container-low border border-outline-variant rounded-xl p-4 flex items-center gap-3 text-body-sm text-on-surface-variant">
+              <span className="material-symbols-outlined text-primary">info</span>
+              Matchs, tournois et coupes à venir ({matches.length}). Les entraînements et réunions n'apparaissent pas ici.
+              <button onClick={() => navigate('/evenements/creer')} className="ml-auto text-primary hover:underline text-label-md shrink-0">
+                Créer un match →
+              </button>
+            </div>
+          </>
+        )}
       </div>
     )
   }
