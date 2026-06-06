@@ -34,7 +34,8 @@ export default function TeamDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const role = localStorage.getItem('role') || 'joueur'
-  const canManage = ['superadmin', 'admin', 'dirigeant'].includes(role)
+  const canManage    = ['superadmin', 'admin', 'dirigeant', 'coach'].includes(role)
+  const canEditRoster = ['superadmin', 'admin', 'dirigeant'].includes(role)
 
   const [team, setTeam]       = useState<TeamDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -192,7 +193,7 @@ export default function TeamDetailPage() {
             {t.label}
           </button>
         ))}
-        {canManage && tab === 'joueurs' && (
+        {canEditRoster && tab === 'joueurs' && (
           <button onClick={openAddModal}
             className="ml-auto flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-label-md hover:bg-primary-container transition-colors">
             <span className="material-symbols-outlined text-[18px]">person_add</span>
@@ -209,7 +210,7 @@ export default function TeamDetailPage() {
               <span className="material-symbols-outlined text-[52px] block mb-3 opacity-30">sports_soccer</span>
               <p className="text-headline-md text-on-surface mb-1">Aucun joueur</p>
               <p className="text-body-md mb-4">Ajoutez des joueurs à cette équipe.</p>
-              {canManage && (
+              {canEditRoster && (
                 <button onClick={openAddModal}
                   className="bg-primary text-white px-5 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
                   Ajouter un joueur
@@ -225,7 +226,7 @@ export default function TeamDetailPage() {
                   <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden md:table-cell">Poste</th>
                   <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden md:table-cell">N°</th>
                   <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden lg:table-cell">Parent</th>
-                  {canManage && <th className="px-4 py-3 text-label-md text-on-surface-variant">Actions</th>}
+                  {canEditRoster && <th className="px-4 py-3 text-label-md text-on-surface-variant">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e8e8f0]">
@@ -272,7 +273,7 @@ export default function TeamDetailPage() {
                         <span className="text-[11px] text-on-surface-variant opacity-50">Aucun</span>
                       )}
                     </td>
-                    {canManage && (
+                    {canEditRoster && (
                       <td className="px-4 py-3">
                         <button onClick={() => removePlayer(lic.id)}
                           className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-on-surface-variant hover:text-error transition-colors" title="Retirer de l'équipe">

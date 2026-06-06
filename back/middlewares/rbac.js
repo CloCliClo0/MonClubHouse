@@ -77,7 +77,7 @@ const requireCoachOfTeam = async (req, res, next) => {
   if (req.user.role === 'coach') {
     const { Equipe } = require('../models');
     const equipe = await Equipe.findOne({
-      where: { id: req.params.equipeId, coach_id: req.user.id }
+      where: { id: req.params.equipeId || req.params.id, coach_id: req.user.id }
     });
     if (!equipe) {
       return res.status(403).json({ success: false, message: 'Vous n\'êtes pas coach de cette équipe' });
