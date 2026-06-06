@@ -4,7 +4,7 @@ const { analyseHTML, importMatches } = require('../controllers/scraperController
 const { authenticate } = require('../middlewares/auth');
 const { requireMinRole } = require('../middlewares/rbac');
 
-router.post('/analyse', authenticate, requireMinRole('coach'), analyseHTML);
-router.post('/import',  authenticate, requireMinRole('coach'), importMatches);
+router.post('/analyse', authenticate, requireMinRole('admin'), analyseHTML);
+router.post('/import',  authenticate, requireMinRole('admin'), importMatches);
 
 module.exports = router;

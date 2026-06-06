@@ -18,6 +18,7 @@ type Equipe = {
   id: number; nom: string; categorie: string; genre: string; format: string
   couleur_maillot: string | null; coach_id: number | null; description: string | null
   coach?: { id: number; nom: string; prenom: string }
+  coachs_extra?: { id: number; nom: string; prenom: string }[]
 }
 
 type UserShort = { id: number; nom: string; prenom: string; role: string }
@@ -25,7 +26,7 @@ type UserShort = { id: number; nom: string; prenom: string; role: string }
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const BLANK_TERRAIN  = { nom: '', type: 'gazon_naturel', capacite: '', adresse: '' }
-const BLANK_EQUIPE   = { nom: '', categorie: 'Senior', genre: 'masculin', format: '11', couleur_maillot: '#0f5238', coach_id: '', description: '' }
+const BLANK_EQUIPE   = { nom: '', categorie: 'Senior', genre: 'masculin', format: '11', couleur_maillot: '#0f5238', description: '' }
 
 const TERRAIN_TYPES = [
   { v: 'gazon_naturel',     l: 'Gazon naturel'    },
@@ -88,15 +89,21 @@ function EquipeRow({
           <span className="text-body-sm text-on-surface-variant">
             {eq.format !== 'autre' ? `${eq.format}v${eq.format}` : 'Format libre'}
           </span>
-          {eq.coach && (
-            <>
-              <span className="text-on-surface-variant/40">·</span>
-              <span className="flex items-center gap-1 text-body-sm text-on-surface-variant">
-                <span className="material-symbols-outlined text-[13px]">person</span>
-                {eq.coach.prenom} {eq.coach.nom}
-              </span>
-            </>
-          )}
+          {(() => {
+            const all = eq.coachs_extra && eq.coachs_extra.length > 0
+              ? eq.coachs_extra
+              : eq.coach ? [eq.coach] : []
+            if (!all.length) return null
+            return (
+              <>
+                <span className="text-on-surface-variant/40">·</span>
+                <span className="flex items-center gap-1 text-body-sm text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[13px]">person</span>
+                  {all.map(c => `${c.prenom} ${c.nom}`).join(', ')}
+                </span>
+              </>
+            )
+          })()}
         </div>
       </div>
       {canManage && (
@@ -146,6 +153,7 @@ export default function ClubPage() {
   const [coaches, setCoaches]       = useState<UserShort[]>([])
   const [equipeModal, setEquipeModal] = useState<{ open: false } | { open: true; editing: Equipe | null }>({ open: false })
   const [equipeForm, setEquipeForm]   = useState(BLANK_EQUIPE)
+  const [selectedCoachIds, setSelectedCoachIds] = useState<number[]>([])
   const [savingEquipe, setSavingEquipe] = useState(false)
   const [equipeError, setEquipeError]   = useState<string | null>(null)
   const [deleteEquipeId, setDeleteEquipeId] = useState<number | null>(null)
@@ -242,6 +250,7 @@ export default function ClubPage() {
 
   const openAddEquipe = (presetCat?: string) => {
     setEquipeForm({ ...BLANK_EQUIPE, categorie: presetCat || 'Senior' })
+    setSelectedCoachIds([])
     setEquipeError(null)
     setEquipeModal({ open: true, editing: null })
   }
@@ -249,12 +258,21 @@ export default function ClubPage() {
     setEquipeForm({
       nom: e.nom, categorie: e.categorie, genre: e.genre, format: e.format,
       couleur_maillot: e.couleur_maillot || '#0f5238',
-      coach_id: e.coach_id?.toString() || '',
       description: e.description || '',
     })
+    const ids = e.coachs_extra && e.coachs_extra.length > 0
+      ? e.coachs_extra.map(c => c.id)
+      : e.coach_id ? [e.coach_id] : []
+    setSelectedCoachIds(ids)
     setEquipeError(null)
     setEquipeModal({ open: true, editing: e })
   }
+
+  const toggleCoach = (id: number) =>
+    setSelectedCoachIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+
   const handleSaveEquipe = async () => {
     if (!equipeForm.nom.trim() || !equipeForm.categorie) return
     setSavingEquipe(true)
@@ -267,13 +285,17 @@ export default function ClubPage() {
         format:          equipeForm.format,
         couleur_maillot: equipeForm.couleur_maillot,
         description:     equipeForm.description || null,
-        coach_id:        equipeForm.coach_id ? parseInt(equipeForm.coach_id) : null,
+        coach_id:        selectedCoachIds[0] || null,
       }
+      let equipeId: number
       if (equipeModal.open && equipeModal.editing) {
         await api.put(`/equipes/${equipeModal.editing.id}`, payload)
+        equipeId = equipeModal.editing.id
       } else {
-        await api.post('/equipes', payload)
+        const res = await api.post('/equipes', payload)
+        equipeId = res.data.data.id
       }
+      await api.put(`/equipes/${equipeId}/coachs`, { coach_ids: selectedCoachIds })
       load(); setEquipeModal({ open: false })
     } catch (err: any) {
       setEquipeError(err?.response?.data?.message || 'Erreur lors de l\'enregistrement')
@@ -868,19 +890,46 @@ export default function ClubPage() {
                 </div>
               </div>
 
-              {/* Coach */}
+              {/* Coachs (multi-select) */}
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Coach (optionnel)</label>
-                <div className="relative">
-                  <select value={equipeForm.coach_id} onChange={e => setEF('coach_id', e.target.value)}
-                    className="w-full appearance-none px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary pr-8 bg-white">
-                    <option value="">— Aucun coach assigné —</option>
-                    {coaches.map(c => (
-                      <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>
-                    ))}
-                  </select>
-                  <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
-                </div>
+                <label className="text-label-md text-on-surface-variant">
+                  Coachs (optionnel)
+                  {selectedCoachIds.length > 0 && (
+                    <span className="ml-2 text-primary font-semibold">{selectedCoachIds.length} sélectionné{selectedCoachIds.length > 1 ? 's' : ''}</span>
+                  )}
+                </label>
+                {coaches.length === 0 ? (
+                  <p className="text-body-sm text-on-surface-variant italic px-1">Aucun coach disponible dans le club.</p>
+                ) : (
+                  <div className="border border-outline-variant rounded-lg overflow-hidden divide-y divide-outline-variant/50 max-h-40 overflow-y-auto">
+                    {coaches.map(c => {
+                      const checked = selectedCoachIds.includes(c.id)
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => toggleCoach(c.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                            checked ? 'bg-primary/10 text-primary' : 'hover:bg-surface-container-low text-on-surface'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded flex items-center justify-center border-2 shrink-0 transition-colors ${
+                            checked ? 'bg-primary border-primary' : 'border-outline-variant'
+                          }`}>
+                            {checked && <span className="material-symbols-outlined text-white text-[14px]">check</span>}
+                          </div>
+                          <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                            <span className="text-primary text-[11px] font-bold">
+                              {c.prenom[0]}{c.nom[0]}
+                            </span>
+                          </div>
+                          <span className="text-body-md">{c.prenom} {c.nom}</span>
+                          <span className="ml-auto text-body-sm text-on-surface-variant capitalize">{c.role}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Description */}

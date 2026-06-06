@@ -77,7 +77,7 @@ export default function ScraperPage() {
 
   const selectedCount = matches.filter(m => m.selected).length
 
-  if (!['superadmin', 'admin', 'dirigeant', 'coach'].includes(role)) {
+  if (!['superadmin', 'admin'].includes(role)) {
     return (
       <div className="py-20 text-center text-on-surface-variant">
         <span className="material-symbols-outlined text-[56px] block mb-4 opacity-30">lock</span>

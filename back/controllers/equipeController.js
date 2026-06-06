@@ -12,7 +12,6 @@ const getAll = async (req, res) => {
     const role = req.user?.role;
 
     if (role === 'coach') {
-      // Le coach ne voit que ses propres équipes (coach_id ou equipe_coachs)
       const coachLinks = await EquipeCoach.findAll({
         where: { user_id: req.user.id },
         attributes: ['equipe_id'],
@@ -23,7 +22,6 @@ const getAll = async (req, res) => {
       if (linkedIds.length > 0) orClauses.push({ id: { [Op.in]: linkedIds } });
       where[Op.or] = orClauses;
     } else if (['joueur', 'parent'].includes(role)) {
-      // Le joueur/parent voit toutes les équipes de ses catégories
       const licencies = await Licencie.findAll({
         where: { user_id: req.user.id },
         include: [{ model: Equipe, as: 'equipe', attributes: ['categorie'] }],
@@ -40,6 +38,7 @@ const getAll = async (req, res) => {
       include: [
         { model: Sport, as: 'sport' },
         { model: User, as: 'coach', attributes: ['id', 'nom', 'prenom'], required: false },
+        { model: User, as: 'coachs_extra', attributes: ['id', 'nom', 'prenom'], through: { attributes: [] }, required: false },
       ],
     });
     return res.json({ success: true, data: equipes });
@@ -111,4 +110,25 @@ const remove = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, update, remove };
+const updateCoachs = async (req, res) => {
+  try {
+    const equipe = await Equipe.findByPk(req.params.id);
+    if (!equipe) return res.status(404).json({ success: false, message: 'Équipe introuvable' });
+
+    const { coach_ids } = req.body;
+    if (!Array.isArray(coach_ids)) return res.status(400).json({ success: false, message: 'coach_ids doit être un tableau' });
+
+    await EquipeCoach.destroy({ where: { equipe_id: equipe.id } });
+    if (coach_ids.length > 0) {
+      await EquipeCoach.bulkCreate(coach_ids.map(uid => ({ equipe_id: equipe.id, user_id: uid })));
+    }
+    await equipe.update({ coach_id: coach_ids[0] || null });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getAll, getById, create, update, remove, updateCoachs };

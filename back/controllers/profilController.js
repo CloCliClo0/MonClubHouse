@@ -47,7 +47,7 @@ const updatePassword = async (req, res) => {
 const uploadAvatar = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fichier requis' });
-    const avatarUrl = `/uploads/${req.file.filename}`;
+    const avatarUrl = `/uploads/${req.file.filename}`.replace(/\\/g, '/');
     await req.user.update({ avatar: avatarUrl });
     return res.json({ success: true, data: { avatar: avatarUrl } });
   } catch (err) {

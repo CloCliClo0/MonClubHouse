@@ -6,8 +6,9 @@ const { getProfil, updateProfil, updatePassword, uploadAvatar, getHistorique, ge
 const { getMes, marquerLue, marquerToutesLues } = require('../controllers/notificationController');
 const { authenticate } = require('../middlewares/auth');
 
+const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
 const storage = multer.diskStorage({
-  destination: './public/uploads/',
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
     cb(null, `avatar-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
   }

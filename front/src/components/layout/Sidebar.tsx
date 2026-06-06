@@ -45,13 +45,11 @@ export default function Sidebar({ open, onClose }: Props) {
       { label: 'Club',          items: [NAV.MON_CLUB, NAV.EQUIPES] },
       { label: 'Planning',      items: [NAV.CALENDRIER] },
       { label: 'Compétition',   items: [NAV.SAISON, NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
-      { label: 'Outils',        items: [NAV.SCRAPER] },
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
     coach: [
       { label: 'Mon équipe',    items: [NAV.EQUIPES, NAV.CALENDRIER, NAV.CONVOCS, NAV.COMPO] },
       { label: 'Compétition',   items: [NAV.SAISON, NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
-      { label: 'Outils',        items: [NAV.SCRAPER] },
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
     joueur:   [{ label: 'Mon activité', items: [NAV.SAISON, NAV.CONVOCS, NAV.MESSAGES] }],
