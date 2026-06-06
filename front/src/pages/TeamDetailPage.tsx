@@ -35,7 +35,7 @@ export default function TeamDetailPage() {
   const navigate = useNavigate()
   const role = localStorage.getItem('role') || 'joueur'
   const canManage    = ['superadmin', 'admin', 'dirigeant', 'coach'].includes(role)
-  const canEditRoster = ['superadmin', 'admin', 'dirigeant'].includes(role)
+  const canEditRoster = ['superadmin', 'admin', 'dirigeant', 'coach'].includes(role)
 
   const [team, setTeam]       = useState<TeamDetail | null>(null)
   const [loading, setLoading] = useState(true)

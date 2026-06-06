@@ -65,6 +65,7 @@ export default function ConvocationsPage() {
   const [teamPlayers, setTeamPlayers]     = useState<TeamPlayer[]>([])
   const [loadingMatches, setLoadingMatches] = useState(true)
   const [loadingPlayers, setLoadingPlayers] = useState(false)
+  const [isClubFallback, setIsClubFallback] = useState(false)
 
   // Panneau d'ajout
   const [showAddPanel, setShowAddPanel]   = useState(false)
@@ -96,6 +97,7 @@ export default function ConvocationsPage() {
     setPendingAdd(new Set())
     setPlayers([])
     setTeamPlayers([])
+    setIsClubFallback(false)
 
     try {
       const [convoRes, teamRes] = await Promise.all([
@@ -118,16 +120,36 @@ export default function ConvocationsPage() {
       // Roster de l'équipe
       const equipeData = teamRes.data.data || teamRes.data || {}
       const licencies: any[] = equipeData.licencies || []
-      setTeamPlayers(licencies
-        .filter((l: any) => l.statut === 'actif' && l.user)
-        .map((l: any) => ({
+      const activeLicencies = licencies.filter((l: any) => l.statut === 'actif' && l.user)
+
+      if (activeLicencies.length > 0) {
+        setTeamPlayers(activeLicencies.map((l: any) => ({
           userId:         l.user.id,
           nom:            l.user.nom,
           prenom:         l.user.prenom,
           poste:          l.poste ?? null,
           numero_maillot: l.numero_maillot ?? null,
-        }))
-      )
+        })))
+      } else {
+        // Fallback : roster vide → afficher tous les joueurs du club
+        try {
+          const usersRes = await api.get('/admin/users')
+          const allUsers: any[] = usersRes.data.data || usersRes.data || []
+          setTeamPlayers(allUsers
+            .filter((u: any) => ['joueur', 'parent'].includes(u.role))
+            .map((u: any) => ({
+              userId:         u.id,
+              nom:            u.nom,
+              prenom:         u.prenom,
+              poste:          null,
+              numero_maillot: null,
+            }))
+          )
+          setIsClubFallback(true)
+        } catch {
+          // keep empty
+        }
+      }
     } catch {
       setPlayers([])
     } finally {
@@ -357,7 +379,7 @@ export default function ConvocationsPage() {
           <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
             <div className="p-4 border-b border-[#e8e8f0] flex items-center justify-between">
               <h4 className="text-headline-md">Joueurs convoqués ({players.length})</h4>
-              {!loadingPlayers && teamPlayers.length > 0 && !showAddPanel && (
+              {!loadingPlayers && !showAddPanel && (
                 <button
                   onClick={() => setShowAddPanel(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-label-md transition-colors"
@@ -377,7 +399,7 @@ export default function ConvocationsPage() {
                 <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">group_off</span>
                 <p className="text-body-md font-medium">Aucun joueur convoqué</p>
                 <p className="text-body-sm mt-1">Ajoutez des joueurs depuis le roster de l'équipe.</p>
-                {teamPlayers.length > 0 && !showAddPanel && (
+                {!showAddPanel && (
                   <button
                     onClick={() => setShowAddPanel(true)}
                     className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-label-md mx-auto hover:bg-primary/90 transition-colors"
@@ -441,7 +463,10 @@ export default function ConvocationsPage() {
                 <div>
                   <h4 className="text-headline-md">Ajouter des joueurs</h4>
                   <p className="text-body-sm text-on-surface-variant mt-0.5">
-                    {availablePlayers.length} joueur{availablePlayers.length > 1 ? 's' : ''} disponible{availablePlayers.length > 1 ? 's' : ''} dans l'équipe
+                    {isClubFallback
+                      ? `${availablePlayers.length} joueur${availablePlayers.length > 1 ? 's' : ''} du club`
+                      : `${availablePlayers.length} joueur${availablePlayers.length > 1 ? 's' : ''} disponible${availablePlayers.length > 1 ? 's' : ''} dans l'équipe`
+                    }
                   </p>
                 </div>
                 <button
@@ -478,9 +503,9 @@ export default function ConvocationsPage() {
                     {teamPlayers.length === 0 ? 'groups' : 'check_circle'}
                   </span>
                   <p className="text-body-sm">
-                    {teamPlayers.length === 0
-                      ? "Aucun joueur dans l'équipe."
-                      : 'Tous les joueurs de l\'équipe sont déjà convoqués.'}
+                    {addSearch
+                      ? 'Aucun résultat pour cette recherche.'
+                      : 'Tous les joueurs disponibles sont déjà convoqués.'}
                   </p>
                 </div>
               ) : (

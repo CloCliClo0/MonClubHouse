@@ -6,7 +6,7 @@ const { requireMinRole } = require('../middlewares/rbac');
 
 router.get('/', authenticate, requireMinRole('coach'), getAll);
 router.get('/:id', authenticate, getById);
-router.post('/', authenticate, requireMinRole('dirigeant'), create);
+router.post('/', authenticate, requireMinRole('coach'), create);
 router.put('/:id', authenticate, requireMinRole('dirigeant'), update);
 router.patch('/:id/equipe', authenticate, requireMinRole('dirigeant'), changerEquipe);
 
