@@ -174,6 +174,26 @@ const deleteMatch = async (req, res) => {
   }
 };
 
+// DELETE /championnat/complet?equipe_ref_id=X&saison=Y&championnat=Z
+const deleteChampionnat = async (req, res) => {
+  try {
+    const { equipe_ref_id, saison, championnat } = req.query;
+    const club_id = req.user.club_id;
+    if (!equipe_ref_id || !saison || !championnat) {
+      return res.status(400).json({ success: false, message: 'equipe_ref_id, saison et championnat sont requis' });
+    }
+    const equipes = await ChEquipe.findAll({ where: { club_id, equipe_ref_id, saison, championnat }, attributes: ['id'] });
+    const ids = equipes.map(e => e.id);
+    if (ids.length > 0) {
+      await ChMatch.destroy({ where: { club_id, [Op.or]: [{ dom_id: ids }, { ext_id: ids }] } });
+    }
+    await ChEquipe.destroy({ where: { club_id, equipe_ref_id, saison, championnat } });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 // GET /championnat/coachs?equipe_id=X — coachs d'une équipe
 const getCoachs = async (req, res) => {
   try {
@@ -218,7 +238,7 @@ const removeCoach = async (req, res) => {
 };
 
 module.exports = {
-  getClassement, getChampionnats,
+  getClassement, getChampionnats, deleteChampionnat,
   addEquipe, updateEquipe, removeEquipe,
   addMatch, updateMatch, deleteMatch,
   getCoachs, addCoach, removeCoach,

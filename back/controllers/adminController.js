@@ -70,7 +70,8 @@ const toggleUserActif = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
-    await user.update({ actif: !user.actif });
+    const actif = req.body.actif !== undefined ? Boolean(req.body.actif) : !user.actif;
+    await user.update({ actif });
     return res.json({ success: true, data: { actif: user.actif } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur serveur' });

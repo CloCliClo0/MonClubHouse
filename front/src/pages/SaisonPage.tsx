@@ -297,6 +297,15 @@ export default function SaisonPage() {
     await loadChampData()
   }
 
+  const handleDeleteChamp = async () => {
+    if (!selectedTeamId || !activeChamp) return
+    if (!confirm(`Supprimer le championnat "${activeChamp}" et toutes ses données ?`)) return
+    await api.delete(`/championnat/complet?equipe_ref_id=${selectedTeamId}&saison=${season}&championnat=${encodeURIComponent(activeChamp)}`)
+    setChampList(prev => prev.filter(c => c !== activeChamp))
+    setActiveChamp('')
+    setChampData(null)
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   const selectedTeam = equipes.find(e => e.id === selectedTeamId)
@@ -531,6 +540,7 @@ export default function SaisonPage() {
               onEditResult={openEditResult}
               onDeleteResult={handleDeleteMatch}
               onDeleteTeam={handleDeleteTeam}
+              onDeleteChamp={handleDeleteChamp}
             />
           )}
         </>
@@ -770,11 +780,12 @@ interface ClassementProps {
   onEditResult: (m: ChMatchRow) => void
   onDeleteResult: (id: number) => void
   onDeleteTeam: (id: number) => void
+  onDeleteChamp: () => void
 }
 
 function ClassementView({
   champList, activeChamp, champData, loadingChamp, canManage,
-  onSelectChamp, onOpenNewChamp, onAddTeam, onAddResult, onEditResult, onDeleteResult, onDeleteTeam,
+  onSelectChamp, onOpenNewChamp, onAddTeam, onAddResult, onEditResult, onDeleteResult, onDeleteTeam, onDeleteChamp,
 }: ClassementProps) {
   const equipes = champData?.equipes ?? []
   const matchs  = champData?.matchs  ?? []
@@ -799,6 +810,13 @@ function ClassementView({
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-label-lg border border-dashed border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-all">
             <span className="material-symbols-outlined text-[18px]">add</span>
             Nouveau championnat
+          </button>
+        )}
+        {canManage && activeChamp && (
+          <button onClick={onDeleteChamp}
+            className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-label-md text-error hover:bg-red-50 border border-error/20 transition-colors">
+            <span className="material-symbols-outlined text-[16px]">delete</span>
+            Supprimer "{activeChamp}"
           </button>
         )}
       </div>

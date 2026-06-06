@@ -196,6 +196,25 @@ const runMigrations = async () => {
 
   try {
     await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS adversaires (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        club_id    INT NOT NULL,
+        nom        VARCHAR(200) NOT NULL,
+        categorie  VARCHAR(50)  NULL,
+        ville      VARCHAR(100) NULL,
+        contact    VARCHAR(255) NULL,
+        telephone  VARCHAR(20)  NULL,
+        couleur    VARCHAR(7)   DEFAULT '#1b4332',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('[Migration] adversaires créée');
+  } catch (e) { /* déjà existante */ }
+
+  try {
+    await sequelize.query(`
       CREATE TABLE IF NOT EXISTS ch_equipes (
         id            INT AUTO_INCREMENT PRIMARY KEY,
         club_id       INT NOT NULL,

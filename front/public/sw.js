@@ -18,10 +18,15 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return
   const url = new URL(e.request.url)
+  // Ignore non-http(s) schemes (chrome-extension://, etc.)
+  if (!url.protocol.startsWith('http')) return
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth')) return
 
   if (e.request.mode === 'navigate') {
-    e.respondWith(fetch(e.request).catch(() => caches.match('/')))
+    e.respondWith(
+      fetch(e.request)
+        .catch(() => caches.match('/').then(r => r || fetch('/')))
+    )
     return
   }
 

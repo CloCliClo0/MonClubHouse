@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {
-  getClassement, getChampionnats,
+  getClassement, getChampionnats, deleteChampionnat,
   addEquipe, updateEquipe, removeEquipe,
   addMatch, updateMatch, deleteMatch,
   getCoachs, addCoach, removeCoach,
@@ -11,6 +11,7 @@ const { requireMinRole } = require('../middlewares/rbac');
 
 router.get('/',          authenticate, getClassement);
 router.get('/list',      authenticate, getChampionnats);
+router.delete('/complet', authenticate, requireMinRole('coach'), deleteChampionnat);
 
 router.post('/equipes',        authenticate, requireMinRole('coach'), addEquipe);
 router.patch('/equipes/:id',   authenticate, requireMinRole('coach'), updateEquipe);
