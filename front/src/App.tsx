@@ -20,6 +20,7 @@ import ClubPage from './pages/ClubPage'
 import CreateEventPage from './pages/CreateEventPage'
 import OpponentsPage from './pages/OpponentsPage'
 import SaisonPage from './pages/SaisonPage'
+import ScraperPage from './pages/ScraperPage'
 import StatsPage from './pages/StatsPage'
 import SetupClubPage from './pages/SetupClubPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/evenements/creer"   element={<CreateEventPage />} />
           <Route path="/adversaires"        element={<OpponentsPage />} />
           <Route path="/saison"             element={<SaisonPage />} />
+          <Route path="/scraper"            element={<ScraperPage />} />
           <Route path="/statistiques"       element={<StatsPage />} />
           <Route path="/aide"                   element={<HelpPage />} />
           <Route path="/aide/documentation"     element={<DocumentationPage />} />

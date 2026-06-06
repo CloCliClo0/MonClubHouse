@@ -13,6 +13,9 @@ const Message = require('./Message');
 const Channel = require('./Channel');
 const Notification = require('./Notification');
 const Adversaire = require('./Adversaire');
+const ChEquipe = require('./ChEquipe');
+const ChMatch = require('./ChMatch');
+const EquipeCoach = require('./EquipeCoach');
 
 // Associations Club
 Club.hasMany(Terrain, { foreignKey: 'club_id', as: 'terrains' });
@@ -82,6 +85,18 @@ InviteCode.belongsTo(User,  { foreignKey: 'created_by',as: 'createur' });
 Club.hasMany(Adversaire, { foreignKey: 'club_id', as: 'adversaires' });
 Adversaire.belongsTo(Club, { foreignKey: 'club_id', as: 'club' });
 
+// Championnat
+ChEquipe.hasMany(ChMatch, { foreignKey: 'dom_id', as: 'matchs_dom' });
+ChEquipe.hasMany(ChMatch, { foreignKey: 'ext_id', as: 'matchs_ext' });
+ChMatch.belongsTo(ChEquipe, { foreignKey: 'dom_id', as: 'dom' });
+ChMatch.belongsTo(ChEquipe, { foreignKey: 'ext_id', as: 'ext' });
+
+// Multi-coachs par équipe
+Equipe.belongsToMany(User, { through: EquipeCoach, foreignKey: 'equipe_id', as: 'coachs_extra' });
+User.belongsToMany(Equipe, { through: EquipeCoach, foreignKey: 'user_id', as: 'equipes_coachs_extra' });
+EquipeCoach.belongsTo(User,   { foreignKey: 'user_id',   as: 'user' });
+EquipeCoach.belongsTo(Equipe, { foreignKey: 'equipe_id', as: 'equipe' });
+
 module.exports = {
   sequelize,
   User,
@@ -98,4 +113,7 @@ module.exports = {
   Channel,
   Notification,
   Adversaire,
+  ChEquipe,
+  ChMatch,
+  EquipeCoach,
 };

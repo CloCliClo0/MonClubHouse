@@ -42,7 +42,8 @@ router.patch('/codes/:id/disable', authenticate, requireMinRole('dirigeant'), de
 router.get('/stats',               authenticate, getStats);
 router.get('/terrains',            authenticate, getTerrains);
 router.post('/terrains',           authenticate, requireMinRole('dirigeant'), createTerrain);
-router.put('/terrains/:id',        authenticate, requireMinRole('dirigeant'), updateTerrain);
+router.put('/terrains/:id',           authenticate, requireMinRole('dirigeant'), updateTerrain);
+router.patch('/terrains/:id',         authenticate, requireMinRole('dirigeant'), updateTerrain);
 router.patch('/terrains/:id/disable', authenticate, requireMinRole('dirigeant'), deleteTerrain);
 
 router.get('/', getAll);

@@ -30,6 +30,8 @@ const adminRoutes  = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
 const codesRoutes        = require('./routes/codes');
 const adversairesRoutes  = require('./routes/adversaires');
+const championnatRoutes  = require('./routes/championnat');
+const scraperRoutes      = require('./routes/scraper');
 
 const app = express();
 const server = http.createServer(app);
@@ -121,8 +123,10 @@ app.use('/api/resultats', resultatsRoutes);
 app.use('/api/profil', profilRoutes);
 app.use('/api/admin',  adminRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/codes',       codesRoutes);
-app.use('/api/adversaires', adversairesRoutes);
+app.use('/api/codes',        codesRoutes);
+app.use('/api/adversaires',  adversairesRoutes);
+app.use('/api/championnat',  championnatRoutes);
+app.use('/api/scraper',      scraperRoutes);
 
 // Auth Google (hors /api pour le redirect OAuth)
 app.use('/auth', authRoutes);
@@ -173,12 +177,63 @@ server.listen(PORT, () => {
 
 const runMigrations = async () => {
   try {
-    // Rend equipe_id nullable (codes dirigeant sans équipe)
     await sequelize.query('ALTER TABLE invite_codes MODIFY COLUMN equipe_id INT NULL;');
     console.log('[Migration] invite_codes.equipe_id → nullable');
-  } catch (e) {
-    // Déjà nullable ou table inexistante — silencieux
-  }
+  } catch (e) { /* déjà ok */ }
+
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS equipe_coachs (
+        equipe_id INT NOT NULL,
+        user_id   INT NOT NULL,
+        PRIMARY KEY (equipe_id, user_id),
+        FOREIGN KEY (equipe_id) REFERENCES equipes(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id)   REFERENCES users(id)   ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('[Migration] equipe_coachs créée');
+  } catch (e) { /* déjà existante */ }
+
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS ch_equipes (
+        id            INT AUTO_INCREMENT PRIMARY KEY,
+        club_id       INT NOT NULL,
+        equipe_ref_id INT NOT NULL,
+        equipe_id     INT NULL,
+        nom           VARCHAR(200) NOT NULL,
+        saison        VARCHAR(20)  NOT NULL,
+        championnat   VARCHAR(200) NULL,
+        couleur       VARCHAR(7)   DEFAULT '#6c757d',
+        created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('[Migration] ch_equipes créée');
+  } catch (e) { /* déjà existante */ }
+
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS ch_matchs (
+        id            INT AUTO_INCREMENT PRIMARY KEY,
+        club_id       INT NOT NULL,
+        equipe_ref_id INT NOT NULL,
+        dom_id        INT NOT NULL,
+        ext_id        INT NOT NULL,
+        journee       INT  NULL,
+        date          DATE NULL,
+        score_dom     INT  NULL,
+        score_ext     INT  NULL,
+        saison        VARCHAR(20)  NOT NULL,
+        championnat   VARCHAR(200) NULL,
+        created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (dom_id) REFERENCES ch_equipes(id) ON DELETE CASCADE,
+        FOREIGN KEY (ext_id) REFERENCES ch_equipes(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('[Migration] ch_matchs créée');
+  } catch (e) { /* déjà existante */ }
 };
 
 const connectDB = async (retries = 10, delay = 5000) => {

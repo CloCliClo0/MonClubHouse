@@ -1,5 +1,6 @@
-const { Equipe, Licencie, User, Sport, Match } = require('../models');
+const { Equipe, Licencie, User, Sport, Match, EquipeCoach } = require('../models');
 const { validationResult } = require('express-validator');
+const { Op } = require('sequelize');
 
 const getAll = async (req, res) => {
   try {
@@ -8,15 +9,42 @@ const getAll = async (req, res) => {
     if (req.query.sport_id) where.sport_id = req.query.sport_id;
     if (req.query.categorie) where.categorie = req.query.categorie;
 
+    const role = req.user?.role;
+
+    if (role === 'coach') {
+      // Le coach ne voit que ses propres équipes (coach_id ou equipe_coachs)
+      const coachLinks = await EquipeCoach.findAll({
+        where: { user_id: req.user.id },
+        attributes: ['equipe_id'],
+        raw: true,
+      });
+      const linkedIds = coachLinks.map(l => l.equipe_id);
+      const orClauses = [{ coach_id: req.user.id }];
+      if (linkedIds.length > 0) orClauses.push({ id: { [Op.in]: linkedIds } });
+      where[Op.or] = orClauses;
+    } else if (['joueur', 'parent'].includes(role)) {
+      // Le joueur/parent voit toutes les équipes de ses catégories
+      const licencies = await Licencie.findAll({
+        where: { user_id: req.user.id },
+        include: [{ model: Equipe, as: 'equipe', attributes: ['categorie'] }],
+        raw: true,
+        nest: true,
+      });
+      const categories = [...new Set(licencies.map(l => l.equipe?.categorie).filter(Boolean))];
+      if (categories.length === 0) return res.json({ success: true, data: [] });
+      where.categorie = { [Op.in]: categories };
+    }
+
     const equipes = await Equipe.findAll({
       where,
       include: [
         { model: Sport, as: 'sport' },
         { model: User, as: 'coach', attributes: ['id', 'nom', 'prenom'], required: false },
-      ]
+      ],
     });
     return res.json({ success: true, data: equipes });
   } catch (err) {
+    console.error(err);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

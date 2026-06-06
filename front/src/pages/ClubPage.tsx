@@ -153,22 +153,36 @@ export default function ClubPage() {
 
   // ── Load ──────────────────────────────────────────────────────────
 
-  const load = () => {
+  const load = async () => {
     setLoading(true)
-    Promise.all([
-      api.get('/clubs').catch(() => null),
-      api.get('/clubs/terrains').catch(() => null),
-      api.get('/equipes').catch(() => null),
-      api.get('/admin/users').catch(() => null),
-    ]).then(([cRes, tRes, eRes, uRes]) => {
-      const c = cRes?.data?.data?.[0] || cRes?.data?.data || null
+    try {
+      const [cRes, tRes, eRes, uRes] = await Promise.all([
+        api.get('/clubs').catch(() => null),
+        api.get('/clubs/terrains').catch(() => null),
+        api.get('/equipes').catch(() => null),
+        api.get('/admin/users').catch(() => null),
+      ])
+
+      // GET /clubs ne retourne que id/nom/logo/ville/couleur_primaire
+      // → on récupère le club complet via GET /clubs/:id
+      const partial = cRes?.data?.data?.[0] || cRes?.data?.data || null
+      let c: Club | null = partial
+      if (partial?.id) {
+        try {
+          const fullRes = await api.get(`/clubs/${partial.id}`)
+          c = fullRes?.data?.data || partial
+        } catch {}
+      }
+
       setClub(c)
       setForm(c || {})
       setTerrains(tRes?.data?.data || [])
       setEquipes(eRes?.data?.data || eRes?.data || [])
       const users: UserShort[] = uRes?.data?.data || []
       setCoaches(users.filter(u => ['coach', 'dirigeant', 'admin', 'superadmin'].includes(u.role)))
-    }).finally(() => setLoading(false))
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])

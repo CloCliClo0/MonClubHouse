@@ -66,7 +66,7 @@ const requireSameClub = (req, res, next) => {
 };
 
 /**
- * Vérifie que le coach n'accède qu'à ses propres équipes.
+ * Vérifie que le coach n'accède qu'à ses propres équipes (via coach_id OU equipe_coachs).
  */
 const requireCoachOfTeam = async (req, res, next) => {
   if (!req.user) {
@@ -75,11 +75,15 @@ const requireCoachOfTeam = async (req, res, next) => {
   if (['superadmin', 'admin', 'dirigeant'].includes(req.user.role)) return next();
 
   if (req.user.role === 'coach') {
-    const { Equipe } = require('../models');
-    const equipe = await Equipe.findOne({
-      where: { id: req.params.equipeId || req.params.id, coach_id: req.user.id }
-    });
-    if (!equipe) {
+    const { Equipe, EquipeCoach } = require('../models');
+    const equipeId = req.params.equipeId || req.params.id;
+
+    const [byCoachId, byTable] = await Promise.all([
+      Equipe.findOne({ where: { id: equipeId, coach_id: req.user.id } }),
+      EquipeCoach.findOne({ where: { equipe_id: equipeId, user_id: req.user.id } }),
+    ]);
+
+    if (!byCoachId && !byTable) {
       return res.status(403).json({ success: false, message: 'Vous n\'êtes pas coach de cette équipe' });
     }
   }
