@@ -12,6 +12,7 @@ const Composition = require('./Composition');
 const Message = require('./Message');
 const Channel = require('./Channel');
 const Notification = require('./Notification');
+const Adversaire = require('./Adversaire');
 
 // Associations Club
 Club.hasMany(Terrain, { foreignKey: 'club_id', as: 'terrains' });
@@ -77,6 +78,10 @@ InviteCode.belongsTo(Club,  { foreignKey: 'club_id',   as: 'club' });
 InviteCode.belongsTo(Equipe,{ foreignKey: 'equipe_id', as: 'equipe' });
 InviteCode.belongsTo(User,  { foreignKey: 'created_by',as: 'createur' });
 
+// Adversaires
+Club.hasMany(Adversaire, { foreignKey: 'club_id', as: 'adversaires' });
+Adversaire.belongsTo(Club, { foreignKey: 'club_id', as: 'club' });
+
 module.exports = {
   sequelize,
   User,
@@ -91,5 +96,6 @@ module.exports = {
   Composition,
   Message,
   Channel,
-  Notification
+  Notification,
+  Adversaire,
 };

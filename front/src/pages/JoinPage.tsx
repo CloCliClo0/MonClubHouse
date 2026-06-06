@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 
 type Player = { id: number; nom: string; prenom: string; avatar?: string }
 
 export default function JoinPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const role = localStorage.getItem('role') || 'joueur'
 
   const [step, setStep]     = useState<'code' | 'child' | 'done'>('code')
-  const [code, setCode]     = useState('')
+  const [code, setCode]     = useState((searchParams.get('code') || '').toUpperCase())
   const [loading, setLoading] = useState(false)
   const [error, setError]   = useState('')
   const [joinInfo, setJoinInfo] = useState<{ equipe: { nom: string; categorie: string }; role: string } | null>(null)

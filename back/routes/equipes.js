@@ -9,6 +9,6 @@ router.get('/', authenticate, getAll);
 router.get('/:id', authenticate, getById);
 router.post('/', authenticate, requireMinRole('dirigeant'), validateEquipe, create);
 router.put('/:id', authenticate, requireMinRole('coach'), requireCoachOfTeam, update);
-router.patch('/:id/disable', authenticate, requireMinRole('admin'), remove);
+router.patch('/:id/disable', authenticate, requireMinRole('dirigeant'), remove);
 
 module.exports = router;

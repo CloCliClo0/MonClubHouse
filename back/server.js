@@ -28,7 +28,8 @@ const resultatsRoutes = require('./routes/resultats');
 const profilRoutes = require('./routes/profil');
 const adminRoutes  = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
-const codesRoutes  = require('./routes/codes');
+const codesRoutes        = require('./routes/codes');
+const adversairesRoutes  = require('./routes/adversaires');
 
 const app = express();
 const server = http.createServer(app);
@@ -120,29 +121,8 @@ app.use('/api/resultats', resultatsRoutes);
 app.use('/api/profil', profilRoutes);
 app.use('/api/admin',  adminRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/codes',  codesRoutes);
-
-// Route adversaires — opponents déduits des matchs
-const { authenticate: _auth } = require('./middlewares/auth');
-const { Match: _Match, Equipe: _Equipe } = require('./models');
-app.get('/api/adversaires', _auth, async (req, res) => {
-  try {
-    const where = {};
-    if (req.user.club_id) {
-      const eqs = await _Equipe.findAll({ where: { club_id: req.user.club_id, actif: true }, attributes: ['id'] });
-      if (eqs.length) where.equipe_id = eqs.map(e => e.id);
-    }
-    const matchs = await _Match.findAll({ where, attributes: ['adversaire'], group: ['adversaire'], raw: true });
-    const adversaires = matchs
-      .map(m => m.adversaire)
-      .filter(Boolean)
-      .sort()
-      .map((nom, i) => ({ id: i + 1, nom }));
-    return res.json({ success: true, data: adversaires });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
+app.use('/api/codes',       codesRoutes);
+app.use('/api/adversaires', adversairesRoutes);
 
 // Auth Google (hors /api pour le redirect OAuth)
 app.use('/auth', authRoutes);

@@ -10,7 +10,10 @@ const getAll = async (req, res) => {
 
     const equipes = await Equipe.findAll({
       where,
-      include: [{ model: Sport, as: 'sport' }]
+      include: [
+        { model: Sport, as: 'sport' },
+        { model: User, as: 'coach', attributes: ['id', 'nom', 'prenom'], required: false },
+      ]
     });
     return res.json({ success: true, data: equipes });
   } catch (err) {

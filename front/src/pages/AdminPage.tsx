@@ -139,10 +139,11 @@ export default function AdminPage() {
     const appUrl = window.location.origin
     const label  = code.label || code.equipe?.nom || 'votre équipe'
     const role   = ({ joueur: 'joueur', parent: 'parent', coach: 'coach', dirigeant: 'dirigeant' } as Record<string,string>)[code.role] ?? code.role
-    const text   = `🏆 Rejoignez ${label} sur MonClubHouse !\n\nVotre code d'accès (${role}) : ${code.code}\n\nInscription : ${appUrl}/register`
+    const link   = `${appUrl}/register?code=${code.code}`
+    const text   = `🏆 Rejoignez ${label} sur MonClubHouse !\n\nCliquez sur ce lien pour vous inscrire directement (${role}) :\n${link}`
 
     if (navigator.share) {
-      navigator.share({ title: 'Code MonClubHouse', text }).catch(() => {})
+      navigator.share({ title: 'Code MonClubHouse', text, url: link }).catch(() => {})
     } else {
       navigator.clipboard.writeText(text)
       setCopiedId(code.id)

@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 
 export default function RegisterPage() {
+  const [searchParams] = useSearchParams()
   const [form, setForm] = useState({
-    prenom: '', nom: '', email: '', password: '', invite_code: '',
+    prenom: '', nom: '', email: '', password: '',
+    invite_code: (searchParams.get('code') || '').toUpperCase(),
   })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading]   = useState(false)
@@ -134,14 +136,32 @@ export default function RegisterPage() {
             <label className="text-label-md text-on-surface-variant" htmlFor="invite_code">
               Code d'invitation *
             </label>
-            <input
-              className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono tracking-widest text-center uppercase"
-              id="invite_code" type="text"
-              placeholder="Ex : U15-A3F2B1"
-              required
-              value={form.invite_code}
-              onChange={e => set('invite_code', e.target.value.toUpperCase())}
-            />
+            {form.invite_code && searchParams.get('code') ? (
+              <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-green-300 bg-green-50">
+                <span className="material-symbols-outlined text-green-600 text-[20px] shrink-0">check_circle</span>
+                <span className="font-mono tracking-widest text-green-800 text-body-md font-bold flex-1 text-center">
+                  {form.invite_code}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => set('invite_code', '')}
+                  className="text-green-600 hover:text-green-800 transition-colors"
+                  title="Modifier le code"
+                >
+                  <span className="material-symbols-outlined text-[18px]">edit</span>
+                </button>
+              </div>
+            ) : (
+              <input
+                className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono tracking-widest text-center uppercase"
+                id="invite_code" type="text"
+                placeholder="Ex : U15-A3F2B1"
+                required
+                value={form.invite_code}
+                onChange={e => set('invite_code', e.target.value.toUpperCase())}
+                autoFocus={!form.invite_code}
+              />
+            )}
             <p className="text-body-sm text-on-surface-variant/70">
               Fourni par le dirigeant ou l'administrateur de votre club.
             </p>

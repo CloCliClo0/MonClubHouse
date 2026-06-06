@@ -22,6 +22,7 @@ export default function Sidebar({ open, onClose }: Props) {
     CONVOCS:     { path: '/convocations', icon: 'assignment_turned_in', label: t.nav.convocations  },
     COMPO:       { path: '/composition',  icon: 'format_list_numbered', label: t.nav.composition   },
     ADVERSAIRES: { path: '/adversaires',  icon: 'groups',               label: t.nav.adversaires   },
+    SAISON:      { path: '/saison',       icon: 'emoji_events',         label: t.nav.saison        },
     RESULTATS:   { path: '/resultats',    icon: 'leaderboard',          label: t.nav.resultats     },
     STATS:       { path: '/statistiques', icon: 'bar_chart',            label: t.nav.statistiques  },
     MON_CLUB:    { path: '/mon-club',     icon: 'home_work',            label: t.nav.monClub       },
@@ -40,12 +41,12 @@ export default function Sidebar({ open, onClose }: Props) {
     dirigeant: [
       { label: 'Club',          items: [NAV.MON_CLUB, NAV.EQUIPES] },
       { label: 'Planning',      items: [NAV.CALENDRIER] },
-      { label: 'Compétition',   items: [NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
+      { label: 'Compétition',   items: [NAV.SAISON, NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
     coach: [
       { label: 'Mon équipe',    items: [NAV.EQUIPES, NAV.CALENDRIER, NAV.CONVOCS, NAV.COMPO] },
-      { label: 'Compétition',   items: [NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
+      { label: 'Compétition',   items: [NAV.SAISON, NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
     joueur:   [{ label: 'Mon activité', items: [NAV.CONVOCS, NAV.MESSAGES] }],
