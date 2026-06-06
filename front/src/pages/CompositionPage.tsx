@@ -77,91 +77,130 @@ function toDisplay(m: ApiMatch): MatchDisplay {
   }
 }
 
-const FIELD_POSITIONS: Record<string, Player[]> = {
+type ConvoquedPlayer = {
+  userId: number
+  nom: string
+  prenom: string
+  statut: string
+  numero_maillot: number | null
+  poste: string | null
+}
+
+const FIELD_POSITIONS: Record<string, Omit<Player, 'name' | 'number'>[]> = {
   '4-3-3': [
-    { id: 1,  name: 'M. Rousseau',   number: 1,  position: 'GB',  x: 50, y: 90 },
-    { id: 2,  name: 'B. Girard',     number: 5,  position: 'DG',  x: 15, y: 70 },
-    { id: 3,  name: 'A. Moreau',     number: 4,  position: 'DCG', x: 35, y: 73 },
-    { id: 4,  name: 'T. Dupuis',     number: 3,  position: 'DCD', x: 65, y: 73 },
-    { id: 5,  name: 'R. Denis',      number: 2,  position: 'DD',  x: 85, y: 70 },
-    { id: 6,  name: 'C. Lefebvre',   number: 8,  position: 'MG',  x: 20, y: 50 },
-    { id: 7,  name: 'J. Fontaine',   number: 6,  position: 'MC',  x: 50, y: 52 },
-    { id: 8,  name: 'T. Blanchard',  number: 10, position: 'MD',  x: 80, y: 50 },
-    { id: 9,  name: 'N. Perrin',     number: 11, position: 'AG',  x: 20, y: 28 },
-    { id: 10, name: 'L. Bertin',     number: 9,  position: 'AT',  x: 50, y: 22 },
-    { id: 11, name: 'S. Mathieu',    number: 7,  position: 'AD',  x: 80, y: 28 },
+    { id: 1,  position: 'GB',  x: 50, y: 90 },
+    { id: 2,  position: 'DG',  x: 15, y: 70 },
+    { id: 3,  position: 'DCG', x: 35, y: 73 },
+    { id: 4,  position: 'DCD', x: 65, y: 73 },
+    { id: 5,  position: 'DD',  x: 85, y: 70 },
+    { id: 6,  position: 'MG',  x: 20, y: 50 },
+    { id: 7,  position: 'MC',  x: 50, y: 52 },
+    { id: 8,  position: 'MD',  x: 80, y: 50 },
+    { id: 9,  position: 'AG',  x: 20, y: 28 },
+    { id: 10, position: 'AT',  x: 50, y: 22 },
+    { id: 11, position: 'AD',  x: 80, y: 28 },
   ],
   '4-4-2': [
-    { id: 1,  name: 'M. Rousseau',   number: 1,  position: 'GB',  x: 50, y: 90 },
-    { id: 2,  name: 'B. Girard',     number: 5,  position: 'DG',  x: 15, y: 70 },
-    { id: 3,  name: 'A. Moreau',     number: 4,  position: 'DCG', x: 35, y: 73 },
-    { id: 4,  name: 'T. Dupuis',     number: 3,  position: 'DCD', x: 65, y: 73 },
-    { id: 5,  name: 'R. Denis',      number: 2,  position: 'DD',  x: 85, y: 70 },
-    { id: 6,  name: 'C. Lefebvre',   number: 8,  position: 'MG',  x: 20, y: 48 },
-    { id: 7,  name: 'J. Fontaine',   number: 6,  position: 'MCG', x: 38, y: 48 },
-    { id: 8,  name: 'T. Blanchard',  number: 10, position: 'MCD', x: 62, y: 48 },
-    { id: 9,  name: 'S. Mathieu',    number: 7,  position: 'MD',  x: 80, y: 48 },
-    { id: 10, name: 'L. Bertin',     number: 9,  position: 'ATG', x: 38, y: 24 },
-    { id: 11, name: 'N. Perrin',     number: 11, position: 'ATD', x: 62, y: 24 },
+    { id: 1,  position: 'GB',  x: 50, y: 90 },
+    { id: 2,  position: 'DG',  x: 15, y: 70 },
+    { id: 3,  position: 'DCG', x: 35, y: 73 },
+    { id: 4,  position: 'DCD', x: 65, y: 73 },
+    { id: 5,  position: 'DD',  x: 85, y: 70 },
+    { id: 6,  position: 'MG',  x: 20, y: 48 },
+    { id: 7,  position: 'MCG', x: 38, y: 48 },
+    { id: 8,  position: 'MCD', x: 62, y: 48 },
+    { id: 9,  position: 'MD',  x: 80, y: 48 },
+    { id: 10, position: 'ATG', x: 38, y: 24 },
+    { id: 11, position: 'ATD', x: 62, y: 24 },
   ],
   '4-2-3-1': [
-    { id: 1,  name: 'M. Rousseau',   number: 1,  position: 'GB',  x: 50, y: 90 },
-    { id: 2,  name: 'B. Girard',     number: 5,  position: 'DG',  x: 15, y: 70 },
-    { id: 3,  name: 'A. Moreau',     number: 4,  position: 'DCG', x: 35, y: 73 },
-    { id: 4,  name: 'T. Dupuis',     number: 3,  position: 'DCD', x: 65, y: 73 },
-    { id: 5,  name: 'R. Denis',      number: 2,  position: 'DD',  x: 85, y: 70 },
-    { id: 6,  name: 'C. Lefebvre',   number: 8,  position: 'MDG', x: 33, y: 56 },
-    { id: 7,  name: 'J. Fontaine',   number: 6,  position: 'MDD', x: 67, y: 56 },
-    { id: 8,  name: 'T. Blanchard',  number: 10, position: 'MC',  x: 50, y: 40 },
-    { id: 9,  name: 'N. Perrin',     number: 11, position: 'MG',  x: 22, y: 33 },
-    { id: 10, name: 'S. Mathieu',    number: 7,  position: 'MD',  x: 78, y: 33 },
-    { id: 11, name: 'L. Bertin',     number: 9,  position: 'AT',  x: 50, y: 20 },
+    { id: 1,  position: 'GB',  x: 50, y: 90 },
+    { id: 2,  position: 'DG',  x: 15, y: 70 },
+    { id: 3,  position: 'DCG', x: 35, y: 73 },
+    { id: 4,  position: 'DCD', x: 65, y: 73 },
+    { id: 5,  position: 'DD',  x: 85, y: 70 },
+    { id: 6,  position: 'MDG', x: 33, y: 56 },
+    { id: 7,  position: 'MDD', x: 67, y: 56 },
+    { id: 8,  position: 'MC',  x: 50, y: 40 },
+    { id: 9,  position: 'MG',  x: 22, y: 33 },
+    { id: 10, position: 'MD',  x: 78, y: 33 },
+    { id: 11, position: 'AT',  x: 50, y: 20 },
   ],
   '3-5-2': [
-    { id: 1,  name: 'M. Rousseau',   number: 1,  position: 'GB',  x: 50, y: 90 },
-    { id: 2,  name: 'B. Girard',     number: 5,  position: 'DG',  x: 22, y: 73 },
-    { id: 3,  name: 'A. Moreau',     number: 4,  position: 'DC',  x: 50, y: 76 },
-    { id: 4,  name: 'R. Denis',      number: 2,  position: 'DD',  x: 78, y: 73 },
-    { id: 5,  name: 'T. Dupuis',     number: 3,  position: 'PG',  x: 10, y: 50 },
-    { id: 6,  name: 'C. Lefebvre',   number: 8,  position: 'MCG', x: 30, y: 50 },
-    { id: 7,  name: 'J. Fontaine',   number: 6,  position: 'MC',  x: 50, y: 50 },
-    { id: 8,  name: 'T. Blanchard',  number: 10, position: 'MCD', x: 70, y: 50 },
-    { id: 9,  name: 'S. Mathieu',    number: 7,  position: 'PD',  x: 90, y: 50 },
-    { id: 10, name: 'L. Bertin',     number: 9,  position: 'ATG', x: 38, y: 24 },
-    { id: 11, name: 'N. Perrin',     number: 11, position: 'ATD', x: 62, y: 24 },
+    { id: 1,  position: 'GB',  x: 50, y: 90 },
+    { id: 2,  position: 'DG',  x: 22, y: 73 },
+    { id: 3,  position: 'DC',  x: 50, y: 76 },
+    { id: 4,  position: 'DD',  x: 78, y: 73 },
+    { id: 5,  position: 'PG',  x: 10, y: 50 },
+    { id: 6,  position: 'MCG', x: 30, y: 50 },
+    { id: 7,  position: 'MC',  x: 50, y: 50 },
+    { id: 8,  position: 'MCD', x: 70, y: 50 },
+    { id: 9,  position: 'PD',  x: 90, y: 50 },
+    { id: 10, position: 'ATG', x: 38, y: 24 },
+    { id: 11, position: 'ATD', x: 62, y: 24 },
   ],
   '5-3-2': [
-    { id: 1,  name: 'M. Rousseau',   number: 1,  position: 'GB',  x: 50, y: 90 },
-    { id: 2,  name: 'T. Dupuis',     number: 3,  position: 'DLG', x: 12, y: 70 },
-    { id: 3,  name: 'B. Girard',     number: 5,  position: 'DCG', x: 30, y: 74 },
-    { id: 4,  name: 'A. Moreau',     number: 4,  position: 'DC',  x: 50, y: 77 },
-    { id: 5,  name: 'R. Denis',      number: 2,  position: 'DCD', x: 70, y: 74 },
-    { id: 6,  name: 'S. Mathieu',    number: 7,  position: 'DLD', x: 88, y: 70 },
-    { id: 7,  name: 'C. Lefebvre',   number: 8,  position: 'MCG', x: 28, y: 50 },
-    { id: 8,  name: 'J. Fontaine',   number: 6,  position: 'MC',  x: 50, y: 50 },
-    { id: 9,  name: 'T. Blanchard',  number: 10, position: 'MCD', x: 72, y: 50 },
-    { id: 10, name: 'L. Bertin',     number: 9,  position: 'ATG', x: 36, y: 25 },
-    { id: 11, name: 'N. Perrin',     number: 11, position: 'ATD', x: 64, y: 25 },
+    { id: 1,  position: 'GB',  x: 50, y: 90 },
+    { id: 2,  position: 'DLG', x: 12, y: 70 },
+    { id: 3,  position: 'DCG', x: 30, y: 74 },
+    { id: 4,  position: 'DC',  x: 50, y: 77 },
+    { id: 5,  position: 'DCD', x: 70, y: 74 },
+    { id: 6,  position: 'DLD', x: 88, y: 70 },
+    { id: 7,  position: 'MCG', x: 28, y: 50 },
+    { id: 8,  position: 'MC',  x: 50, y: 50 },
+    { id: 9,  position: 'MCD', x: 72, y: 50 },
+    { id: 10, position: 'ATG', x: 36, y: 25 },
+    { id: 11, position: 'ATD', x: 64, y: 25 },
   ],
 }
 
-const DEFAULT_BENCH: BenchPlayer[] = [
-  { id: 12, name: 'F. Blanc',   number: 16, position: 'GB'  },
-  { id: 13, name: 'P. Roux',    number: 14, position: 'DEF' },
-  { id: 14, name: 'K. Martin',  number: 15, position: 'MIL' },
-  { id: 15, name: 'E. Léger',   number: 17, position: 'ATT' },
-]
-
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2']
 
+function posOrder(poste: string | null): number {
+  const p = (poste ?? '').toLowerCase()
+  if (p.includes('gard') || p.startsWith('gb') || p === 'g') return 0
+  if (p.includes('def') || p.startsWith('d')) return 1
+  if (p.includes('mil') || p.startsWith('m')) return 2
+  return 3
+}
+
+function playerLabel(p: ConvoquedPlayer): string {
+  return `${p.prenom.charAt(0)}. ${p.nom}`
+}
+
+function buildTeam(convocations: ConvoquedPlayer[], formation: string, mode: CompoMode = 'pre'): { field: Player[]; bench: BenchPlayer[] } {
+  const slots = FIELD_POSITIONS[formation]
+  const eligible = mode === 'final'
+    ? convocations.filter(p => p.statut === 'present')
+    : convocations
+  const sorted = [...eligible].sort((a, b) => posOrder(a.poste) - posOrder(b.poste))
+
+  const field: Player[] = slots.map((slot, i) => {
+    const p = sorted[i]
+    return { ...slot, name: p ? playerLabel(p) : '—', number: p?.numero_maillot ?? i + 1 }
+  })
+  const bench: BenchPlayer[] = sorted.slice(slots.length).map((p, i) => ({
+    id: 1000 + i,
+    name: playerLabel(p),
+    number: p.numero_maillot ?? slots.length + i + 1,
+    position: p.poste ?? '—',
+  }))
+  return { field, bench }
+}
+
+function emptyField(formation: string): Player[] {
+  return FIELD_POSITIONS[formation].map(slot => ({ ...slot, name: '—', number: 0 }))
+}
+
+type CompoMode = 'pre' | 'final'
 type Selection = { id: number; source: 'field' | 'bench' }
 
 export default function CompositionPage() {
   const navigate = useNavigate()
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null)
   const [formation, setFormation]   = useState('4-3-3')
-  const [fieldPlayers, setFieldPlayers] = useState<Player[]>(() => FIELD_POSITIONS['4-3-3'].map(p => ({ ...p })))
-  const [bench, setBench]               = useState<BenchPlayer[]>(DEFAULT_BENCH.map(p => ({ ...p })))
+  const [fieldPlayers, setFieldPlayers] = useState<Player[]>(() => emptyField('4-3-3'))
+  const [bench, setBench]               = useState<BenchPlayer[]>([])
   const [selected, setSelected]         = useState<Selection | null>(null)
   const [saved, setSaved]               = useState(false)
 
@@ -169,10 +208,15 @@ export default function CompositionPage() {
   const [loading, setLoading]   = useState(true)
   const [fetchError, setFetchError] = useState(false)
 
+  const [convocations, setConvocations]       = useState<ConvoquedPlayer[]>([])
+  const [rawCounts, setRawCounts]             = useState({ present: 0, incertain: 0, convoque: 0, absent: 0, non_retenu: 0 })
+  const [loadingConvocations, setLoadingConvocations] = useState(false)
+  const [mode, setMode]                       = useState<CompoMode>('pre')
+
   useEffect(() => {
-    api.get<{ data: ApiMatch[] }>('/matchs?statut=programme')
+    api.get('/matchs?statut=programme')
       .then(r => {
-        const list = Array.isArray(r.data) ? r.data : (r.data?.data ?? [])
+        const list: ApiMatch[] = Array.isArray(r.data) ? r.data : (r.data?.data ?? [])
         const today = new Date(); today.setHours(0, 0, 0, 0)
         const filtered = list
           .filter(m => COMPETITION_TYPES.has(m.type) && new Date(m.date) >= today)
@@ -183,12 +227,56 @@ export default function CompositionPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    if (!selectedMatchId) return
+    setLoadingConvocations(true)
+    setConvocations([])
+    setFieldPlayers(emptyField(formation))
+    setBench([])
+
+    api.get(`/matchs/${selectedMatchId}/convocations`)
+      .then(r => {
+        const list = Array.isArray(r.data) ? r.data : (r.data?.data ?? [])
+        // Comptes bruts pour les stats
+        const cnt = { present: 0, incertain: 0, convoque: 0, absent: 0, non_retenu: 0 }
+        list.forEach((c: any) => { if (c.statut in cnt) cnt[c.statut as keyof typeof cnt]++ })
+        setRawCounts(cnt)
+        // Joueurs éligibles (sans absents ni non-retenus)
+        const eligible: ConvoquedPlayer[] = list
+          .filter((c: any) => c.statut !== 'absent' && c.statut !== 'non_retenu')
+          .map((c: any) => ({
+            userId:         c.joueur.id,
+            nom:            c.joueur.nom,
+            prenom:         c.joueur.prenom,
+            statut:         c.statut,
+            numero_maillot: c.joueur.licence?.numero_maillot ?? null,
+            poste:          c.joueur.licence?.poste ?? null,
+          }))
+        setConvocations(eligible)
+        setMode('pre')
+        const { field, bench } = buildTeam(eligible, formation, 'pre')
+        setFieldPlayers(field)
+        setBench(bench)
+      })
+      .catch(() => {})
+      .finally(() => setLoadingConvocations(false))
+  }, [selectedMatchId])
+
   const match = matches.find(m => m.id === selectedMatchId)
+
+  const handleModeChange = (newMode: CompoMode) => {
+    setMode(newMode)
+    const { field, bench } = buildTeam(convocations, formation, newMode)
+    setFieldPlayers(field)
+    setBench(bench)
+    setSelected(null)
+  }
 
   const changeFormation = (f: string) => {
     setFormation(f)
-    setFieldPlayers(FIELD_POSITIONS[f].map(p => ({ ...p })))
-    setBench(DEFAULT_BENCH.map(p => ({ ...p })))
+    const { field, bench } = buildTeam(convocations, f, mode)
+    setFieldPlayers(field)
+    setBench(bench)
     setSelected(null)
   }
 
@@ -198,8 +286,9 @@ export default function CompositionPage() {
   }
 
   const handleReset = () => {
-    setFieldPlayers(FIELD_POSITIONS[formation].map(p => ({ ...p })))
-    setBench(DEFAULT_BENCH.map(p => ({ ...p })))
+    const { field, bench } = buildTeam(convocations, formation, mode)
+    setFieldPlayers(field)
+    setBench(bench)
     setSelected(null)
   }
 
@@ -354,6 +443,25 @@ export default function CompositionPage() {
     )
   }
 
+  // ── Chargement des convocations ───────────────────────────────────────────
+  if (loadingConvocations) {
+    return (
+      <div>
+        <button
+          onClick={() => { setSelectedMatchId(null); setSelected(null) }}
+          className="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface text-label-md mb-6 transition-colors"
+        >
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          Choisir un autre match
+        </button>
+        <div className="flex flex-col items-center justify-center py-24 gap-3 text-on-surface-variant">
+          <span className="material-symbols-outlined text-[48px] text-primary animate-spin">progress_activity</span>
+          <p className="text-body-md">Chargement des convocations…</p>
+        </div>
+      </div>
+    )
+  }
+
   // ── Éditeur de composition ────────────────────────────────────────────────
   return (
     <div>
@@ -383,13 +491,35 @@ export default function CompositionPage() {
         </div>
       </div>
 
+      {/* Chargement des convocations */}
+      {loadingConvocations && (
+        <div className="mb-4 flex items-center gap-3 bg-surface-container-low border border-outline-variant px-4 py-3 rounded-xl text-body-sm text-on-surface-variant">
+          <span className="material-symbols-outlined text-[20px] animate-spin text-primary">progress_activity</span>
+          Chargement des joueurs convoqués…
+        </div>
+      )}
+
+      {!loadingConvocations && convocations.length === 0 && (
+        <div className="mb-4 flex items-center gap-3 bg-yellow-50 border border-yellow-200 px-4 py-3 rounded-xl text-body-sm text-yellow-800">
+          <span className="material-symbols-outlined text-yellow-600 text-[20px]">warning</span>
+          Aucun joueur convoqué pour ce match. Créez des convocations depuis la page <button onClick={() => navigate('/convocations')} className="underline font-semibold">Convocations</button>.
+        </div>
+      )}
+
+      {!loadingConvocations && convocations.length > 0 && convocations.length < 11 && (
+        <div className="mb-4 flex items-center gap-3 bg-orange-50 border border-orange-200 px-4 py-3 rounded-xl text-body-sm text-orange-800">
+          <span className="material-symbols-outlined text-orange-500 text-[20px]">group</span>
+          {convocations.length} joueur{convocations.length > 1 ? 's' : ''} convoqué{convocations.length > 1 ? 's' : ''} — il en faut au moins 11 pour compléter le terrain.
+        </div>
+      )}
+
       {/* Info match */}
       <div className="bg-white border border-[#e8e8f0] rounded-xl p-4 mb-5 flex flex-wrap items-center gap-4 text-body-sm text-on-surface-variant">
         {[
           { icon: 'sports_soccer', val: match?.label },
           { icon: 'calendar_today', val: match?.date?.split(' · ')[0] },
           { icon: 'schedule', val: match?.date?.split(' · ')[1] },
-          { icon: 'location_on', val: match?.terrain },
+          { icon: 'location_on', val: match?.terrain !== '—' ? match?.terrain : undefined },
           { icon: 'emoji_events', val: match?.competition },
         ].map((item, i) => item.val && (
           <span key={i} className="flex items-center gap-1.5">
@@ -397,7 +527,85 @@ export default function CompositionPage() {
             {item.val}
           </span>
         ))}
+        {convocations.length > 0 && (
+          <span className="ml-auto flex items-center gap-1.5 text-primary font-medium">
+            <span className="material-symbols-outlined text-[16px]">group</span>
+            {convocations.length} convoqué{convocations.length > 1 ? 's' : ''}
+          </span>
+        )}
+        {convocations.length === 0 && (
+          <span className="ml-auto flex items-center gap-1.5 text-orange-500 text-label-md">
+            <span className="material-symbols-outlined text-[16px]">warning</span>
+            Aucune convocation pour ce match
+          </span>
+        )}
       </div>
+
+      {/* Toggle pré-composition / composition finale */}
+      {!loadingConvocations && convocations.length > 0 && (
+        <div className="bg-white border border-[#e8e8f0] rounded-xl p-4 mb-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex rounded-xl border border-outline-variant overflow-hidden">
+              <button
+                onClick={() => handleModeChange('pre')}
+                className={`flex items-center gap-2 px-4 py-2 text-label-md transition-colors ${
+                  mode === 'pre' ? 'bg-primary text-white' : 'text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">edit_calendar</span>
+                Pré-composition
+              </button>
+              <button
+                onClick={() => handleModeChange('final')}
+                className={`flex items-center gap-2 px-4 py-2 text-label-md transition-colors ${
+                  mode === 'final' ? 'bg-primary text-white' : 'text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">group_add</span>
+                Composition finale
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {rawCounts.present > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 rounded-lg text-label-md">
+                  <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                  {rawCounts.present} présent{rawCounts.present > 1 ? 's' : ''}
+                </span>
+              )}
+              {rawCounts.incertain > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-orange-50 text-orange-700 rounded-lg text-label-md">
+                  <span className="material-symbols-outlined text-[14px]">help</span>
+                  {rawCounts.incertain} incertain{rawCounts.incertain > 1 ? 's' : ''}
+                </span>
+              )}
+              {rawCounts.convoque > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-lg text-label-md">
+                  <span className="material-symbols-outlined text-[14px]">schedule</span>
+                  {rawCounts.convoque} en attente
+                </span>
+              )}
+              {rawCounts.absent > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-700 rounded-lg text-label-md">
+                  <span className="material-symbols-outlined text-[14px]">cancel</span>
+                  {rawCounts.absent} absent{rawCounts.absent > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </div>
+          <p className="text-body-sm text-on-surface-variant mt-3">
+            {mode === 'pre'
+              ? 'Pré-composition : inclut les convoqués en attente de réponse et les incertains.'
+              : 'Composition finale : uniquement les joueurs ayant confirmé leur présence.'}
+          </p>
+          {mode === 'final' && rawCounts.present < 11 && (
+            <div className="mt-3 flex items-center gap-2 text-body-sm text-orange-700 bg-orange-50 rounded-xl px-3 py-2">
+              <span className="material-symbols-outlined text-[16px]">warning</span>
+              Seulement {rawCounts.present} présent{rawCounts.present > 1 ? 's' : ''} confirmé{rawCounts.present > 1 ? 's' : ''} — des postes resteront vides.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Hint échange */}
       {selected && (
@@ -511,10 +719,19 @@ export default function CompositionPage() {
 
           {/* Remplaçants */}
           <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#e8e8f0]">
+            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
               <h4 className="text-headline-md">Remplaçants</h4>
+              {bench.length > 0 && (
+                <span className="text-label-md text-on-surface-variant">{bench.length}</span>
+              )}
             </div>
             <div className="divide-y divide-[#e8e8f0]">
+              {bench.length === 0 && (
+                <div className="py-6 flex flex-col items-center gap-1.5 text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[28px] opacity-30">person_off</span>
+                  <p className="text-body-sm">Aucun remplaçant convoqué</p>
+                </div>
+              )}
               {bench.map(p => {
                 const sel = isSelected(p.id, 'bench')
                 return (

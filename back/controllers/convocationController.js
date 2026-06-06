@@ -1,4 +1,4 @@
-const { Convocation, Match, User, Equipe, Terrain, Notification } = require('../models');
+const { Convocation, Match, User, Equipe, Terrain, Notification, Licencie } = require('../models');
 const { createNotification } = require('./notificationController');
 const { sendBulkConvocationEmails } = require('../services/emailService');
 
@@ -8,7 +8,12 @@ const getByMatch = async (req, res) => {
       where: { match_id: req.params.matchId },
       include: [{
         model: User, as: 'joueur',
-        attributes: ['id', 'nom', 'prenom', 'email', 'avatar', 'telephone', 'notif_email']
+        attributes: ['id', 'nom', 'prenom', 'email', 'avatar'],
+        include: [{
+          model: Licencie, as: 'licence',
+          attributes: ['numero_maillot', 'poste'],
+          required: false,
+        }],
       }],
       order: [['createdAt', 'ASC']],
     });

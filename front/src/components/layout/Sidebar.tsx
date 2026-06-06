@@ -45,7 +45,7 @@ export default function Sidebar({ open, onClose }: Props) {
     ],
     coach: [
       { label: 'Mon équipe',    items: [NAV.CALENDRIER, NAV.CONVOCS, NAV.COMPO] },
-      { label: 'Compétition',   items: [NAV.RESULTATS, NAV.STATS] },
+      { label: 'Compétition',   items: [NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
     joueur:   [{ label: 'Mon activité', items: [NAV.CONVOCS, NAV.MESSAGES] }],
