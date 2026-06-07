@@ -29,6 +29,7 @@ export default function ScraperPage() {
   const [equipes, setEquipes]           = useState<Equipe[]>([])
   const [selectedEqId, setSelectedEqId] = useState('')
   const [champName, setChampName]       = useState('')
+  const [championnats, setChampionnats] = useState<string[]>([])
   const [saisonName, setSaisonName]     = useState(season)
 
   /* ── Source ── */
@@ -60,6 +61,14 @@ export default function ScraperPage() {
 
     api.get('/ai-scraper/quota').then(r => setQuota(r.data.data)).catch(() => {})
   }, [])
+
+  // Recharge les championnats existants quand l'équipe ou la saison change
+  useEffect(() => {
+    if (!selectedEqId || !saisonName.trim()) { setChampionnats([]); return }
+    api.get('/championnat/list', { params: { equipe_ref_id: selectedEqId, saison: saisonName.trim() } })
+      .then(r => setChampionnats(r.data.data || []))
+      .catch(() => setChampionnats([]))
+  }, [selectedEqId, saisonName])
 
   /* ── Drag & drop ── */
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -189,10 +198,24 @@ export default function ScraperPage() {
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-label-md text-on-surface-variant">Nom du championnat *</label>
-            <input value={champName} onChange={e => setChampName(e.target.value)}
-              placeholder="Ex : Régional 2"
-              className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
+            <label className="text-label-md text-on-surface-variant">
+              Championnat *
+              {championnats.length > 0 && (
+                <span className="ml-2 text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                  {championnats.length} existant{championnats.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </label>
+            <input
+              list="champ-datalist"
+              value={champName}
+              onChange={e => setChampName(e.target.value)}
+              placeholder={championnats.length ? 'Sélectionnez ou saisissez…' : 'Ex : Régional 2'}
+              className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all"
+            />
+            <datalist id="champ-datalist">
+              {championnats.map(c => <option key={c} value={c} />)}
+            </datalist>
           </div>
           <div className="space-y-1.5">
             <label className="text-label-md text-on-surface-variant">Saison</label>
