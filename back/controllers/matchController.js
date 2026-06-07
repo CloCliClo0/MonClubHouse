@@ -1,10 +1,10 @@
-const { Match, Equipe, Terrain, Convocation, User } = require('../models');
+const { Match, Equipe, Terrain, Convocation, Composition, User } = require('../models');
 const { validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 
 const getAll = async (req, res) => {
   try {
-    const where = {};
+    const where = { statut: { [Op.ne]: 'annule' } };
     if (req.query.equipe_id) where.equipe_id = req.query.equipe_id;
     if (req.query.type) where.type = req.query.type;
     if (req.query.statut) where.statut = req.query.statut;
@@ -96,9 +96,12 @@ const remove = async (req, res) => {
   try {
     const match = await Match.findByPk(req.params.id);
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
-    await match.update({ statut: 'annule' });
-    return res.json({ success: true, message: 'Match annulé' });
+    await Convocation.destroy({ where: { match_id: match.id } });
+    await Composition.destroy({ where: { match_id: match.id } });
+    await match.destroy();
+    return res.json({ success: true, message: 'Événement supprimé' });
   } catch (err) {
+    console.error('[matchController.remove]', err);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

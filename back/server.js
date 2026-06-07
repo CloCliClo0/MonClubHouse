@@ -32,6 +32,7 @@ const codesRoutes        = require('./routes/codes');
 const adversairesRoutes  = require('./routes/adversaires');
 const championnatRoutes  = require('./routes/championnat');
 const scraperRoutes      = require('./routes/scraper');
+const aiScraperRoutes    = require('./routes/aiScraper');
 
 const app = express();
 const server = http.createServer(app);
@@ -127,6 +128,7 @@ app.use('/api/codes',        codesRoutes);
 app.use('/api/adversaires',  adversairesRoutes);
 app.use('/api/championnat',  championnatRoutes);
 app.use('/api/scraper',      scraperRoutes);
+app.use('/api/ai-scraper',   aiScraperRoutes);
 
 // Auth Google (hors /api pour le redirect OAuth)
 app.use('/auth', authRoutes);
