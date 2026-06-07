@@ -113,11 +113,12 @@ const analyseWithAI = async (req, res) => {
   } catch (err) {
     console.error('[AI Scraper Gemini]', err.message);
 
-    if (err.message?.includes('API_KEY') || err.status === 400) {
-      return res.status(500).json({ success: false, message: 'Clé API Gemini invalide.' });
+    if (err.message?.includes('API_KEY') || err.message?.includes('API key') || err.status === 401) {
+      return res.status(502).json({ success: false, message: 'Clé API Gemini invalide ou non reconnue. Vérifiez la configuration.' });
     }
-    if (err.status === 429 || err.message?.includes('quota')) {
-      return res.status(429).json({ success: false, message: 'Quota API Gemini dépassé. Réessayez dans quelques minutes.' });
+    if (err.status === 429 || err.message?.includes('quota') || err.message?.includes('RESOURCE_EXHAUSTED')) {
+      // 502 et non 429 pour ne pas être confondu avec le quota journalier interne de l'application
+      return res.status(502).json({ success: false, message: 'Limite de l\'API Gemini atteinte. Réessayez dans quelques minutes.' });
     }
     return res.status(500).json({ success: false, message: `Erreur IA : ${err.message}` });
   }
