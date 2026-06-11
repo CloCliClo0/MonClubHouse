@@ -11,6 +11,7 @@ type Team = {
   couleur_maillot: string
   coach?: { nom: string; prenom: string }
   _count?: { licencies: number }
+  players_count?: number
   actif: boolean
 }
 
@@ -129,7 +130,7 @@ export default function TeamsPage() {
                   )}
                   <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">
                     <span className="material-symbols-outlined text-[16px]">groups</span>
-                    <span className="text-on-surface font-medium">{team._count?.licencies ?? 0} joueur(s)</span>
+                    <span className="text-on-surface font-medium">{team.players_count ?? team._count?.licencies ?? 0} joueur(s)</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-4 border-t border-[#e8e8f0]">

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getResultatsLocaux, getClassementFFF, getResultatsFFF } = require('../controllers/resultatController');
+const { getResultatsLocaux, getClassementFFF, getResultatsFFF, getAttendanceStats } = require('../controllers/resultatController');
 const { optionalAuth, authenticate } = require('../middlewares/auth');
 const { Match, Equipe, Licencie, User } = require('../models');
 const { Op } = require('sequelize');
@@ -72,5 +72,8 @@ router.get('/stats/equipes', authenticate, async (req, res) => {
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
+
+// Stats présence par joueur
+router.get('/stats/presence', authenticate, getAttendanceStats);
 
 module.exports = router;

@@ -22,7 +22,9 @@ const User = sequelize.define('User', {
   actif: { type: DataTypes.BOOLEAN, defaultValue: true },
   derniere_connexion: { type: DataTypes.DATE, allowNull: true },
   notif_email: { type: DataTypes.BOOLEAN, defaultValue: true },
-  notif_push: { type: DataTypes.BOOLEAN, defaultValue: true }
+  notif_push: { type: DataTypes.BOOLEAN, defaultValue: true },
+  pied_fort: { type: DataTypes.ENUM('droit', 'gauche', 'ambidextre'), allowNull: true },
+  poste: { type: DataTypes.STRING(50), allowNull: true }
 }, {
   tableName: 'users',
   hooks: {

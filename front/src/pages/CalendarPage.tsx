@@ -81,20 +81,20 @@ export default function CalendarPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
           <h2 className="text-headline-lg text-on-surface">Calendrier</h2>
           <p className="text-body-md text-on-surface-variant">
             {['admin', 'dirigeant'].includes(role) ? 'Tous les événements du club' : 'Vos événements'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Filtre équipe */}
           {equipes.length > 0 && (
             <select
               value={selectedEquipe}
               onChange={e => setSelectedEquipe(e.target.value)}
-              className="px-3 py-2 border border-outline-variant rounded-lg text-body-md bg-white focus:outline-none focus:border-primary"
+              className="px-3 py-2 border border-outline-variant rounded-lg text-body-md bg-white focus:outline-none focus:border-primary flex-1 sm:flex-none"
             >
               {(role === 'coach' || ['admin', 'dirigeant', 'superadmin'].includes(role)) && (
                 <option value="all">Tout le club</option>
@@ -108,10 +108,11 @@ export default function CalendarPage() {
           <div className="bg-white border border-outline-variant rounded-lg p-1 flex">
             {(['mois', 'semaine', 'jour'] as ViewMode[]).map(v => (
               <button key={v} onClick={() => setView(v)}
-                className={`px-4 py-1.5 rounded-md text-label-md capitalize transition-all ${
+                className={`px-3 py-1.5 rounded-md text-label-md capitalize transition-all ${
                   view === v ? 'bg-primary-container text-white' : 'text-on-surface-variant hover:bg-surface-container'
                 }`}>
-                {v.charAt(0).toUpperCase() + v.slice(1)}
+                {v === 'mois' ? 'Mois' : v === 'semaine' ? <span className="hidden sm:inline">Semaine</span> : <span className="hidden sm:inline">Jour</span>}
+                {v !== 'mois' && <span className="sm:hidden">{v.charAt(0).toUpperCase()}</span>}
               </button>
             ))}
           </div>
@@ -120,8 +121,8 @@ export default function CalendarPage() {
 
       <div className="bg-white border border-outline-variant rounded-xl overflow-hidden">
         {/* Header calendrier */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 border-b border-outline-variant gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h3 className="text-headline-md font-bold text-on-surface capitalize">{monthLabel}</h3>
             <div className="flex gap-1">
               <button onClick={prevMonth} className="p-1.5 hover:bg-surface-container rounded-md border border-outline-variant transition-colors">
@@ -135,7 +136,7 @@ export default function CalendarPage() {
               Aujourd'hui
             </button>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-primary/20 border border-primary/40" />
               <span className="text-label-md text-on-surface-variant">Matchs</span>

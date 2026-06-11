@@ -52,6 +52,11 @@ export default function TeamDetailPage() {
   const [saving, setSaving]     = useState(false)
   const [editMsg, setEditMsg]   = useState('')
 
+  // Modal licence
+  const [licModal, setLicModal] = useState<Licencie | null>(null)
+  const [licForm, setLicForm]   = useState<Record<string, any>>({})
+  const [savingLic, setSavingLic] = useState(false)
+
   const load = () => {
     setLoading(true)
     api.get(`/equipes/${id}`)
@@ -103,6 +108,29 @@ export default function TeamDetailPage() {
     load()
   }
 
+  const openLicModal = (lic: Licencie) => {
+    setLicModal(lic)
+    setLicForm({ poste: lic.poste || '', numero_maillot: lic.numero_maillot ?? '', statut: lic.statut })
+  }
+
+  const saveLicence = async () => {
+    if (!licModal) return
+    setSavingLic(true)
+    try {
+      await api.put(`/licencies/${licModal.id}`, {
+        poste: licForm.poste || null,
+        numero_maillot: licForm.numero_maillot !== '' ? Number(licForm.numero_maillot) : null,
+        statut: licForm.statut,
+      })
+      setLicModal(null)
+      load()
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur')
+    } finally {
+      setSavingLic(false)
+    }
+  }
+
   const saveInfos = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -143,12 +171,12 @@ export default function TeamDetailPage() {
       {/* Header */}
       <div className="bg-white border border-[#e8e8f0] rounded-2xl overflow-hidden mb-6">
         <div className="h-2" style={{ backgroundColor: team.couleur_maillot || '#0f5238' }} />
-        <div className="p-6 flex items-start gap-5">
+        <div className="p-4 sm:p-6 flex flex-wrap items-start gap-4">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-xl shrink-0"
             style={{ backgroundColor: team.couleur_maillot || '#0f5238' }}>
             {team.nom.slice(0, 2).toUpperCase()}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-[160px]">
             <h2 className="text-headline-lg text-on-surface">{team.nom}</h2>
             <div className="flex gap-2 mt-1.5 flex-wrap">
               <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant">{team.categorie}</span>
@@ -165,7 +193,7 @@ export default function TeamDetailPage() {
               </p>
             )}
           </div>
-          <div className="flex items-center gap-6 shrink-0">
+          <div className="flex items-center gap-6 w-full sm:w-auto">
             <div className="text-center">
               <p className="text-display-lg text-primary font-black">{team.licencies.filter(l => l.statut === 'actif').length}</p>
               <p className="text-label-md text-on-surface-variant">Joueurs actifs</p>
@@ -179,7 +207,7 @@ export default function TeamDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center border-b border-outline-variant mb-6">
+      <div className="flex items-center border-b border-outline-variant mb-6 overflow-x-auto">
         {[
           { key: 'joueurs',  label: `Joueurs (${team.licencies.length})`, icon: 'sports_soccer' },
           { key: 'parents',  label: `Parents (${parents.length})`,        icon: 'family_restroom' },
@@ -275,10 +303,16 @@ export default function TeamDetailPage() {
                     </td>
                     {canEditRoster && (
                       <td className="px-4 py-3">
-                        <button onClick={() => removePlayer(lic.id)}
-                          className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-on-surface-variant hover:text-error transition-colors" title="Retirer de l'équipe">
-                          <span className="material-symbols-outlined text-[18px]">person_remove</span>
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => openLicModal(lic)}
+                            className="w-8 h-8 rounded-full hover:bg-blue-50 flex items-center justify-center text-on-surface-variant hover:text-blue-600 transition-colors" title="Modifier la licence">
+                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                          </button>
+                          <button onClick={() => removePlayer(lic.id)}
+                            className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-on-surface-variant hover:text-error transition-colors" title="Retirer de l'équipe">
+                            <span className="material-symbols-outlined text-[18px]">person_remove</span>
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -431,6 +465,63 @@ export default function TeamDetailPage() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal édition licence */}
+      {licModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Modifier la licence — {licModal.user.prenom} {licModal.user.nom}</h3>
+              <button onClick={() => setLicModal(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Poste</label>
+                  <input
+                    type="text"
+                    value={licForm.poste || ''}
+                    onChange={e => setLicForm(f => ({ ...f, poste: e.target.value }))}
+                    placeholder="Gardien, Défenseur…"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">N° maillot</label>
+                  <input
+                    type="number"
+                    min={1} max={99}
+                    value={licForm.numero_maillot ?? ''}
+                    onChange={e => setLicForm(f => ({ ...f, numero_maillot: e.target.value }))}
+                    placeholder="10"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Statut</label>
+                <select
+                  value={licForm.statut || 'actif'}
+                  onChange={e => setLicForm(f => ({ ...f, statut: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="actif">Actif</option>
+                  <option value="inactif">Inactif</option>
+                  <option value="suspendu">Suspendu</option>
+                  <option value="blesse">Blessé</option>
+                </select>
+              </div>
+              <button
+                onClick={saveLicence}
+                disabled={savingLic}
+                className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl disabled:opacity-50 hover:bg-blue-700 transition"
+              >
+                {savingLic ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
             </div>
           </div>
         </div>

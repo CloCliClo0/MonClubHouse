@@ -39,9 +39,29 @@ export default function CreateEventPage() {
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState('')
 
-  const [equipes, setEquipes]       = useState<Equipe[]>([])
-  const [terrains, setTerrains]     = useState<Terrain[]>([])
+  const [equipes, setEquipes]         = useState<Equipe[]>([])
+  const [terrains, setTerrains]       = useState<Terrain[]>([])
   const [adversaires, setAdversaires] = useState<{ id: number; nom: string }[]>([])
+
+  // Récurrence entraînements
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurDay, setRecurDay]       = useState<number>(2) // Mardi
+  const [recurDateDebut, setRecurDateDebut] = useState('')
+  const [recurDateFin, setRecurDateFin]     = useState('')
+  const [recurringCount, setRecurringCount] = useState<number | null>(null)
+  const [submittedRecurring, setSubmittedRecurring] = useState(false)
+
+  const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
+
+  // Calcul du nombre d'entraînements
+  useEffect(() => {
+    if (!isRecurring || !recurDateDebut || !recurDateFin) { setRecurringCount(null); return }
+    const start = new Date(recurDateDebut), end = new Date(recurDateFin)
+    let count = 0, cur = new Date(start)
+    while (cur.getDay() !== recurDay) cur.setDate(cur.getDate() + 1)
+    while (cur <= end) { count++; cur.setDate(cur.getDate() + 7) }
+    setRecurringCount(count)
+  }, [isRecurring, recurDay, recurDateDebut, recurDateFin])
 
   useEffect(() => {
     api.get('/equipes').then(r => {
@@ -68,20 +88,29 @@ export default function CreateEventPage() {
     setError('')
     setSaving(true)
     try {
-      const payload: Record<string, any> = {
-        equipe_id:   parseInt(equipeId),
-        type,
-        date:        `${date}T${heure}:00`,
-        domicile,
-        adversaire:  adversaire || null,
-        competition: competition || null,
-        statut:      'programme',
-        notes:       instructions || null,
+      if (type === 'entrainement' && isRecurring) {
+        const payload: Record<string, any> = {
+          equipe_id: parseInt(equipeId),
+          day_of_week: recurDay,
+          heure, date_debut: recurDateDebut, date_fin: recurDateFin,
+          terrain_id: terrainId ? parseInt(terrainId) : undefined,
+        }
+        const r = await api.post('/matchs/recurring', payload)
+        setRecurringCount(r.data.count)
+        setSubmittedRecurring(true)
+        setTimeout(() => navigate('/calendrier'), 2000)
+      } else {
+        const payload: Record<string, any> = {
+          equipe_id:   parseInt(equipeId),
+          type, date: `${date}T${heure}:00`, domicile,
+          adversaire: adversaire || null, competition: competition || null,
+          statut: 'programme', notes: instructions || null,
+        }
+        if (terrainId) payload.terrain_id = parseInt(terrainId)
+        await api.post('/matchs', payload)
+        setSubmitted(true)
+        setTimeout(() => navigate('/calendrier'), 1800)
       }
-      if (terrainId) payload.terrain_id = parseInt(terrainId)
-      await api.post('/matchs', payload)
-      setSubmitted(true)
-      setTimeout(() => navigate('/calendrier'), 1800)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de la création')
       setSaving(false)
@@ -94,6 +123,19 @@ export default function CreateEventPage() {
     { n: 3, label: 'Détails'      },
     { n: 4, label: 'Confirmer'    },
   ]
+
+  if (submittedRecurring) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+        <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <span className="material-symbols-outlined text-blue-600 text-[44px]">event_repeat</span>
+        </div>
+        <h2 className="text-headline-lg text-on-surface mb-2">{recurringCount} entraînement(s) créé(s) !</h2>
+        <p className="text-body-lg text-on-surface-variant mb-6">Les séances récurrentes ont été planifiées.</p>
+        <div className="animate-pulse text-body-md text-on-surface-variant">Redirection vers le calendrier…</div>
+      </div>
+    )
+  }
 
   if (submitted) {
     return (
@@ -213,11 +255,13 @@ export default function CreateEventPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Date *</label>
-                <input type="date" value={date} onChange={e => setDate(e.target.value)} required
-                  className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-              </div>
+              {!isRecurring && (
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Date *</label>
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)} required
+                    className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <label className="text-label-md text-on-surface-variant">Heure *</label>
@@ -225,6 +269,56 @@ export default function CreateEventPage() {
                   className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
               </div>
             </div>
+
+            {/* Récurrence — uniquement pour entraînements */}
+            {type === 'entrainement' && (
+              <div className="mt-4 space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div
+                    onClick={() => setIsRecurring(!isRecurring)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${isRecurring ? 'bg-blue-600' : 'bg-gray-200'}`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${isRecurring ? 'left-6' : 'left-1'}`} />
+                  </div>
+                  <span className="text-label-lg text-on-surface">Entraînements récurrents</span>
+                </label>
+
+                {isRecurring && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+                    <p className="text-sm font-semibold text-blue-800">Planification automatique</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-label-md text-on-surface-variant">Jour de la semaine</label>
+                        <select value={recurDay} onChange={e => setRecurDay(Number(e.target.value))}
+                          className="w-full px-4 py-3 border border-blue-200 rounded-lg text-body-md focus:outline-none bg-white">
+                          {DAYS_FR.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-label-md text-on-surface-variant">Heure</label>
+                        <input type="time" value={heure} onChange={e => setHeure(e.target.value)}
+                          className="w-full px-4 py-3 border border-blue-200 rounded-lg text-body-md focus:outline-none bg-white" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-label-md text-on-surface-variant">Date de début</label>
+                        <input type="date" value={recurDateDebut} onChange={e => setRecurDateDebut(e.target.value)}
+                          className="w-full px-4 py-3 border border-blue-200 rounded-lg text-body-md focus:outline-none bg-white" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-label-md text-on-surface-variant">Date de fin</label>
+                        <input type="date" value={recurDateFin} onChange={e => setRecurDateFin(e.target.value)}
+                          className="w-full px-4 py-3 border border-blue-200 rounded-lg text-body-md focus:outline-none bg-white" />
+                      </div>
+                    </div>
+                    {recurringCount !== null && (
+                      <p className="text-sm font-semibold text-blue-700">
+                        → {recurringCount} entraînement(s) seront créés
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

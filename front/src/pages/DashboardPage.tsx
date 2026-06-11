@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
 
 type Stats = { membres: number; equipes: number; matchs_weekend: number; notifications: number }
 type Event = { id: number; titre: string; date: string; heure: string; lieu: string; type: string }
-type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; created_at: string }
+type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; created_at: string; lien?: string }
+type PersonalStats = {
+  taux_presence_matchs: number | null
+  taux_presence_entrainements: number | null
+  total_convocations: number
+  prochaine_convocation: { date: string; type: string; adversaire?: string; statut: string } | null
+  vote_en_cours: number | null
+}
 
 function EmptyCard({ icon, text }: { icon: string; text: string }) {
   return (
@@ -16,45 +24,96 @@ function EmptyCard({ icon, text }: { icon: string; text: string }) {
 }
 
 export default function DashboardPage() {
+  const { user: authUser } = useAuth()
   const [stats, setStats]   = useState<Stats | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [notifs, setNotifs] = useState<Notif[]>([])
   const [loading, setLoading] = useState(true)
-  const user = { prenom: localStorage.getItem('prenom') || 'vous' }
+  const [personalStats, setPersonalStats] = useState<PersonalStats | null>(null)
+  const prenom = authUser?.prenom || localStorage.getItem('prenom') || 'vous'
+  const isPlayer = authUser && ['joueur', 'parent'].includes(authUser.role)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [sRes, mRes, nRes] = await Promise.all([
-          api.get('/clubs/stats').catch(() => null),
+        const [mRes, nRes] = await Promise.all([
           api.get('/matchs?limit=3&statut=programme').catch(() => null),
           api.get('/profil/notifications?limit=3').catch(() => null),
         ])
-        if (sRes)  setStats(sRes.data.data)
         if (mRes) {
           const md = mRes.data.data
           setEvents(Array.isArray(md) ? md : (md?.rows ?? md?.matchs ?? []))
         }
         if (nRes) {
           const nd = nRes.data.data
-          // Le controller renvoie { notifications: [...], non_lues: N }
           setNotifs(Array.isArray(nd) ? nd : (nd?.notifications ?? []))
+        }
+
+        if (isPlayer) {
+          // Stats personnelles
+          const convR = await api.get('/licencies/mes-convocations').catch(() => null)
+          if (convR) {
+            const convocations = convR.data.data || []
+            const now = new Date()
+            const matchs = convocations.filter((c: any) => c.match?.type === 'match')
+            const entrs = convocations.filter((c: any) => c.match?.type !== 'match')
+            const calcTaux = (arr: any[]) => {
+              const total = arr.filter((c: any) => ['present','absent'].includes(c.statut)).length
+              const pres = arr.filter((c: any) => c.statut === 'present').length
+              return total > 0 ? Math.round(pres / total * 100) : null
+            }
+            const upcoming = convocations
+              .filter((c: any) => c.match && new Date(c.match.date) >= now)
+              .sort((a: any, b: any) => new Date(a.match.date).getTime() - new Date(b.match.date).getTime())
+            const prochaine = upcoming[0]?.match ? {
+              date: upcoming[0].match.date,
+              type: upcoming[0].match.type,
+              adversaire: upcoming[0].match.adversaire,
+              statut: upcoming[0].statut,
+            } : null
+
+            // Chercher un vote en cours (notif de type vote non lue)
+            const voteNotif = (Array.isArray(nRes?.data?.data?.notifications) ? nRes.data.data.notifications : [])
+              .find((n: any) => n.type === 'vote' && !n.lu && n.lien?.startsWith('/vote/'))
+            const vote_en_cours = voteNotif ? parseInt(voteNotif.lien.split('/vote/')[1]) : null
+
+            setPersonalStats({
+              taux_presence_matchs: calcTaux(matchs),
+              taux_presence_entrainements: calcTaux(entrs),
+              total_convocations: convocations.length,
+              prochaine_convocation: prochaine,
+              vote_en_cours,
+            })
+          }
+        } else {
+          const sRes = await api.get('/clubs/stats').catch(() => null)
+          if (sRes) setStats(sRes.data.data)
         }
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [])
+  }, [isPlayer])
 
-  const quickActions = [
+  const quickActions = isPlayer ? [
+    { icon: 'event_available', label: 'Mes présences', to: '/mes-presences' },
+    { icon: 'forum',           label: 'Chat',          to: '/messages'     },
+    { icon: 'leaderboard',     label: 'Résultats',     to: '/resultats'    },
+    { icon: 'account_circle',  label: 'Profil',        to: '/profil'       },
+  ] : [
     { icon: 'assignment_turned_in', label: 'Convocations', to: '/convocations' },
     { icon: 'forum',                label: 'Chat',         to: '/messages'     },
     { icon: 'leaderboard',          label: 'Résultats',    to: '/resultats'    },
     { icon: 'account_circle',       label: 'Profil',       to: '/profil'       },
   ]
 
-  const statCards = [
+  const statCards = isPlayer ? [
+    { label: 'Présence matchs',     value: personalStats?.taux_presence_matchs != null ? `${personalStats.taux_presence_matchs}%` : '—', icon: 'sports_soccer',   color: 'text-green-500',  bg: 'bg-green-50',     border: 'border-l-green-500' },
+    { label: 'Présence entraîn.',   value: personalStats?.taux_presence_entrainements != null ? `${personalStats.taux_presence_entrainements}%` : '—', icon: 'fitness_center', color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-l-blue-500' },
+    { label: 'Convocations',        value: personalStats?.total_convocations ?? '—', icon: 'assignment_turned_in', color: 'text-orange-500', bg: 'bg-orange-50', border: 'border-l-orange-500' },
+    { label: 'Notifications',       value: notifs.filter(n => !n.lu).length || '—',  icon: 'campaign',        color: 'text-error',      bg: 'bg-red-50',       border: 'border-l-error'    },
+  ] : [
     { label: 'Membres',       value: stats?.membres,          icon: 'groups',          color: 'text-primary',    bg: 'bg-primary/10',   border: 'border-l-primary'  },
     { label: 'Équipes',       value: stats?.equipes,          icon: 'sports_soccer',   color: 'text-blue-500',   bg: 'bg-blue-50',      border: 'border-l-blue-500' },
     { label: 'Matchs',        value: stats?.matchs_weekend,   icon: 'event_available', color: 'text-orange-500', bg: 'bg-orange-50',    border: 'border-l-orange-500'},
@@ -71,7 +130,7 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="mb-10">
-        <h2 className="text-display-lg text-on-surface">Bonjour {user.prenom} 👋</h2>
+        <h2 className="text-display-lg text-on-surface">Bonjour {prenom} 👋</h2>
         <p className="text-body-lg text-on-surface-variant mt-2">Voici ce qui se passe dans votre club aujourd'hui.</p>
       </div>
 
@@ -97,6 +156,43 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Bandeaux joueur/parent */}
+      {isPlayer && !loading && (
+        <div className="space-y-3 mb-6">
+          {personalStats?.vote_en_cours && (
+            <Link to={`/vote/${personalStats.vote_en_cours}`}
+              className="flex items-center gap-3 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-4 py-3 rounded-xl shadow hover:opacity-90 transition">
+              <span className="material-symbols-outlined text-[24px]">star</span>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">Vote ouvert — Joueur du match</p>
+                <p className="text-xs opacity-90">Votez avant la clôture</p>
+              </div>
+              <span className="material-symbols-outlined">chevron_right</span>
+            </Link>
+          )}
+          {personalStats?.prochaine_convocation && (
+            <Link to="/mes-presences"
+              className="flex items-center gap-3 bg-white border border-blue-200 px-4 py-3 rounded-xl shadow-sm hover:bg-blue-50 transition">
+              <span className="material-symbols-outlined text-blue-500 text-[24px]">event_available</span>
+              <div className="flex-1">
+                <p className="font-semibold text-sm text-gray-800">
+                  Prochaine convocation — {personalStats.prochaine_convocation.type === 'match' ? `Match vs ${personalStats.prochaine_convocation.adversaire || '?'}` : 'Entraînement'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {new Date(personalStats.prochaine_convocation.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {' '}• Statut : <span className="font-medium">{
+                    personalStats.prochaine_convocation.statut === 'present' ? '✓ Présent' :
+                    personalStats.prochaine_convocation.statut === 'absent' ? '✕ Absent' :
+                    personalStats.prochaine_convocation.statut === 'incertain' ? '? Incertain' : 'En attente de réponse'
+                  }</span>
+                </p>
+              </div>
+              <span className="material-symbols-outlined text-gray-400">chevron_right</span>
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Bento */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

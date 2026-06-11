@@ -174,4 +174,44 @@ const renvoyerEmail = async (req, res) => {
   }
 };
 
-module.exports = { getByMatch, creerConvocations, repondre, repondreParent, renvoyerEmail };
+// GET /matchs/:matchId/sms-links — liens SMS natifs pour le coach
+const getSmsLinks = async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const match = await Match.findByPk(matchId, {
+      include: [
+        { model: Equipe, as: 'equipe', include: [{ model: require('../models').Club, as: 'club' }] },
+        { model: Terrain, as: 'terrain' },
+      ],
+    });
+    if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
+
+    const convocations = await Convocation.findAll({
+      where: { match_id: matchId },
+      include: [{ model: User, as: 'joueur', attributes: ['id', 'nom', 'prenom', 'telephone'] }],
+    });
+
+    const dateStr = match.date ? new Date(match.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '?';
+    const heureStr = match.heure ? match.heure.substring(0, 5) : '?';
+    const heureRdvStr = match.heure_rdv ? ` (RDV ${match.heure_rdv.substring(0, 5)})` : '';
+    const lieuStr = match.terrain?.nom || match.lieu || '?';
+    const adversaireStr = match.adversaire ? ` contre ${match.adversaire}` : '';
+    const typeLabel = match.type === 'entrainement' ? 'Entraînement' : 'Match';
+
+    const links = convocations.map(conv => {
+      const j = conv.joueur;
+      if (!j?.telephone) return { joueur: j, telephone: null, smsUri: null };
+      const tel = j.telephone.replace(/\s+/g, '').replace(/^0/, '+33');
+      const body = `Bonjour ${j.prenom}, ${typeLabel} le ${dateStr} à ${heureStr}${heureRdvStr}${adversaireStr} - Lieu : ${lieuStr}. Bonne chance ! 🏆`;
+      const smsUri = `sms:${tel}?body=${encodeURIComponent(body)}`;
+      return { joueur: { id: j.id, nom: j.nom, prenom: j.prenom }, telephone: tel, smsUri, body };
+    });
+
+    return res.json({ success: true, data: links, match: { adversaire: match.adversaire, date: match.date, type: match.type } });
+  } catch (err) {
+    console.error('[convocation.getSmsLinks]', err.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getByMatch, creerConvocations, repondre, repondreParent, renvoyerEmail, getSmsLinks };

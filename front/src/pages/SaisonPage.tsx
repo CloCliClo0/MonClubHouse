@@ -313,7 +313,7 @@ export default function SaisonPage() {
   return (
     <div>
       {/* En-tête */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
           <h2 className="text-headline-lg text-on-surface">Saison {season}</h2>
           <p className="text-body-md text-on-surface-variant">

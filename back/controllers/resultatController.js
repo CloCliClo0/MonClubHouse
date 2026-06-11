@@ -1,5 +1,6 @@
 const axios = require('axios');
-const { Match, Equipe } = require('../models');
+const { Match, Equipe, Convocation, User, Licencie } = require('../models');
+const { Op } = require('sequelize');
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const getResultatsLocaux = async (req, res) => {
@@ -66,4 +67,56 @@ const getResultatsFFF = async (req, res) => {
   }
 };
 
-module.exports = { getResultatsLocaux, getClassementFFF, getResultatsFFF };
+// GET /resultats/stats/presence?equipe_id=X&saison=2024-2025
+const getAttendanceStats = async (req, res) => {
+  try {
+    const { equipe_id, saison } = req.query;
+    const club_id = req.user.club_id;
+
+    // Trouver les matchs concernés
+    const matchWhere = { club_id };
+    if (equipe_id) matchWhere.equipe_id = equipe_id;
+    if (saison) matchWhere.saison = saison;
+
+    const matchs = await Match.findAll({ where: matchWhere, attributes: ['id', 'type', 'date', 'adversaire'] });
+    const matchIds = matchs.map(m => m.id);
+    const matchsMatchs = matchs.filter(m => m.type === 'match');
+    const matchsEntrainements = matchs.filter(m => m.type !== 'match');
+
+    if (matchIds.length === 0) return res.json({ success: true, data: [] });
+
+    // Toutes les convocations
+    const convocations = await Convocation.findAll({
+      where: { match_id: matchIds },
+      include: [{ model: User, as: 'joueur', attributes: ['id', 'nom', 'prenom', 'avatar'] }],
+    });
+
+    // Agréger par joueur
+    const byJoueur = {};
+    for (const c of convocations) {
+      if (!c.joueur) continue;
+      const id = c.joueur_id;
+      if (!byJoueur[id]) {
+        byJoueur[id] = { user: c.joueur, matchs: { convoques: 0, presents: 0, absents: 0 }, entrainements: { convoques: 0, presents: 0, absents: 0 } };
+      }
+      const isMatch = matchsMatchs.find(m => m.id === c.match_id);
+      const cat = isMatch ? 'matchs' : 'entrainements';
+      byJoueur[id][cat].convoques++;
+      if (c.statut === 'present') byJoueur[id][cat].presents++;
+      if (c.statut === 'absent') byJoueur[id][cat].absents++;
+    }
+
+    const stats = Object.values(byJoueur).map(s => ({
+      user: s.user,
+      matchs: { ...s.matchs, taux: s.matchs.convoques > 0 ? Math.round(s.matchs.presents / s.matchs.convoques * 100) : null },
+      entrainements: { ...s.entrainements, taux: s.entrainements.convoques > 0 ? Math.round(s.entrainements.presents / s.entrainements.convoques * 100) : null },
+    }));
+
+    return res.json({ success: true, data: stats });
+  } catch (err) {
+    console.error('[resultat.getAttendanceStats]', err.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getResultatsLocaux, getClassementFFF, getResultatsFFF, getAttendanceStats };

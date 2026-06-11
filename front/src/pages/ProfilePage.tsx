@@ -29,6 +29,8 @@ export default function ProfilePage() {
   const [nom, setNom]         = useState('')
   const [telephone, setTel]   = useState('')
   const [dateNaiss, setDate]  = useState('')
+  const [poste, setPoste]     = useState('')
+  const [piedFort, setPiedFort] = useState('')
   const [notifEmail, setNotifEmail] = useState(true)
   const [notifPush, setNotifPush]   = useState(true)
   const [saving, setSaving]   = useState(false)
@@ -68,6 +70,8 @@ export default function ProfilePage() {
       setPrenom(u.prenom || '')
       setNom(u.nom || '')
       setTel(u.telephone || '')
+      setPoste((u as any).poste || '')
+      setPiedFort((u as any).pied_fort || '')
       setDate(u.date_naissance || '')
       setNotifEmail(u.notif_email !== false)
       setNotifPush(u.notif_push !== false)
@@ -98,7 +102,7 @@ export default function ProfilePage() {
     e.preventDefault()
     setSaving(true)
     try {
-      await api.put('/profil', { prenom, nom, telephone: telephone || null, date_naissance: dateNaiss || null, notif_email: notifEmail, notif_push: notifPush })
+      await api.put('/profil', { prenom, nom, telephone: telephone || null, date_naissance: dateNaiss || null, poste: poste || null, pied_fort: piedFort || null, notif_email: notifEmail, notif_push: notifPush })
       localStorage.setItem('prenom', prenom)
       await loadUser()
       flash('Profil mis à jour avec succès.')
@@ -245,6 +249,23 @@ export default function ProfilePage() {
                       <label className="text-label-md text-on-surface-variant">Date de naissance</label>
                       <input value={dateNaiss} onChange={e => setDate(e.target.value)} type="date"
                         className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-label-md text-on-surface-variant">Poste</label>
+                        <input value={poste} onChange={e => setPoste(e.target.value)} type="text" placeholder="Défenseur, Gardien…"
+                          className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-label-md text-on-surface-variant">Pied fort</label>
+                        <select value={piedFort} onChange={e => setPiedFort(e.target.value)}
+                          className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary transition-all text-body-md">
+                          <option value="">Non précisé</option>
+                          <option value="droit">Droit</option>
+                          <option value="gauche">Gauche</option>
+                          <option value="ambidextre">Ambidextre</option>
+                        </select>
+                      </div>
                     </div>
                     <div className="pt-4 border-t border-[#e8e8f0] mt-2">
                       <h6 className="text-label-lg text-on-surface mb-3">Préférences de contact</h6>

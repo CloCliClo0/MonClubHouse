@@ -106,4 +106,48 @@ const remove = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, update, saisirScore, remove };
+// POST /matchs/recurring — crée des entraînements récurrents (coach+)
+const createRecurring = async (req, res) => {
+  try {
+    const { equipe_id, day_of_week, heure, heure_rdv, terrain_id, description, date_debut, date_fin } = req.body;
+    if (!equipe_id || day_of_week === undefined || !heure || !date_debut || !date_fin) {
+      return res.status(400).json({ success: false, message: 'equipe_id, day_of_week, heure, date_debut, date_fin requis' });
+    }
+
+    const equipe = await Equipe.findByPk(equipe_id);
+    if (!equipe) return res.status(404).json({ success: false, message: 'Équipe introuvable' });
+
+    const start = new Date(date_debut);
+    const end = new Date(date_fin);
+    if (isNaN(start) || isNaN(end) || end <= start) {
+      return res.status(400).json({ success: false, message: 'Dates invalides' });
+    }
+
+    const created = [];
+    const current = new Date(start);
+    // Avancer au premier jour correspondant
+    while (current.getDay() !== Number(day_of_week)) {
+      current.setDate(current.getDate() + 1);
+    }
+
+    while (current <= end) {
+      const match = await Match.create({
+        equipe_id, type: 'entrainement', statut: 'programme',
+        date: current.toISOString().slice(0, 10),
+        heure, heure_rdv: heure_rdv || null,
+        terrain_id: terrain_id || null,
+        description: description || null,
+        club_id: equipe.club_id,
+      });
+      created.push(match);
+      current.setDate(current.getDate() + 7);
+    }
+
+    return res.status(201).json({ success: true, data: created, count: created.length });
+  } catch (err) {
+    console.error('[match.createRecurring]', err.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getAll, getById, create, update, saisirScore, remove, createRecurring };

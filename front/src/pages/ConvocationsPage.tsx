@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,7 +60,11 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+interface SmsLink { joueur: { id: number; nom: string; prenom: string }; telephone: string | null; smsUri: string | null; body?: string }
+
 export default function ConvocationsPage() {
+  const { user: authUser } = useAuth()
+  const navigate = useNavigate()
   const [matches, setMatches]             = useState<Match[]>([])
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [players, setPlayers]             = useState<Player[]>([])
@@ -78,6 +84,18 @@ export default function ConvocationsPage() {
   const [instructions, setInstructions]   = useState('')
   const [sendStep, setSendStep]           = useState<SendStep>('idle')
   const [emailReport, setEmailReport]     = useState<{ sent: number; failed: number } | null>(null)
+
+  // SMS
+  const [showSmsPanel, setShowSmsPanel]   = useState(false)
+  const [smsLinks, setSmsLinks]           = useState<SmsLink[]>([])
+  const [loadingSms, setLoadingSms]       = useState(false)
+
+  // Guard : joueur/parent → rediriger vers /mes-presences
+  useEffect(() => {
+    if (authUser && ['joueur', 'parent'].includes(authUser.role)) {
+      navigate('/mes-presences', { replace: true })
+    }
+  }, [authUser])
 
   // ── Chargement des matchs ──────────────────────────────────────────────────
 
@@ -230,6 +248,24 @@ export default function ConvocationsPage() {
   }
   const emailCount = players.filter(p => p.notif_email).length
 
+  const loadSmsLinks = async () => {
+    if (!selectedMatch) return
+    setLoadingSms(true)
+    try {
+      const r = await api.get(`/matchs/${selectedMatch.id}/sms-links`)
+      setSmsLinks(r.data.data || [])
+      setShowSmsPanel(true)
+    } catch { /* ignore */ } finally {
+      setLoadingSms(false)
+    }
+  }
+
+  const copierTousNumeros = () => {
+    const withPhone = smsLinks.filter(l => l.telephone)
+    const text = withPhone.map(l => `${l.joueur.prenom} ${l.joueur.nom}: ${l.telephone}\n${l.body}`).join('\n\n')
+    navigator.clipboard.writeText(text).catch(() => {})
+  }
+
   const handleSend = async () => {
     if (!selectedMatch) return
     setSendStep('sending')
@@ -300,7 +336,7 @@ export default function ConvocationsPage() {
   return (
     <div>
       {/* En-tête */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
           <button onClick={() => setSelectedMatch(null)}
             className="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface text-label-md mb-2 transition-colors">
@@ -312,15 +348,62 @@ export default function ConvocationsPage() {
             {selectedMatch.equipe?.nom}{selectedMatch.adversaire ? ` vs ${selectedMatch.adversaire}` : ''}
           </p>
         </div>
-        <button
-          onClick={() => setSendStep('preview')}
-          disabled={players.length === 0}
-          className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg text-label-lg hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <span className="material-symbols-outlined text-[20px]">send</span>
-          Envoyer les convocations
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={loadSmsLinks}
+            disabled={players.length === 0 || loadingSms}
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-green-700 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[20px]">sms</span>
+            SMS
+          </button>
+          <button
+            onClick={() => setSendStep('preview')}
+            disabled={players.length === 0}
+            className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg text-label-lg hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[20px]">send</span>
+            <span className="hidden sm:inline">Envoyer les convocations</span>
+            <span className="sm:hidden">Envoyer</span>
+          </button>
+        </div>
       </div>
+
+      {/* Panneau SMS */}
+      {showSmsPanel && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="font-semibold text-green-800 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[20px]">sms</span>
+              Envoi SMS depuis votre téléphone
+            </p>
+            <div className="flex gap-2">
+              <button onClick={copierTousNumeros} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">
+                Tout copier
+              </button>
+              <button onClick={() => setShowSmsPanel(false)} className="text-xs text-gray-500 px-2 py-1">✕</button>
+            </div>
+          </div>
+          <p className="text-xs text-green-700">Cliquez sur "Envoyer" pour ouvrir votre application SMS avec le message pré-rempli.</p>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {smsLinks.map(l => (
+              <div key={l.joueur.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-green-100">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{l.joueur.prenom} {l.joueur.nom}</p>
+                  <p className="text-xs text-gray-500">{l.telephone || 'Pas de numéro'}</p>
+                </div>
+                {l.smsUri ? (
+                  <a href={l.smsUri} className="text-xs bg-green-100 text-green-700 font-medium px-3 py-1.5 rounded-lg hover:bg-green-200 transition">
+                    Envoyer
+                  </a>
+                ) : (
+                  <span className="text-xs text-gray-400">—</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Info match */}
       <div className="bg-white border border-[#e8e8f0] rounded-xl p-5 mb-5">

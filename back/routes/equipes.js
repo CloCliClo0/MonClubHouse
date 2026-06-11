@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { getAll, getById, create, update, remove, updateCoachs } = require('../controllers/equipeController');
+const { getAll, getById, create, update, remove, updateCoachs, getCategoriesCoach } = require('../controllers/equipeController');
 const { authenticate } = require('../middlewares/auth');
 const { requireMinRole, requireCoachOfTeam } = require('../middlewares/rbac');
 const { validateEquipe } = require('../middlewares/validation');
 
+router.get('/categories-coach', authenticate, requireMinRole('coach'), getCategoriesCoach);
 router.get('/', authenticate, getAll);
 router.get('/:id', authenticate, getById);
 router.post('/', authenticate, requireMinRole('dirigeant'), validateEquipe, create);

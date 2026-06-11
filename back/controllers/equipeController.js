@@ -39,9 +39,14 @@ const getAll = async (req, res) => {
         { model: Sport, as: 'sport' },
         { model: User, as: 'coach', attributes: ['id', 'nom', 'prenom'], required: false },
         { model: User, as: 'coachs_extra', attributes: ['id', 'nom', 'prenom'], through: { attributes: [] }, required: false },
+        { model: Licencie, as: 'licencies', where: { statut: 'actif' }, required: false, attributes: ['id'] },
       ],
     });
-    return res.json({ success: true, data: equipes });
+    const data = equipes.map(e => ({
+      ...e.toJSON(),
+      players_count: e.licencies ? e.licencies.length : 0,
+    }));
+    return res.json({ success: true, data });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -131,4 +136,25 @@ const updateCoachs = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, update, remove, updateCoachs };
+// GET /equipes/categories-coach — catégories des équipes du coach connecté
+const getCategoriesCoach = async (req, res) => {
+  try {
+    const coachLinks = await EquipeCoach.findAll({ where: { user_id: req.user.id }, attributes: ['equipe_id'], raw: true });
+    const linkedIds = coachLinks.map(l => l.equipe_id);
+    const orClauses = [{ coach_id: req.user.id }];
+    if (linkedIds.length > 0) orClauses.push({ id: { [Op.in]: linkedIds } });
+
+    const equipes = await Equipe.findAll({
+      where: { actif: true, [Op.or]: orClauses },
+      attributes: ['id', 'nom', 'categorie'],
+      raw: true,
+    });
+    const categories = [...new Set(equipes.map(e => e.categorie).filter(Boolean))];
+    return res.json({ success: true, data: categories });
+  } catch (err) {
+    console.error('[equipe.getCategoriesCoach]', err.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getAll, getById, create, update, remove, updateCoachs, getCategoriesCoach };

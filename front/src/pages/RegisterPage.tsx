@@ -6,6 +6,7 @@ export default function RegisterPage() {
   const [searchParams] = useSearchParams()
   const [form, setForm] = useState({
     prenom: '', nom: '', email: '', password: '',
+    telephone: '', poste: '', pied_fort: '',
     invite_code: (searchParams.get('code') || '').toUpperCase(),
   })
   const [showPassword, setShowPassword] = useState(false)
@@ -20,6 +21,10 @@ export default function RegisterPage() {
     setError('')
     if (form.password.length < 8) {
       setError('Le mot de passe doit contenir au moins 8 caractères.')
+      return
+    }
+    if (!form.telephone.trim()) {
+      setError('Le numéro de téléphone est requis.')
       return
     }
     if (!form.invite_code.trim()) {
@@ -103,6 +108,16 @@ export default function RegisterPage() {
           </div>
 
           <div className="flex flex-col gap-2">
+            <label className="text-label-md text-on-surface-variant" htmlFor="telephone">Téléphone *</label>
+            <input
+              className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              id="telephone" type="tel" placeholder="06 12 34 56 78" required
+              value={form.telephone} onChange={e => set('telephone', e.target.value)}
+              autoComplete="tel"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
             <label className="text-label-md text-on-surface-variant" htmlFor="email">Email *</label>
             <input
               className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
@@ -129,6 +144,29 @@ export default function RegisterPage() {
               </button>
             </div>
             <p className="text-body-sm text-on-surface-variant/70 italic">8 car. min.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-label-md text-on-surface-variant" htmlFor="poste">Poste (optionnel)</label>
+              <input
+                className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                id="poste" type="text" placeholder="Défenseur, Gardien…"
+                value={form.poste} onChange={e => set('poste', e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-label-md text-on-surface-variant" htmlFor="pied_fort">Pied fort</label>
+              <select
+                className="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface text-body-md focus:outline-none focus:border-primary transition-all"
+                id="pied_fort" value={form.pied_fort} onChange={e => set('pied_fort', e.target.value)}
+              >
+                <option value="">Non précisé</option>
+                <option value="droit">Droit</option>
+                <option value="gauche">Gauche</option>
+                <option value="ambidextre">Ambidextre</option>
+              </select>
+            </div>
           </div>
 
           {/* Code d'invitation */}

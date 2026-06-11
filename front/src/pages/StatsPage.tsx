@@ -3,12 +3,19 @@ import api from '../services/api'
 
 type Scorer = { id: number; nom: string; prenom: string; equipe: string; buts: number; assists: number; matchs: number }
 type TeamStat = { equipe: string; matchs: number; victoires: number; nuls: number; defaites: number; bp: number; bc: number }
+type PresenceStat = {
+  user: { id: number; nom: string; prenom: string; avatar?: string }
+  matchs: { convoques: number; presents: number; absents: number; taux: number | null }
+  entrainements: { convoques: number; presents: number; absents: number; taux: number | null }
+}
 
 export default function StatsPage() {
-  const [scorers, setScorers]     = useState<Scorer[]>([])
-  const [teamStats, setTeamStats] = useState<TeamStat[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [view, setView]           = useState<'buteurs' | 'passes' | 'equipes'>('buteurs')
+  const [scorers, setScorers]           = useState<Scorer[]>([])
+  const [teamStats, setTeamStats]       = useState<TeamStat[]>([])
+  const [presenceStats, setPresenceStats] = useState<PresenceStat[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [loadingPresence, setLoadingPresence] = useState(false)
+  const [view, setView]                 = useState<'buteurs' | 'passes' | 'equipes' | 'presences'>('buteurs')
 
   useEffect(() => {
     Promise.all([
@@ -19,6 +26,16 @@ export default function StatsPage() {
       setTeamStats(tRes.data.data || [])
     }).finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (view === 'presences' && presenceStats.length === 0) {
+      setLoadingPresence(true)
+      api.get('/resultats/stats/presence')
+        .then(r => setPresenceStats(r.data.data || []))
+        .catch(() => {})
+        .finally(() => setLoadingPresence(false))
+    }
+  }, [view])
 
   const assists = [...scorers].sort((a, b) => b.assists - a.assists)
 
@@ -34,12 +51,12 @@ export default function StatsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
           <h2 className="text-headline-lg text-on-surface">Statistiques</h2>
           <p className="text-body-md text-on-surface-variant">Performances et analyses de toutes les équipes</p>
         </div>
-        <div className="flex items-center gap-2 text-body-sm text-on-surface-variant bg-white border border-[#e8e8f0] px-4 py-2 rounded-lg">
+        <div className="flex items-center gap-2 text-body-sm text-on-surface-variant bg-white border border-[#e8e8f0] px-4 py-2 rounded-lg w-fit">
           <span className="material-symbols-outlined text-[16px]">update</span>
           Saison en cours
         </div>
@@ -70,13 +87,13 @@ export default function StatsPage() {
       </div>
 
       {/* Switcher */}
-      <div className="flex gap-1 bg-surface-container-low rounded-lg p-1 mb-5 w-fit">
-        {(['buteurs', 'passes', 'equipes'] as const).map(v => (
+      <div className="flex gap-1 bg-surface-container-low rounded-lg p-1 mb-5 overflow-x-auto">
+        {(['buteurs', 'passes', 'equipes', 'presences'] as const).map(v => (
           <button key={v} onClick={() => setView(v)}
-            className={`px-4 py-2 rounded-md text-label-md transition-all ${
+            className={`px-3 py-2 rounded-md text-label-md transition-all whitespace-nowrap ${
               view === v ? 'bg-white text-primary shadow-sm font-semibold' : 'text-on-surface-variant hover:text-on-surface'
             }`}>
-            {v === 'buteurs' ? '⚽ Buteurs' : v === 'passes' ? '🎯 Passeurs' : '📊 Équipes'}
+            {v === 'buteurs' ? '⚽ Buteurs' : v === 'passes' ? '🎯 Passeurs' : v === 'equipes' ? '📊 Équipes' : '📅 Présences'}
           </button>
         ))}
       </div>
@@ -172,6 +189,66 @@ export default function StatsPage() {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+      )}
+
+      {/* Présences */}
+      {view === 'presences' && (
+        <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-[#e8e8f0]"><h4 className="text-headline-md">Taux de présence par joueur</h4></div>
+          {loadingPresence ? (
+            <div className="p-4 space-y-2">{[1,2,3,4].map(i => <div key={i} className="h-14 bg-surface-container-low rounded animate-pulse" />)}</div>
+          ) : presenceStats.length === 0 ? (
+            <Empty icon="how_to_reg" text="Aucune donnée de présence" />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-surface-container-low border-b border-[#e8e8f0]">
+                    <th className="px-4 py-3 text-left text-label-md text-on-surface-variant">Joueur</th>
+                    <th className="px-4 py-3 text-center text-label-md text-on-surface-variant">⚽ Matchs</th>
+                    <th className="px-4 py-3 text-center text-label-md text-on-surface-variant hidden sm:table-cell">Conv.</th>
+                    <th className="px-4 py-3 text-center text-label-md text-on-surface-variant">🏃 Entraîn.</th>
+                    <th className="px-4 py-3 text-center text-label-md text-on-surface-variant hidden sm:table-cell">Conv.</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e8e8f0]">
+                  {presenceStats.sort((a, b) => (b.matchs.taux ?? 0) - (a.matchs.taux ?? 0)).map(s => (
+                    <tr key={s.user.id} className="hover:bg-surface-container-low transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-white text-xs font-bold shrink-0">
+                            {s.user.prenom?.[0]}{s.user.nom?.[0]}
+                          </div>
+                          <span className="text-label-lg text-on-surface">{s.user.prenom} {s.user.nom}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {s.matchs.taux !== null ? (
+                          <span className={`font-black text-label-lg ${s.matchs.taux >= 80 ? 'text-green-600' : s.matchs.taux >= 50 ? 'text-orange-500' : 'text-error'}`}>
+                            {s.matchs.taux}%
+                          </span>
+                        ) : <span className="text-on-surface-variant">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center text-body-sm text-on-surface-variant hidden sm:table-cell">
+                        {s.matchs.presents}/{s.matchs.convoques}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {s.entrainements.taux !== null ? (
+                          <span className={`font-black text-label-lg ${s.entrainements.taux >= 80 ? 'text-green-600' : s.entrainements.taux >= 50 ? 'text-orange-500' : 'text-error'}`}>
+                            {s.entrainements.taux}%
+                          </span>
+                        ) : <span className="text-on-surface-variant">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center text-body-sm text-on-surface-variant hidden sm:table-cell">
+                        {s.entrainements.presents}/{s.entrainements.convoques}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

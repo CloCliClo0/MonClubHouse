@@ -45,6 +45,10 @@ export default function ChatPage() {
   const [newCh, setNewCh]           = useState({ nom: '', type: 'equipe' })
   const [saving, setSaving]         = useState(false)
   const [showEmoji, setShowEmoji]   = useState(false)
+  const [groupNomEdit, setGroupNomEdit] = useState('')
+  const [showRenameInput, setShowRenameInput] = useState(false)
+  const [mutedChannels, setMutedChannels] = useState<Set<number>>(new Set())
+  const userId = parseInt(localStorage.getItem('userId') || '0')
   const [uploading, setUploading]   = useState(false)
   const fileInputRef  = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -160,7 +164,7 @@ export default function ChatPage() {
       <div className="bg-white rounded-xl border border-outline-variant flex h-full shadow-sm overflow-hidden">
 
         {/* Canaux */}
-        <div className="w-[260px] border-r border-outline-variant flex flex-col bg-white shrink-0">
+        <div className={`${activeId ? 'hidden md:flex' : 'flex'} w-full md:w-[260px] border-r border-outline-variant flex-col bg-white shrink-0`}>
           <div className="p-4 border-b border-outline-variant flex justify-between items-center">
             <h2 className="text-headline-md text-on-surface">Canaux</h2>
             <button onClick={() => setChannelModal({ open: true })}
@@ -213,12 +217,15 @@ export default function ChatPage() {
         ) : (
           <div className="flex-1 flex flex-col min-w-0">
             {/* Header canal */}
-            <div className="h-[64px] px-6 border-b border-outline-variant flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center">
+            <div className="h-[64px] px-4 sm:px-6 border-b border-outline-variant flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button onClick={() => setActiveId(null)} className="md:hidden w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors">
+                  <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                </button>
+                <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[18px]">{TYPE_ICON[activeChannel?.type || ''] || 'chat'}</span>
                 </div>
-                <h3 className="text-headline-md leading-none">{activeChannel?.nom}</h3>
+                <h3 className="text-headline-md leading-none truncate">{activeChannel?.nom}</h3>
               </div>
               <div className="flex items-center gap-1">
                 <button className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors text-on-surface-variant">
@@ -404,19 +411,65 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-container-low transition-colors text-left">
-                  <span className="material-symbols-outlined text-on-surface-variant">edit</span>
-                  <span className="text-label-lg text-on-surface">Renommer le canal</span>
+                {/* Renommer */}
+                {!showRenameInput ? (
+                  <button
+                    onClick={() => { setGroupNomEdit(infoModal.open ? infoModal.channel.nom : ''); setShowRenameInput(true) }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-container-low transition-colors text-left">
+                    <span className="material-symbols-outlined text-on-surface-variant">edit</span>
+                    <span className="text-label-lg text-on-surface">Renommer le canal</span>
+                  </button>
+                ) : (
+                  <div className="flex gap-2 px-2">
+                    <input
+                      autoFocus
+                      value={groupNomEdit}
+                      onChange={e => setGroupNomEdit(e.target.value)}
+                      className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      placeholder="Nouveau nom"
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!infoModal.open || !groupNomEdit.trim()) return
+                        await api.patch(`/chat/channels/${infoModal.channel.id}`, { nom: groupNomEdit.trim() }).catch(() => {})
+                        setChannels(prev => prev.map(c => c.id === infoModal.channel.id ? { ...c, nom: groupNomEdit.trim() } : c))
+                        setShowRenameInput(false)
+                      }}
+                      className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                    >OK</button>
+                    <button onClick={() => setShowRenameInput(false)} className="px-2 py-2 text-gray-400 text-sm">✕</button>
+                  </div>
+                )}
+
+                {/* Mute */}
+                <button
+                  onClick={async () => {
+                    if (!infoModal.open) return
+                    const chId = infoModal.channel.id
+                    const isMuted = mutedChannels.has(chId)
+                    await api.patch(`/chat/channels/${chId}/mute`, { muted: !isMuted }).catch(() => {})
+                    setMutedChannels(prev => { const s = new Set(prev); isMuted ? s.delete(chId) : s.add(chId); return s })
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-container-low transition-colors text-left">
+                  <span className="material-symbols-outlined text-on-surface-variant">
+                    {infoModal.open && mutedChannels.has(infoModal.channel.id) ? 'notifications' : 'notifications_off'}
+                  </span>
+                  <span className="text-label-lg text-on-surface">
+                    {infoModal.open && mutedChannels.has(infoModal.channel.id) ? 'Réactiver les notifs' : 'Désactiver les notifications'}
+                  </span>
                 </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-container-low transition-colors text-left">
-                  <span className="material-symbols-outlined text-on-surface-variant">person_add</span>
-                  <span className="text-label-lg text-on-surface">Ajouter des membres</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-container-low transition-colors text-left">
-                  <span className="material-symbols-outlined text-on-surface-variant">notifications_off</span>
-                  <span className="text-label-lg text-on-surface">Désactiver les notifications</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-colors text-left">
+
+                {/* Quitter */}
+                <button
+                  onClick={async () => {
+                    if (!infoModal.open) return
+                    if (!confirm('Quitter ce canal ?')) return
+                    await api.patch(`/chat/channels/${infoModal.channel.id}/membres`, { action: 'leave' }).catch(() => {})
+                    setChannels(prev => prev.filter(c => c.id !== infoModal.channel.id))
+                    if (activeId === infoModal.channel.id) setActiveId(null)
+                    setInfoModal({ open: false })
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-colors text-left">
                   <span className="material-symbols-outlined text-error">exit_to_app</span>
                   <span className="text-label-lg text-error">Quitter le canal</span>
                 </button>

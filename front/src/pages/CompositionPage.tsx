@@ -465,7 +465,7 @@ export default function CompositionPage() {
   // ── Éditeur de composition ────────────────────────────────────────────────
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
           <button onClick={() => { setSelectedMatchId(null); setSelected(null) }}
             className="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface text-label-md mb-2 transition-colors">
@@ -475,11 +475,11 @@ export default function CompositionPage() {
           <h2 className="text-headline-lg text-on-surface">Composition</h2>
           <p className="text-body-md text-on-surface-variant">{match?.label} · {match?.date}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={handleReset}
             className="flex items-center gap-2 border border-outline-variant text-on-surface px-4 py-2.5 rounded-lg text-label-lg hover:bg-surface-container-low transition-colors">
             <span className="material-symbols-outlined text-[20px]">restart_alt</span>
-            Réinitialiser
+            <span className="hidden sm:inline">Réinitialiser</span>
           </button>
           <button onClick={handleSave}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-label-lg transition-colors ${

@@ -234,7 +234,7 @@ export default function AdminPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
         <div>
           <h2 className="text-headline-lg text-on-surface">Administration</h2>
           <p className="text-body-md text-on-surface-variant">Gérez les utilisateurs, rôles et codes d'accès</p>
@@ -243,14 +243,16 @@ export default function AdminPage() {
           <button onClick={openCreate}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
             <span className="material-symbols-outlined text-[20px]">person_add</span>
-            Ajouter un utilisateur
+            <span className="hidden sm:inline">Ajouter un utilisateur</span>
+            <span className="sm:hidden">Ajouter</span>
           </button>
         )}
         {activeTab === 'codes' && (
           <button onClick={() => setShowCodeForm(v => !v)}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
             <span className="material-symbols-outlined text-[20px]">add</span>
-            Générer un code
+            <span className="hidden sm:inline">Générer un code</span>
+            <span className="sm:hidden">Générer</span>
           </button>
         )}
       </div>
@@ -282,7 +284,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      <div className="flex items-center border-b border-outline-variant mb-6">
+      <div className="flex items-center border-b border-outline-variant mb-6 overflow-x-auto">
         {[
           { key: 'users', label: 'Utilisateurs',    icon: 'groups'              },
           { key: 'codes', label: 'Codes d\'accès',  icon: 'key'                 },

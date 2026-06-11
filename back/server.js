@@ -33,6 +33,8 @@ const adversairesRoutes  = require('./routes/adversaires');
 const championnatRoutes  = require('./routes/championnat');
 const scraperRoutes      = require('./routes/scraper');
 const aiScraperRoutes    = require('./routes/aiScraper');
+const voteRoutes         = require('./routes/vote');
+const arbitrageRoutes    = require('./routes/arbitrage');
 
 const app = express();
 const server = http.createServer(app);
@@ -129,6 +131,8 @@ app.use('/api/adversaires',  adversairesRoutes);
 app.use('/api/championnat',  championnatRoutes);
 app.use('/api/scraper',      scraperRoutes);
 app.use('/api/ai-scraper',   aiScraperRoutes);
+app.use('/api/votes',        voteRoutes);
+app.use('/api/arbitrage',    arbitrageRoutes);
 
 // Auth Google (hors /api pour le redirect OAuth)
 app.use('/auth', authRoutes);
@@ -255,6 +259,82 @@ const runMigrations = async () => {
     `);
     console.log('[Migration] ch_matchs créée');
   } catch (e) { /* déjà existante */ }
+
+  // Champs profil utilisateur
+  try {
+    await sequelize.query(`ALTER TABLE users ADD COLUMN pied_fort ENUM('droit','gauche','ambidextre') NULL`);
+    console.log('[Migration] users.pied_fort ajouté');
+  } catch (e) { /* déjà existant */ }
+  try {
+    await sequelize.query(`ALTER TABLE users ADD COLUMN poste VARCHAR(50) NULL`);
+    console.log('[Migration] users.poste ajouté');
+  } catch (e) { /* déjà existant */ }
+
+  // Notifications : nouveaux types et send_at
+  try {
+    await sequelize.query(`ALTER TABLE notifications MODIFY COLUMN type ENUM('convocation','match','message','resultat','systeme','rappel','annulation','vote','arbitrage','rappel_veille') NOT NULL`);
+    console.log('[Migration] notifications.type étendu');
+  } catch (e) { /* déjà ok */ }
+  try {
+    await sequelize.query(`ALTER TABLE notifications ADD COLUMN send_at DATETIME NULL`);
+    console.log('[Migration] notifications.send_at ajouté');
+  } catch (e) { /* déjà existant */ }
+
+  // Table match_events
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS match_events (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        match_id   INT NOT NULL,
+        club_id    INT NOT NULL,
+        type       ENUM('but','but_annule','carton_jaune','carton_rouge','remplacement','fin_mi_temps','debut') NOT NULL,
+        minute     INT NULL,
+        joueur_id  INT NULL,
+        equipe     ENUM('domicile','exterieur') NULL,
+        description VARCHAR(255) NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (match_id)  REFERENCES matchs(id) ON DELETE CASCADE,
+        FOREIGN KEY (joueur_id) REFERENCES users(id)  ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('[Migration] match_events créée');
+  } catch (e) { /* déjà existante */ }
+
+  // Table player_votes
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS player_votes (
+        id            INT AUTO_INCREMENT PRIMARY KEY,
+        match_id      INT NOT NULL,
+        club_id       INT NOT NULL,
+        voter_id      INT NOT NULL,
+        voted_for_id  INT NOT NULL,
+        created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_vote (match_id, voter_id),
+        FOREIGN KEY (match_id)     REFERENCES matchs(id) ON DELETE CASCADE,
+        FOREIGN KEY (voter_id)     REFERENCES users(id)  ON DELETE CASCADE,
+        FOREIGN KEY (voted_for_id) REFERENCES users(id)  ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('[Migration] player_votes créée');
+  } catch (e) { /* déjà existante */ }
+
+  // Table arbitrage_presences
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS arbitrage_presences (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        club_id     INT NOT NULL,
+        user_id     INT NOT NULL,
+        date        DATE NOT NULL,
+        commentaire VARCHAR(500) NULL,
+        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_arb (club_id, user_id, date),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('[Migration] arbitrage_presences créée');
+  } catch (e) { /* déjà existante */ }
 };
 
 const connectDB = async (retries = 10, delay = 5000) => {
@@ -276,6 +356,19 @@ const connectDB = async (retries = 10, delay = 5000) => {
   console.error('[DB] Impossible de se connecter après plusieurs tentatives — les routes API renverront 503');
 };
 
-connectDB();
+connectDB().then(() => {
+  // Cron rappels J-1 — toutes les heures
+  try {
+    const cron = require('node-cron');
+    const { createReminders } = require('./controllers/notificationController');
+    cron.schedule('0 * * * *', async () => {
+      try { await createReminders(); }
+      catch (e) { console.error('[Cron rappels]', e.message); }
+    });
+    console.log('[Cron] Rappels J-1 planifiés (toutes les heures)');
+  } catch (e) {
+    console.warn('[Cron] node-cron non disponible :', e.message);
+  }
+});
 
 module.exports = { app, io };

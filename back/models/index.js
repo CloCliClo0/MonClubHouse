@@ -16,6 +16,9 @@ const Adversaire = require('./Adversaire');
 const ChEquipe = require('./ChEquipe');
 const ChMatch = require('./ChMatch');
 const EquipeCoach = require('./EquipeCoach');
+const MatchEvent = require('./MatchEvent');
+const PlayerVote = require('./PlayerVote');
+const ArbitragePresence = require('./ArbitragePresence');
 
 // Associations Club
 Club.hasMany(Terrain, { foreignKey: 'club_id', as: 'terrains' });
@@ -97,6 +100,24 @@ User.belongsToMany(Equipe, { through: EquipeCoach, foreignKey: 'user_id', as: 'e
 EquipeCoach.belongsTo(User,   { foreignKey: 'user_id',   as: 'user' });
 EquipeCoach.belongsTo(Equipe, { foreignKey: 'equipe_id', as: 'equipe' });
 
+// MatchEvent associations
+Match.hasMany(MatchEvent, { foreignKey: 'match_id', as: 'events' });
+MatchEvent.belongsTo(Match, { foreignKey: 'match_id', as: 'match' });
+User.hasMany(MatchEvent, { foreignKey: 'joueur_id', as: 'match_events' });
+MatchEvent.belongsTo(User, { foreignKey: 'joueur_id', as: 'joueur' });
+
+// PlayerVote associations
+Match.hasMany(PlayerVote, { foreignKey: 'match_id', as: 'votes' });
+PlayerVote.belongsTo(Match, { foreignKey: 'match_id', as: 'match' });
+User.hasMany(PlayerVote, { foreignKey: 'voter_id', as: 'votes_emis' });
+PlayerVote.belongsTo(User, { foreignKey: 'voter_id', as: 'voter' });
+User.hasMany(PlayerVote, { foreignKey: 'voted_for_id', as: 'votes_recus' });
+PlayerVote.belongsTo(User, { foreignKey: 'voted_for_id', as: 'voted_for' });
+
+// ArbitragePresence associations
+User.hasMany(ArbitragePresence, { foreignKey: 'user_id', as: 'arbitrage_presences' });
+ArbitragePresence.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
 module.exports = {
   sequelize,
   User,
@@ -116,4 +137,7 @@ module.exports = {
   ChEquipe,
   ChMatch,
   EquipeCoach,
+  MatchEvent,
+  PlayerVote,
+  ArbitragePresence,
 };

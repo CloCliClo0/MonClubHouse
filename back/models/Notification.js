@@ -7,7 +7,8 @@ const Notification = sequelize.define('Notification', {
   type: {
     type: DataTypes.ENUM(
       'convocation', 'match', 'message', 'resultat',
-      'systeme', 'rappel', 'annulation'
+      'systeme', 'rappel', 'annulation',
+      'vote', 'arbitrage', 'rappel_veille'
     ),
     allowNull: false
   },
@@ -16,7 +17,8 @@ const Notification = sequelize.define('Notification', {
   lien: { type: DataTypes.STRING(500), allowNull: true },
   lu: { type: DataTypes.BOOLEAN, defaultValue: false },
   lu_at: { type: DataTypes.DATE, allowNull: true },
-  donnees: { type: DataTypes.JSON, allowNull: true }
+  donnees: { type: DataTypes.JSON, allowNull: true },
+  send_at: { type: DataTypes.DATE, allowNull: true }
 }, {
   tableName: 'notifications'
 });

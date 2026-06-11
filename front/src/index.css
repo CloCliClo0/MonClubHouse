@@ -50,3 +50,10 @@
     min-height: 110px;
   }
 }
+
+@media (max-width: 640px) {
+  .day-cell {
+    min-height: 56px;
+    font-size: 11px;
+  }
+}

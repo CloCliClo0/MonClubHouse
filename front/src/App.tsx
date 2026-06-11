@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
 import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -33,9 +34,13 @@ import DocumentationPage from './pages/DocumentationPage'
 import SupportPage from './pages/SupportPage'
 import TutorielsPage from './pages/TutorielsPage'
 import RaccourcisPage from './pages/RaccourcisPage'
+import PresencePage from './pages/PresencePage'
+import VotePage from './pages/VotePage'
+import ArbitragePage from './pages/ArbitragePage'
 
 export default function App() {
   return (
+    <AuthProvider>
     <BrowserRouter>
       <Routes>
         {/* Pages publiques */}
@@ -70,6 +75,9 @@ export default function App() {
           <Route path="/saison"             element={<SaisonPage />} />
           <Route path="/scraper"            element={<ScraperPage />} />
           <Route path="/statistiques"       element={<StatsPage />} />
+          <Route path="/mes-presences"            element={<PresencePage />} />
+          <Route path="/vote/:matchId"          element={<VotePage />} />
+          <Route path="/arbitrage"              element={<ArbitragePage />} />
           <Route path="/aide"                   element={<HelpPage />} />
           <Route path="/aide/documentation"     element={<DocumentationPage />} />
           <Route path="/aide/support"           element={<SupportPage />} />
@@ -81,5 +89,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
+    </AuthProvider>
   )
 }
