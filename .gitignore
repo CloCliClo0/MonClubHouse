@@ -1,15 +1,11 @@
 node_modules/
 .claude/
 dist/
-.env
+back/.env
 *.env.local
 .DS_Store
 *.log
 npm-debug.log*
 coverage/
 .cache/
-database.sql
-test.sql
-sup-test.sql
 u555371370_mch_db.sql
-add_adversaires.sql
