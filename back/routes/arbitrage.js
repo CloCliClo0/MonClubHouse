@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, requireMinRole } = require('../middlewares/auth');
+const { authenticate } = require('../middlewares/auth');
+const { requireMinRole } = require('../middlewares/rbac');
 const { getPresences, getMesPresences, addPresence, deletePresence, getStats } = require('../controllers/arbitrageController');
 
-router.use(authenticateToken);
+router.use(authenticate);
 
 router.get('/presences', requireMinRole('joueur'), getPresences);
 router.get('/mes-presences', requireMinRole('joueur'), getMesPresences);
