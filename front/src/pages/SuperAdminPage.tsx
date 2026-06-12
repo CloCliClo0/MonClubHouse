@@ -8,7 +8,7 @@ type Club = {
 type Equipe = { id: number; nom: string; categorie: string; niveau?: string; couleur?: string; actif: boolean }
 type Role = 'superadmin' | 'admin' | 'dirigeant' | 'coach' | 'joueur' | 'parent' | 'visiteur'
 type User = { id: number; nom: string; prenom: string; email: string; role: Role; actif: boolean; derniere_connexion: string | null }
-type InviteCode = { id: number; code: string; role: string; label?: string; uses_count: number; max_uses: number; actif: boolean; equipe?: { id: number; nom: string } }
+type InviteCode = { id: number; code: string; role: string; label?: string; uses_count: number; max_uses: number; actif: boolean; categorie?: string; equipe?: { id: number; nom: string } }
 
 const ROLE_COLORS: Record<string, string> = {
   superadmin: 'bg-red-100 text-red-700', admin: 'bg-purple-100 text-purple-700',
@@ -61,7 +61,7 @@ export default function SuperAdminPage() {
   const [codes, setCodes] = useState<InviteCode[]>([])
   const [codesLoading, setCodesLoading] = useState(false)
   const [showCodeForm, setShowCodeForm] = useState(false)
-  const [codeForm, setCodeForm] = useState({ role: 'joueur', equipe_id: '', label: '', max_uses: '50' })
+  const [codeForm, setCodeForm] = useState({ role: 'joueur', categorie: '', label: '', max_uses: '50' })
   const [codeSaving, setCodeSaving] = useState(false)
   const [copied, setCopied] = useState<number | null>(null)
 
@@ -157,11 +157,11 @@ export default function SuperAdminPage() {
     e.preventDefault(); if (!selectedClub) return; setCodeSaving(true)
     try {
       const payload: Record<string, any> = { role: codeForm.role, label: codeForm.label || undefined, max_uses: parseInt(codeForm.max_uses), club_id: selectedClub.id }
-      if (codeForm.equipe_id) payload.equipe_id = parseInt(codeForm.equipe_id)
+      if (codeForm.categorie) payload.categorie = codeForm.categorie
       await api.post('/codes', payload)
       const r = await api.get(`/codes?club_id=${selectedClub.id}`)
       setCodes(r.data.data || [])
-      setShowCodeForm(false); setCodeForm({ role: 'joueur', equipe_id: '', label: '', max_uses: '50' })
+      setShowCodeForm(false); setCodeForm({ role: 'joueur', categorie: '', label: '', max_uses: '50' })
     } catch {}
     finally { setCodeSaving(false) }
   }
@@ -569,7 +569,7 @@ export default function SuperAdminPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-label-md text-on-surface-variant">Rôle</label>
-                  <select value={codeForm.role} onChange={e => setCodeForm(f => ({ ...f, role: e.target.value, equipe_id: '' }))}
+                  <select value={codeForm.role} onChange={e => setCodeForm(f => ({ ...f, role: e.target.value, categorie: '' }))}
                     className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
                     <option value="joueur">Joueur</option>
                     <option value="parent">Parent</option>
@@ -579,11 +579,11 @@ export default function SuperAdminPage() {
                 </div>
                 {['joueur', 'parent', 'coach'].includes(codeForm.role) && (
                   <div className="space-y-1">
-                    <label className="text-label-md text-on-surface-variant">Équipe *</label>
-                    <select required value={codeForm.equipe_id} onChange={e => setCodeForm(f => ({ ...f, equipe_id: e.target.value }))}
+                    <label className="text-label-md text-on-surface-variant">Catégorie *</label>
+                    <select required value={codeForm.categorie} onChange={e => setCodeForm(f => ({ ...f, categorie: e.target.value }))}
                       className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
-                      <option value="">Choisir une équipe</option>
-                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
+                      <option value="">Choisir une catégorie</option>
+                      {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                   </div>
                 )}
@@ -629,7 +629,8 @@ export default function SuperAdminPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2 py-0.5 rounded-full text-label-md bg-green-100 text-green-700">{c.role}</span>
-                        {c.equipe && <span className="text-body-sm text-on-surface-variant">{c.equipe.nom}</span>}
+                        {c.categorie && <span className="px-2 py-0.5 rounded-full text-label-md bg-blue-100 text-blue-700">{c.categorie}</span>}
+                        {c.equipe && !c.categorie && <span className="text-body-sm text-on-surface-variant">{c.equipe.nom}</span>}
                         {c.label && <span className="text-body-sm text-on-surface-variant italic">• {c.label}</span>}
                       </div>
                       <div className="flex items-center gap-3 mt-1">

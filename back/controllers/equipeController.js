@@ -18,9 +18,8 @@ const getAll = async (req, res) => {
         raw: true,
       });
       const linkedIds = coachLinks.map(l => l.equipe_id);
-      const orClauses = [{ coach_id: req.user.id }];
-      if (linkedIds.length > 0) orClauses.push({ id: { [Op.in]: linkedIds } });
-      where[Op.or] = orClauses;
+      if (linkedIds.length === 0) return res.json({ success: true, data: [] });
+      where.id = { [Op.in]: linkedIds };
     } else if (['joueur', 'parent'].includes(role)) {
       const licencies = await Licencie.findAll({
         where: { user_id: req.user.id },
@@ -36,8 +35,7 @@ const getAll = async (req, res) => {
     const equipes = await Equipe.findAll({
       where,
       include: [
-        { model: Sport, as: 'sport' },
-        { model: User, as: 'coach', attributes: ['id', 'nom', 'prenom'], required: false },
+        { model: Sport, as: 'sport', required: false },
         { model: User, as: 'coachs_extra', attributes: ['id', 'nom', 'prenom'], through: { attributes: [] }, required: false },
         { model: Licencie, as: 'licencies', where: { statut: 'actif' }, required: false, attributes: ['id'] },
       ],
@@ -48,7 +46,7 @@ const getAll = async (req, res) => {
     }));
     return res.json({ success: true, data });
   } catch (err) {
-    console.error(err);
+    console.error('[equipe.getAll]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
@@ -57,7 +55,7 @@ const getById = async (req, res) => {
   try {
     const equipe = await Equipe.findByPk(req.params.id, {
       include: [
-        { model: Sport, as: 'sport' },
+        { model: Sport, as: 'sport', required: false },
         {
           model: Licencie, as: 'licencies',
           include: [{ model: User, as: 'user', attributes: ['id', 'nom', 'prenom', 'avatar'] }]
@@ -67,6 +65,7 @@ const getById = async (req, res) => {
     if (!equipe) return res.status(404).json({ success: false, message: 'Équipe introuvable' });
     return res.json({ success: true, data: equipe });
   } catch (err) {
+    console.error('[equipe.getById]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
@@ -77,18 +76,16 @@ const create = async (req, res) => {
 
   try {
     const data = { ...req.body };
-    // Injecter club_id depuis l'utilisateur si non fourni
     if (!data.club_id && req.user.club_id) data.club_id = req.user.club_id;
-    // Résoudre sport_id : prendre le premier sport disponible si absent
     if (!data.sport_id) {
       const defaultSport = await Sport.findOne({ order: [['id', 'ASC']] });
-      if (!defaultSport) return res.status(400).json({ success: false, message: 'Aucun sport configuré — ajoutez-en un d\'abord.' });
-      data.sport_id = defaultSport.id;
+      if (defaultSport) data.sport_id = defaultSport.id;
     }
 
     const equipe = await Equipe.create(data);
     return res.status(201).json({ success: true, data: equipe });
   } catch (err) {
+    console.error('[equipe.create]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
@@ -127,25 +124,22 @@ const updateCoachs = async (req, res) => {
     if (coach_ids.length > 0) {
       await EquipeCoach.bulkCreate(coach_ids.map(uid => ({ equipe_id: equipe.id, user_id: uid })));
     }
-    await equipe.update({ coach_id: coach_ids[0] || null });
 
     return res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error('[equipe.updateCoachs]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
-// GET /equipes/categories-coach — catégories des équipes du coach connecté
 const getCategoriesCoach = async (req, res) => {
   try {
     const coachLinks = await EquipeCoach.findAll({ where: { user_id: req.user.id }, attributes: ['equipe_id'], raw: true });
     const linkedIds = coachLinks.map(l => l.equipe_id);
-    const orClauses = [{ coach_id: req.user.id }];
-    if (linkedIds.length > 0) orClauses.push({ id: { [Op.in]: linkedIds } });
+    if (linkedIds.length === 0) return res.json({ success: true, data: [] });
 
     const equipes = await Equipe.findAll({
-      where: { actif: true, [Op.or]: orClauses },
+      where: { actif: true, id: { [Op.in]: linkedIds } },
       attributes: ['id', 'nom', 'categorie'],
       raw: true,
     });

@@ -60,9 +60,7 @@ Composition.belongsTo(Match, { foreignKey: 'match_id', as: 'match' });
 Match.belongsTo(Terrain, { foreignKey: 'terrain_id', as: 'terrain' });
 Terrain.hasMany(Match, { foreignKey: 'terrain_id', as: 'matchs' });
 
-// Coach d'équipe
-Equipe.belongsTo(User, { foreignKey: 'coach_id', as: 'coach' });
-User.hasMany(Equipe, { foreignKey: 'coach_id', as: 'equipes_coachs' });
+// (coach principal géré via equipe_coachs — pas de FK coach_id sur equipes)
 
 // Convocation - User
 User.hasMany(Convocation, { foreignKey: 'joueur_id', as: 'convocations' });

@@ -182,10 +182,21 @@ server.listen(PORT, () => {
 });
 
 const runMigrations = async () => {
-  try {
-    await sequelize.query('ALTER TABLE invite_codes MODIFY COLUMN equipe_id INT NULL;');
-    console.log('[Migration] invite_codes.equipe_id → nullable');
-  } catch (e) { /* déjà ok */ }
+  // invite_codes : renommer anciens noms si besoin, ajouter colonnes manquantes
+  try { await sequelize.query('ALTER TABLE invite_codes CHANGE COLUMN usage_count uses_count INT DEFAULT 0'); console.log('[Migration] invite_codes.usage_count → uses_count'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE invite_codes CHANGE COLUMN max_usage max_uses INT DEFAULT 50'); console.log('[Migration] invite_codes.max_usage → max_uses'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE invite_codes ADD COLUMN uses_count INT DEFAULT 0'); console.log('[Migration] invite_codes.uses_count ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE invite_codes ADD COLUMN max_uses INT DEFAULT 50'); console.log('[Migration] invite_codes.max_uses ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE invite_codes MODIFY COLUMN equipe_id INT NULL'); console.log('[Migration] invite_codes.equipe_id nullable'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE invite_codes ADD COLUMN equipe_id INT NULL'); console.log('[Migration] invite_codes.equipe_id ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE invite_codes ADD COLUMN categorie VARCHAR(50) NULL'); console.log('[Migration] invite_codes.categorie ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE invite_codes ADD COLUMN label VARCHAR(100) NULL'); console.log('[Migration] invite_codes.label ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE invite_codes ADD COLUMN created_by INT NULL'); console.log('[Migration] invite_codes.created_by ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE invite_codes ADD COLUMN expires_at DATETIME NULL'); console.log('[Migration] invite_codes.expires_at ajouté'); } catch (e) {}
+
+  // licencies : rendre equipe_id nullable pour joueurs sans équipe assignée
+  try { await sequelize.query('ALTER TABLE licencies MODIFY COLUMN equipe_id INT NULL'); console.log('[Migration] licencies.equipe_id nullable'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE licencies MODIFY COLUMN club_id INT NULL'); console.log('[Migration] licencies.club_id nullable'); } catch (e) {}
 
   try {
     await sequelize.query(`

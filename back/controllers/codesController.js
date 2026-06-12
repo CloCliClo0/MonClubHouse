@@ -33,15 +33,14 @@ const listCodes = async (req, res) => {
 // POST /api/codes — créer un code (admin)
 const createCode = async (req, res) => {
   try {
-    const { equipe_id, role = 'joueur', label, max_uses = 50, expires_at } = req.body;
-    // Pour superadmin, accepter un club_id dans le body ; sinon utiliser celui de l'utilisateur
+    const { equipe_id, categorie, role = 'joueur', label, max_uses = 50, expires_at } = req.body;
     const club_id = req.user.role === 'superadmin' ? (req.body.club_id || req.user.club_id) : req.user.club_id;
 
     if (!club_id) return res.status(400).json({ success: false, message: 'club_id requis' });
 
-    // equipe_id requis uniquement pour les rôles liés à une équipe
-    if (['joueur', 'parent', 'coach'].includes(role) && !equipe_id) {
-      return res.status(400).json({ success: false, message: 'equipe_id requis pour ce rôle' });
+    // Pour les rôles liés, il faut soit equipe_id soit categorie
+    if (['joueur', 'parent', 'coach'].includes(role) && !equipe_id && !categorie) {
+      return res.status(400).json({ success: false, message: 'equipe_id ou categorie requis pour ce rôle' });
     }
 
     let equipe = null;
@@ -50,16 +49,17 @@ const createCode = async (req, res) => {
       if (!equipe) return res.status(404).json({ success: false, message: 'Équipe introuvable' });
     }
 
-    const prefix = equipe?.categorie?.replace(/\s+/g, '').slice(0, 4).toUpperCase() || 'MCH';
+    const catLabel = (categorie || equipe?.categorie || '').replace(/\s+/g, '').slice(0, 4).toUpperCase() || 'MCH';
     let code, exists = true;
     while (exists) {
-      code = makeCode(prefix);
+      code = makeCode(catLabel);
       exists = await InviteCode.findOne({ where: { code } });
     }
 
     const newCode = await InviteCode.create({
       code,
       equipe_id: equipe_id || null,
+      categorie: categorie || equipe?.categorie || null,
       club_id,
       role,
       label,
@@ -115,15 +115,14 @@ const validateCode = async (req, res) => {
       club_id: inviteCode.club_id,
     });
 
-    // Création du licencié si joueur
+    // Création du licencié si joueur (equipe_id peut être null pour codes catégorie)
     if (inviteCode.role === 'joueur') {
       await Licencie.findOrCreate({
         where: { user_id: req.user.id },
         defaults: {
           user_id:   req.user.id,
-          equipe_id: inviteCode.equipe_id,
-          nom:       req.user.nom,
-          prenom:    req.user.prenom,
+          equipe_id: inviteCode.equipe_id || null,
+          club_id:   inviteCode.club_id,
           statut:    'actif',
         },
       });
@@ -132,15 +131,19 @@ const validateCode = async (req, res) => {
     // Incrément du compteur
     await inviteCode.increment('uses_count');
 
+    const label = inviteCode.equipe
+      ? `${inviteCode.equipe.nom}`
+      : inviteCode.categorie
+        ? `la catégorie ${inviteCode.categorie}`
+        : 'le club';
     return res.json({
       success: true,
-      message: inviteCode.equipe
-        ? `Vous avez rejoint ${inviteCode.equipe.nom} en tant que ${inviteCode.role}`
-        : `Bienvenue en tant que ${inviteCode.role}`,
+      message: `Vous avez rejoint ${label} en tant que ${inviteCode.role}`,
       data: {
-        equipe:  inviteCode.equipe || null,
-        role:    inviteCode.role,
-        club_id: inviteCode.club_id,
+        equipe:    inviteCode.equipe || null,
+        categorie: inviteCode.categorie || null,
+        role:      inviteCode.role,
+        club_id:   inviteCode.club_id,
       },
     });
   } catch (err) {
