@@ -173,9 +173,9 @@ const ENDPOINTS = [
   // Adversaires
   { s:'Adversaires', m:'GET', p:'/api/adversaires',         l:'Adversaires',            auth:true  },
 
-  // Championnat
-  { s:'Championnat', m:'GET', p:'/api/championnat/equipes', l:'Équipes champ.',         auth:true  },
-  { s:'Championnat', m:'GET', p:'/api/championnat/matchs',  l:'Matchs champ.',          auth:true  },
+  // Championnat (feature optionnelle — 404 si non configurée = normal)
+  { s:'Championnat', m:'GET', p:'/api/championnat/equipes', l:'Équipes champ.',  auth:true, expectStatus:404 },
+  { s:'Championnat', m:'GET', p:'/api/championnat/matchs',  l:'Matchs champ.',   auth:true, expectStatus:404 },
 
   // Arbitrage
   { s:'Arbitrage',m:'GET', p:'/api/arbitrage/presences',   l:'Présences arbitrage',    auth:true  },
