@@ -635,7 +635,7 @@ export default function AdminPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
         <div>
           <h2 className="text-headline-lg text-on-surface">Administration</h2>
-          <p className="text-body-md text-on-surface-variant">Gérez les utilisateurs, rôles et codes d'accès</p>
+          <p className="text-body-md text-on-surface-variant">{isSuperAdmin ? 'Gestion globale des utilisateurs' : 'Gérez les utilisateurs, rôles et codes d\'accès'}</p>
         </div>
         {activeTab === 'users' && (
           <button onClick={openCreate}
@@ -645,7 +645,7 @@ export default function AdminPage() {
             <span className="sm:hidden">Ajouter</span>
           </button>
         )}
-        {activeTab === 'codes' && (
+        {activeTab === 'codes' && !isSuperAdmin && (
           <button onClick={() => setShowCodeForm(v => !v)}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
             <span className="material-symbols-outlined text-[20px]">add</span>
@@ -682,21 +682,22 @@ export default function AdminPage() {
         </div>
       )}
 
-      <div className="flex items-center border-b border-outline-variant mb-6 overflow-x-auto">
-        {[
-          { key: 'users', label: 'Utilisateurs',    icon: 'groups'              },
-          { key: 'codes', label: 'Codes d\'accès',  icon: 'key'                 },
-          ...(isSuperAdmin ? [{ key: 'clubs', label: 'Clubs', icon: 'home_work' }] : []),
-        ].map(t => (
-          <button key={t.key} onClick={() => { setActiveTab(t.key as any); if (t.key === 'clubs') loadClubs() }}
-            className={`flex items-center gap-2 px-5 py-3 text-label-lg transition-all ${
-              activeTab === t.key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
-            }`}>
-            <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {!isSuperAdmin && (
+        <div className="flex items-center border-b border-outline-variant mb-6 overflow-x-auto">
+          {[
+            { key: 'users', label: 'Utilisateurs',   icon: 'groups' },
+            { key: 'codes', label: 'Codes d\'accès', icon: 'key'    },
+          ].map(t => (
+            <button key={t.key} onClick={() => setActiveTab(t.key as any)}
+              className={`flex items-center gap-2 px-5 py-3 text-label-lg transition-all ${
+                activeTab === t.key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
+              }`}>
+              <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── ONGLET CODES ─────────────────────────────────────────── */}
       {activeTab === 'codes' && (

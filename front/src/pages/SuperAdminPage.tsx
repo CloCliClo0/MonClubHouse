@@ -36,12 +36,20 @@ export default function SuperAdminPage() {
   const [infoSaving, setInfoSaving] = useState(false)
   const [infoSaved, setInfoSaved] = useState(false)
 
-  // Équipes
+  // Équipes / Catégories
   const [equipes, setEquipes] = useState<Equipe[]>([])
   const [eqLoading, setEqLoading] = useState(false)
-  const [showEqForm, setShowEqForm] = useState(false)
-  const [eqForm, setEqForm] = useState({ nom: '', categorie: '', niveau: '', couleur: '#1b4332' })
+  // Création catégorie
+  const [showCatForm, setShowCatForm] = useState(false)
+  const [catForm, setCatForm] = useState({ categorie: '', couleur: '#1b4332' })
+  const [catSaving, setCatSaving] = useState(false)
+  // Création équipe dans une catégorie
+  const [addEqInCat, setAddEqInCat] = useState<string | null>(null) // categorie name
+  const [eqForm, setEqForm] = useState({ nom: '', niveau: '' })
   const [eqSaving, setEqSaving] = useState(false)
+  // Joueurs par catégorie (expanded)
+  const [expandedCat, setExpandedCat] = useState<string | null>(null)
+  const [catJoueurs, setCatJoueurs] = useState<Record<string, User[]>>({})
 
   // Membres
   const [membres, setMembres] = useState<User[]>([])
@@ -96,15 +104,47 @@ export default function SuperAdminPage() {
     finally { setInfoSaving(false) }
   }
 
-  const createEquipe = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!selectedClub) return; setEqSaving(true)
+  const reloadEquipes = async () => {
+    if (!selectedClub) return
+    const r = await api.get(`/equipes?club_id=${selectedClub.id}`)
+    setEquipes(r.data.data || [])
+  }
+
+  // Créer une catégorie = créer une équipe vide avec ce nom de catégorie
+  const createCategorie = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!selectedClub) return; setCatSaving(true)
     try {
-      await api.post('/equipes', { ...eqForm, club_id: selectedClub.id })
-      const r = await api.get(`/equipes?club_id=${selectedClub.id}`)
-      setEquipes(r.data.data || [])
-      setShowEqForm(false); setEqForm({ nom: '', categorie: '', niveau: '', couleur: '#1b4332' })
+      await api.post('/equipes', { nom: catForm.categorie, categorie: catForm.categorie, couleur: catForm.couleur, club_id: selectedClub.id })
+      await reloadEquipes()
+      setShowCatForm(false); setCatForm({ categorie: '', couleur: '#1b4332' })
+    } catch {}
+    finally { setCatSaving(false) }
+  }
+
+  const createEquipeDansCat = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!selectedClub || !addEqInCat) return; setEqSaving(true)
+    try {
+      // Récupère la couleur de la catégorie
+      const couleurCat = equipes.find(eq => eq.categorie === addEqInCat)?.couleur || '#1b4332'
+      await api.post('/equipes', { nom: eqForm.nom, categorie: addEqInCat, niveau: eqForm.niveau || undefined, couleur: couleurCat, club_id: selectedClub.id })
+      await reloadEquipes()
+      setAddEqInCat(null); setEqForm({ nom: '', niveau: '' })
     } catch {}
     finally { setEqSaving(false) }
+  }
+
+  const loadJoueursCat = async (categorie: string) => {
+    if (!selectedClub) return
+    if (expandedCat === categorie) { setExpandedCat(null); return }
+    setExpandedCat(categorie)
+    if (catJoueurs[categorie]) return
+    try {
+      const equipeIds = equipes.filter(e => e.categorie === categorie).map(e => e.id)
+      const results = await Promise.all(equipeIds.map(id => api.get(`/licencies?equipe_id=${id}`).catch(() => ({ data: { data: [] } }))))
+      const joueurs = results.flatMap(r => r.data.data || [])
+      const unique = joueurs.filter((j, i, arr) => arr.findIndex(x => x.user_id === j.user_id) === i)
+      setCatJoueurs(prev => ({ ...prev, [categorie]: unique }))
+    } catch {}
   }
 
   const deleteEquipe = async (id: number) => {
@@ -290,97 +330,158 @@ export default function SuperAdminPage() {
         </div>
       )}
 
-      {/* ── Équipes par catégorie ── */}
+      {/* ── Catégories & Équipes ── */}
       {tab === 'equipes' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button onClick={() => setShowEqForm(v => !v)}
+            <button onClick={() => { setShowCatForm(v => !v); setAddEqInCat(null) }}
               className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Nouvelle équipe
+              <span className="material-symbols-outlined text-[20px]">create_new_folder</span>
+              Créer une catégorie
             </button>
           </div>
 
-          {showEqForm && (
-            <form onSubmit={createEquipe} className="bg-white border border-[#e8e8f0] rounded-xl p-5">
-              <h3 className="text-headline-md mb-4">Nouvelle équipe</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">Nom *</label>
-                  <input required value={eqForm.nom} onChange={e => setEqForm(f => ({ ...f, nom: e.target.value }))}
-                    placeholder="Ex : U15 A"
-                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">Catégorie *</label>
-                  <input required value={eqForm.categorie} onChange={e => setEqForm(f => ({ ...f, categorie: e.target.value }))}
+          {/* Formulaire nouvelle catégorie */}
+          {showCatForm && (
+            <form onSubmit={createCategorie} className="bg-white border border-[#e8e8f0] rounded-xl p-5">
+              <h3 className="text-headline-md mb-1">Nouvelle catégorie</h3>
+              <p className="text-body-sm text-on-surface-variant mb-4">Ex : U15, U17, Seniors, Vétérans…</p>
+              <div className="flex items-end gap-4 flex-wrap">
+                <div className="flex-1 min-w-[180px] space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Nom de la catégorie *</label>
+                  <input required value={catForm.categorie} onChange={e => setCatForm(f => ({ ...f, categorie: e.target.value }))}
                     placeholder="Ex : U15"
-                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
-                    list="cat-suggestions" />
-                  <datalist id="cat-suggestions">
-                    {categories.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">Niveau</label>
-                  <input value={eqForm.niveau} onChange={e => setEqForm(f => ({ ...f, niveau: e.target.value }))}
-                    placeholder="Ex : Régional"
                     className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-label-md text-on-surface-variant">Couleur</label>
                   <div className="flex items-center gap-2">
-                    <input type="color" value={eqForm.couleur} onChange={e => setEqForm(f => ({ ...f, couleur: e.target.value }))}
+                    <input type="color" value={catForm.couleur} onChange={e => setCatForm(f => ({ ...f, couleur: e.target.value }))}
                       className="w-10 h-10 rounded cursor-pointer border border-outline-variant" />
-                    <span className="text-body-sm font-mono text-on-surface-variant">{eqForm.couleur}</span>
+                    <span className="text-body-sm font-mono text-on-surface-variant">{catForm.couleur}</span>
                   </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-4">
-                <button type="button" onClick={() => setShowEqForm(false)}
-                  className="px-4 py-2 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
-                <button type="submit" disabled={eqSaving}
-                  className="px-5 py-2 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40">Créer</button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setShowCatForm(false)}
+                    className="px-4 py-2.5 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
+                  <button type="submit" disabled={catSaving}
+                    className="px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40">Créer</button>
+                </div>
               </div>
             </form>
           )}
 
           {eqLoading ? (
-            <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 bg-surface-container-low rounded-xl animate-pulse" />)}</div>
-          ) : equipes.length === 0 ? (
+            <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-24 bg-surface-container-low rounded-xl animate-pulse" />)}</div>
+          ) : categories.length === 0 ? (
             <div className="py-16 text-center bg-white border border-[#e8e8f0] rounded-xl text-on-surface-variant">
-              <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">groups</span>
-              <p className="text-headline-md mb-1">Aucune équipe</p>
-              <p className="text-body-md">Créez la première équipe de ce club.</p>
+              <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">folder_open</span>
+              <p className="text-headline-md mb-1">Aucune catégorie</p>
+              <p className="text-body-md">Créez votre première catégorie pour organiser les équipes.</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {categories.map(cat => (
-                <div key={cat} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
-                  <div className="px-5 py-3 bg-surface-container-low border-b border-[#e8e8f0] flex items-center justify-between">
-                    <p className="text-label-lg font-semibold text-on-surface">{cat}</p>
-                    <span className="text-body-sm text-on-surface-variant">{equipes.filter(e => e.categorie === cat).length} équipe(s)</span>
-                  </div>
-                  <div className="divide-y divide-[#e8e8f0]">
-                    {equipes.filter(e => e.categorie === cat).map(eq => (
-                      <div key={eq.id} className="px-5 py-4 flex items-center gap-4">
-                        <div className="w-4 h-4 rounded-full shrink-0" style={{ background: eq.couleur || '#1b4332' }} />
-                        <div className="flex-1">
-                          <p className="text-label-lg text-on-surface">{eq.nom}</p>
-                          {eq.niveau && <p className="text-body-sm text-on-surface-variant">{eq.niveau}</p>}
-                        </div>
-                        <span className={`px-2 py-0.5 rounded-full text-label-md ${eq.actif ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {eq.actif ? 'Active' : 'Inactive'}
-                        </span>
-                        <button onClick={() => deleteEquipe(eq.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error transition-colors">
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
+              {categories.map(cat => {
+                const eqsDeCat = equipes.filter(e => e.categorie === cat)
+                const couleurCat = eqsDeCat[0]?.couleur || '#1b4332'
+                const joueursCat = catJoueurs[cat] || []
+                return (
+                  <div key={cat} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+                    {/* Header catégorie */}
+                    <div className="px-5 py-4 flex items-center gap-3 border-b border-[#e8e8f0]">
+                      <div className="w-4 h-4 rounded-full shrink-0" style={{ background: couleurCat }} />
+                      <div className="flex-1">
+                        <p className="text-label-lg font-bold text-on-surface">{cat}</p>
+                        <p className="text-body-sm text-on-surface-variant">
+                          {eqsDeCat.length} équipe{eqsDeCat.length > 1 ? 's' : ''}
+                          {expandedCat === cat && joueursCat.length > 0 ? ` · ${joueursCat.length} joueur${joueursCat.length > 1 ? 's' : ''}` : ''}
+                        </p>
                       </div>
-                    ))}
+                      <button onClick={() => loadJoueursCat(cat)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-label-md transition-colors ${expandedCat === cat ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low'}`}>
+                        <span className="material-symbols-outlined text-[16px]">person</span>
+                        Joueurs
+                        <span className="material-symbols-outlined text-[14px]">{expandedCat === cat ? 'expand_less' : 'expand_more'}</span>
+                      </button>
+                      <button onClick={() => { setAddEqInCat(addEqInCat === cat ? null : cat); setEqForm({ nom: '', niveau: '' }); setShowCatForm(false) }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-label-md hover:bg-primary-container transition-colors">
+                        <span className="material-symbols-outlined text-[16px]">add</span>
+                        Équipe
+                      </button>
+                    </div>
+
+                    {/* Formulaire ajout équipe dans cette catégorie */}
+                    {addEqInCat === cat && (
+                      <form onSubmit={createEquipeDansCat} className="px-5 py-4 bg-primary/5 border-b border-[#e8e8f0] flex items-end gap-3 flex-wrap">
+                        <div className="flex-1 min-w-[150px] space-y-1">
+                          <label className="text-label-md text-on-surface-variant">Nom de l'équipe *</label>
+                          <input required value={eqForm.nom} onChange={e => setEqForm(f => ({ ...f, nom: e.target.value }))}
+                            placeholder={`Ex : ${cat} A`}
+                            className="w-full px-3 py-2 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary bg-white" />
+                        </div>
+                        <div className="flex-1 min-w-[130px] space-y-1">
+                          <label className="text-label-md text-on-surface-variant">Niveau</label>
+                          <input value={eqForm.niveau} onChange={e => setEqForm(f => ({ ...f, niveau: e.target.value }))}
+                            placeholder="Ex : Régional"
+                            className="w-full px-3 py-2 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary bg-white" />
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setAddEqInCat(null)}
+                            className="px-3 py-2 border border-outline-variant rounded-lg text-label-lg hover:bg-white">Annuler</button>
+                          <button type="submit" disabled={eqSaving}
+                            className="px-4 py-2 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40">Ajouter</button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Liste des équipes */}
+                    <div className="divide-y divide-[#e8e8f0]">
+                      {eqsDeCat.map(eq => (
+                        <div key={eq.id} className="px-5 py-3 flex items-center gap-3 pl-10">
+                          <span className="material-symbols-outlined text-[16px] text-on-surface-variant">subdirectory_arrow_right</span>
+                          <div className="flex-1">
+                            <p className="text-label-lg text-on-surface">{eq.nom}</p>
+                            {eq.niveau && <p className="text-body-sm text-on-surface-variant">{eq.niveau}</p>}
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${eq.actif ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {eq.actif ? 'Active' : 'Inactive'}
+                          </span>
+                          <button onClick={() => { api.patch(`/equipes/${eq.id}/disable`).catch(() => {}); setEquipes(prev => prev.filter(e => e.id !== eq.id)) }}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-error transition-colors">
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Joueurs de la catégorie (expanded) */}
+                    {expandedCat === cat && (
+                      <div className="border-t border-[#e8e8f0] bg-surface-container-low/50">
+                        {joueursCat.length === 0 ? (
+                          <p className="px-5 py-4 text-body-sm text-on-surface-variant">Aucun joueur dans cette catégorie.</p>
+                        ) : (
+                          <div className="divide-y divide-[#e8e8f0]">
+                            {joueursCat.map((j: any) => (
+                              <div key={j.id} className="px-5 py-3 flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-primary-container flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                  {j.user?.prenom?.[0]}{j.user?.nom?.[0]}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-label-md text-on-surface truncate">{j.user?.prenom} {j.user?.nom}</p>
+                                  <p className="text-body-sm text-on-surface-variant truncate">{j.equipe?.nom} {j.poste ? `· ${j.poste}` : ''} {j.numero_maillot ? `· #${j.numero_maillot}` : ''}</p>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${j.statut === 'actif' ? 'bg-green-100 text-green-700' : 'bg-surface-container text-on-surface-variant'}`}>
+                                  {j.statut}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
