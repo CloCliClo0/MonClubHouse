@@ -39,7 +39,7 @@ const getServerDiagnostic = async (req, res) => {
       'users', 'clubs', 'equipes', 'licencies', 'matchs', 'convocations',
       'invite_codes', 'notifications', 'channels', 'messages', 'adversaires',
       'equipe_coachs', 'match_events', 'player_votes', 'arbitrage_presences',
-      'terrains', 'compositions', 'resultats',
+      'terrains', 'compositions',
     ];
     for (const t of expectedTables) {
       schemaChecks.push({ table: t, exists: tables.includes(t) });
