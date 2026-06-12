@@ -36,7 +36,8 @@ type ModalState =
 
 const BLANK = { nom: '', prenom: '', email: '', role: 'joueur' as Role, password: '' }
 
-type Club = { id: number; nom: string; logo?: string; ville?: string; email?: string; actif: boolean }
+type Club = { id: number; nom: string; logo?: string; ville?: string; email?: string; telephone?: string; description?: string; couleur_primaire?: string; actif: boolean }
+type EquipeDetail = { id: number; nom: string; categorie: string; niveau?: string; couleur?: string; actif: boolean }
 
 const CODE_ROLES = [
   { v: 'joueur',    l: 'Joueur',    color: 'bg-green-100 text-green-700'   },
@@ -45,9 +46,401 @@ const CODE_ROLES = [
   { v: 'dirigeant', l: 'Dirigeant', color: 'bg-blue-100 text-blue-700'     },
 ]
 
+// ── Composant gestion d'un club (superadmin) ─────────────────
+function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () => void; allClubs: Club[] }) {
+  const [tab, setTab] = useState<'infos' | 'equipes' | 'membres' | 'codes'>('infos')
+  const [infos, setInfos] = useState({ nom: club.nom, ville: club.ville || '', email: club.email || '', telephone: club.telephone || '', description: club.description || '', couleur_primaire: club.couleur_primaire || '#1b4332' })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  // Équipes
+  const [equipes, setEquipes] = useState<EquipeDetail[]>([])
+  const [eqLoading, setEqLoading] = useState(false)
+  const [showEqForm, setShowEqForm] = useState(false)
+  const [eqForm, setEqForm] = useState({ nom: '', categorie: '', niveau: '', couleur: '#1b4332' })
+  const [eqSaving, setEqSaving] = useState(false)
+
+  // Membres
+  const [membres, setMembres] = useState<User[]>([])
+  const [membresLoading, setMembresLoading] = useState(false)
+  const [memSearch, setMemSearch] = useState('')
+  const [memRoleFilter, setMemRoleFilter] = useState<Role | 'Tous'>('Tous')
+
+  // Codes
+  const [codes, setCodes] = useState<InviteCode[]>([])
+  const [codesLoading, setCodesLoading] = useState(false)
+  const [showCodeForm, setShowCodeForm] = useState(false)
+  const [newCode, setNewCode] = useState({ equipe_id: '', role: 'joueur', label: '', max_uses: '50' })
+  const [codeSaving, setCodeSaving] = useState(false)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (tab === 'equipes') {
+      setEqLoading(true)
+      api.get(`/equipes?club_id=${club.id}`).then(r => setEquipes(r.data.data || [])).catch(() => setEquipes([])).finally(() => setEqLoading(false))
+    }
+    if (tab === 'membres') {
+      setMembresLoading(true)
+      api.get(`/admin/users?club_id=${club.id}`).then(r => setMembres(r.data.data || [])).catch(() => setMembres([])).finally(() => setMembresLoading(false))
+    }
+    if (tab === 'codes') {
+      setCodesLoading(true)
+      api.get(`/codes?club_id=${club.id}`).then(r => setCodes(r.data.data || [])).catch(() => setCodes([])).finally(() => setCodesLoading(false))
+    }
+  }, [tab])
+
+  const saveInfos = async () => {
+    setSaving(true)
+    try {
+      await api.put(`/clubs/${club.id}`, infos)
+      setSaved(true); setTimeout(() => setSaved(false), 2000)
+    } catch {}
+    finally { setSaving(false) }
+  }
+
+  const createEquipe = async (e: React.FormEvent) => {
+    e.preventDefault(); setEqSaving(true)
+    try {
+      await api.post('/equipes', { ...eqForm, club_id: club.id })
+      const r = await api.get(`/equipes?club_id=${club.id}`)
+      setEquipes(r.data.data || [])
+      setShowEqForm(false); setEqForm({ nom: '', categorie: '', niveau: '', couleur: '#1b4332' })
+    } catch {}
+    finally { setEqSaving(false) }
+  }
+
+  const deleteEquipe = async (id: number) => {
+    if (!confirm('Désactiver cette équipe ?')) return
+    await api.patch(`/equipes/${id}/disable`).catch(() => {})
+    setEquipes(prev => prev.filter(e => e.id !== id))
+  }
+
+  const createCode = async (e: React.FormEvent) => {
+    e.preventDefault(); setCodeSaving(true)
+    try {
+      const payload: Record<string, any> = { role: newCode.role, label: newCode.label || undefined, max_uses: parseInt(newCode.max_uses), club_id: club.id }
+      if (newCode.equipe_id) payload.equipe_id = parseInt(newCode.equipe_id)
+      await api.post('/codes', payload)
+      const r = await api.get(`/codes?club_id=${club.id}`)
+      setCodes(r.data.data || [])
+      setShowCodeForm(false); setNewCode({ equipe_id: '', role: 'joueur', label: '', max_uses: '50' })
+    } catch {}
+    finally { setCodeSaving(false) }
+  }
+
+  const disableCode = async (id: number) => {
+    await api.patch(`/codes/${id}/disable`).catch(() => {})
+    setCodes(prev => prev.filter(c => c.id !== id))
+  }
+
+  const filteredMembres = membres.filter(u => {
+    const matchSearch = `${u.prenom} ${u.nom} ${u.email}`.toLowerCase().includes(memSearch.toLowerCase())
+    const matchRole = memRoleFilter === 'Tous' || u.role === memRoleFilter
+    return matchSearch && matchRole
+  })
+
+  const categories = [...new Set(equipes.map(e => e.categorie).filter(Boolean))]
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={onBack} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors">
+          <span className="material-symbols-outlined text-on-surface-variant">arrow_back</span>
+        </button>
+        <div className="flex items-center gap-3 flex-1">
+          {club.logo
+            ? <img src={club.logo} className="w-10 h-10 rounded-xl object-cover" alt="" />
+            : <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">{club.nom.slice(0,2).toUpperCase()}</div>
+          }
+          <div>
+            <h2 className="text-headline-lg text-on-surface">{club.nom}</h2>
+            <p className="text-body-sm text-on-surface-variant">Gestion complète du club</p>
+          </div>
+        </div>
+        <span className={`px-2 py-1 rounded-full text-label-md ${club.actif ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{club.actif ? 'Actif' : 'Inactif'}</span>
+      </div>
+
+      {/* Sous-onglets */}
+      <div className="flex border-b border-[#e8e8f0] mb-6 overflow-x-auto">
+        {[
+          { key: 'infos',    label: 'Infos',     icon: 'info'         },
+          { key: 'equipes',  label: 'Équipes',   icon: 'groups'       },
+          { key: 'membres',  label: 'Membres',   icon: 'person'       },
+          { key: 'codes',    label: 'Codes',     icon: 'key'          },
+        ].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key as any)}
+            className={`flex items-center gap-2 px-5 py-3 text-label-lg transition-all whitespace-nowrap ${
+              tab === t.key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
+            }`}>
+            <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Infos ── */}
+      {tab === 'infos' && (
+        <div className="bg-white border border-[#e8e8f0] rounded-xl p-6 max-w-2xl space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              { label: 'Nom du club *', key: 'nom', type: 'text' },
+              { label: 'Ville',         key: 'ville', type: 'text' },
+              { label: 'Email',         key: 'email', type: 'email' },
+              { label: 'Téléphone',     key: 'telephone', type: 'tel' },
+            ].map(f => (
+              <div key={f.key} className="space-y-1">
+                <label className="text-label-md text-on-surface-variant">{f.label}</label>
+                <input type={f.type} value={(infos as any)[f.key]} onChange={e => setInfos(i => ({ ...i, [f.key]: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-1">
+            <label className="text-label-md text-on-surface-variant">Description</label>
+            <textarea value={infos.description} onChange={e => setInfos(i => ({ ...i, description: e.target.value }))} rows={3}
+              className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all resize-none" />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="space-y-1">
+              <label className="text-label-md text-on-surface-variant">Couleur principale</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={infos.couleur_primaire} onChange={e => setInfos(i => ({ ...i, couleur_primaire: e.target.value }))} className="w-10 h-10 rounded cursor-pointer border border-outline-variant" />
+                <span className="text-body-sm text-on-surface-variant font-mono">{infos.couleur_primaire}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button onClick={saveInfos} disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40 transition-colors">
+              {saving ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : null}
+              {saved ? '✓ Enregistré' : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Équipes ── */}
+      {tab === 'equipes' && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button onClick={() => setShowEqForm(v => !v)}
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
+              <span className="material-symbols-outlined text-[20px]">add</span>
+              Nouvelle équipe
+            </button>
+          </div>
+
+          {showEqForm && (
+            <form onSubmit={createEquipe} className="bg-white border border-[#e8e8f0] rounded-xl p-5">
+              <h3 className="text-headline-md mb-4">Nouvelle équipe</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Nom *</label>
+                  <input required value={eqForm.nom} onChange={e => setEqForm(f => ({ ...f, nom: e.target.value }))}
+                    placeholder="Ex : U15 A" className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Catégorie *</label>
+                  <input required value={eqForm.categorie} onChange={e => setEqForm(f => ({ ...f, categorie: e.target.value }))}
+                    placeholder="Ex : U15" className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Niveau</label>
+                  <input value={eqForm.niveau} onChange={e => setEqForm(f => ({ ...f, niveau: e.target.value }))}
+                    placeholder="Ex : Régional" className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Couleur</label>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={eqForm.couleur} onChange={e => setEqForm(f => ({ ...f, couleur: e.target.value }))} className="w-10 h-10 rounded cursor-pointer border border-outline-variant" />
+                    <span className="text-body-sm font-mono text-on-surface-variant">{eqForm.couleur}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-4">
+                <button type="button" onClick={() => setShowEqForm(false)} className="px-4 py-2 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
+                <button type="submit" disabled={eqSaving} className="px-5 py-2 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40">Créer</button>
+              </div>
+            </form>
+          )}
+
+          {eqLoading ? (
+            <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 bg-surface-container-low rounded-xl animate-pulse" />)}</div>
+          ) : equipes.length === 0 ? (
+            <div className="py-16 text-center text-on-surface-variant bg-white border border-[#e8e8f0] rounded-xl">
+              <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">groups</span>
+              <p className="text-headline-md">Aucune équipe</p>
+            </div>
+          ) : (
+            categories.map(cat => (
+              <div key={cat} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+                <div className="px-5 py-3 bg-surface-container-low border-b border-[#e8e8f0]">
+                  <p className="text-label-lg font-semibold text-on-surface">{cat}</p>
+                </div>
+                <div className="divide-y divide-[#e8e8f0]">
+                  {equipes.filter(e => e.categorie === cat).map(eq => (
+                    <div key={eq.id} className="px-5 py-4 flex items-center gap-4">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ background: eq.couleur || '#1b4332' }} />
+                      <div className="flex-1">
+                        <p className="text-label-lg text-on-surface">{eq.nom}</p>
+                        {eq.niveau && <p className="text-body-sm text-on-surface-variant">{eq.niveau}</p>}
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-label-md ${eq.actif ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{eq.actif ? 'Active' : 'Inactive'}</span>
+                      <button onClick={() => deleteEquipe(eq.id)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error transition-colors">
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ── Membres ── */}
+      {tab === 'membres' && (
+        <div className="space-y-4">
+          <div className="bg-white border border-[#e8e8f0] rounded-lg p-4 flex flex-wrap gap-3 items-center">
+            <div className="relative flex-1 min-w-[200px]">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+              <input value={memSearch} onChange={e => setMemSearch(e.target.value)} placeholder="Rechercher…"
+                className="w-full pl-9 pr-4 py-2 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {(['Tous', 'coach', 'joueur', 'parent', 'dirigeant'] as const).map(r => (
+                <button key={r} onClick={() => setMemRoleFilter(r as any)}
+                  className={`px-3 py-1.5 rounded-full text-label-md transition-all ${memRoleFilter === r ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant border border-outline-variant'}`}>
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+            {membresLoading ? (
+              <div className="p-6 space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 bg-surface-container-low rounded animate-pulse" />)}</div>
+            ) : filteredMembres.length === 0 ? (
+              <div className="py-12 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">person_off</span>
+                <p>Aucun membre</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#e8e8f0]">
+                {filteredMembres.map(u => (
+                  <div key={u.id} className="px-5 py-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-white text-sm font-bold shrink-0">
+                      {u.prenom?.[0]}{u.nom?.[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-label-lg text-on-surface truncate">{u.prenom} {u.nom}</p>
+                      <p className="text-body-sm text-on-surface-variant truncate">{u.email}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-label-md font-semibold shrink-0 ${roleColors[u.role]}`}>{u.role}</span>
+                    <span className="text-body-sm text-on-surface-variant shrink-0 hidden sm:block">
+                      {u.derniere_connexion ? new Date(u.derniere_connexion).toLocaleDateString('fr-FR') : 'Jamais'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Codes ── */}
+      {tab === 'codes' && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button onClick={() => setShowCodeForm(v => !v)}
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
+              <span className="material-symbols-outlined text-[20px]">add</span>
+              Générer un code
+            </button>
+          </div>
+
+          {showCodeForm && (
+            <form onSubmit={createCode} className="bg-white border border-[#e8e8f0] rounded-xl p-5">
+              <h3 className="text-headline-md mb-4">Nouveau code d'invitation</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Rôle</label>
+                  <select value={newCode.role} onChange={e => setNewCode(f => ({ ...f, role: e.target.value, equipe_id: '' }))}
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
+                    {CODE_ROLES.map(r => <option key={r.v} value={r.v}>{r.l}</option>)}
+                  </select>
+                </div>
+                {['joueur', 'parent', 'coach'].includes(newCode.role) && (
+                  <div className="space-y-1">
+                    <label className="text-label-md text-on-surface-variant">Équipe *</label>
+                    <select required value={newCode.equipe_id} onChange={e => setNewCode(f => ({ ...f, equipe_id: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
+                      <option value="">Choisir une équipe</option>
+                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Libellé (optionnel)</label>
+                  <input value={newCode.label} onChange={e => setNewCode(f => ({ ...f, label: e.target.value }))} placeholder="Ex : Saison 2025-26 U15"
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Utilisations max</label>
+                  <input type="number" value={newCode.max_uses} onChange={e => setNewCode(f => ({ ...f, max_uses: e.target.value }))} min="1" max="500"
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-4">
+                <button type="button" onClick={() => setShowCodeForm(false)} className="px-4 py-2 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
+                <button type="submit" disabled={codeSaving} className="px-5 py-2 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40">Générer</button>
+              </div>
+            </form>
+          )}
+
+          <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+            {codesLoading ? (
+              <div className="p-6 space-y-3">{[1,2,3].map(i => <div key={i} className="h-14 bg-surface-container-low rounded animate-pulse" />)}</div>
+            ) : codes.length === 0 ? (
+              <div className="py-12 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">key_off</span>
+                <p>Aucun code pour ce club</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#e8e8f0]">
+                {codes.map(c => (
+                  <div key={c.id} className={`px-5 py-4 flex items-center gap-4 flex-wrap ${!c.actif ? 'opacity-50' : ''}`}>
+                    <span className="font-mono font-bold text-lg tracking-widest bg-surface-container-low px-3 py-1.5 rounded-lg">{c.code}</span>
+                    <button onClick={() => { navigator.clipboard.writeText(c.code); setCopiedId(c.id); setTimeout(() => setCopiedId(null), 2000) }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[18px]">{copiedId === c.id ? 'check' : 'content_copy'}</span>
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-full text-label-md bg-green-100 text-green-700">{c.role}</span>
+                        {c.equipe && <span className="text-body-sm text-on-surface-variant">{c.equipe.nom}</span>}
+                        {c.label && <span className="text-body-sm text-on-surface-variant italic">• {c.label}</span>}
+                      </div>
+                      <p className="text-[11px] text-on-surface-variant mt-0.5">{c.uses_count}/{c.max_uses} utilisations</p>
+                    </div>
+                    <button onClick={() => disableCode(c.id)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const isSuperAdmin = localStorage.getItem('role') === 'superadmin'
   const [activeTab, setActiveTab] = useState<'users' | 'codes' | 'clubs'>('users')
+  const [managedClub, setManagedClub] = useState<Club | null>(null)
 
   // ── Clubs (superadmin) ────────────────────────────────────
   const [clubs, setClubs]             = useState<Club[]>([])
@@ -231,6 +624,11 @@ export default function AdminPage() {
     { label: 'Coachs',       value: users.filter(u => u.role === 'coach').length,                icon: 'sports',               color: 'text-blue-600',   bg: 'bg-blue-50'      },
     { label: 'Joueurs',      value: users.filter(u => u.role === 'joueur').length,               icon: 'sports_soccer',        color: 'text-green-600',  bg: 'bg-green-50'     },
   ]
+
+  // Si un club est en cours de gestion, afficher le panneau dédié
+  if (managedClub && isSuperAdmin) {
+    return <ClubManagePanel club={managedClub} onBack={() => setManagedClub(null)} allClubs={clubs} />
+  }
 
   return (
     <div>
@@ -826,8 +1224,14 @@ export default function AdminPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => { setClubFilter(c.id); setActiveTab('users'); load(c.id) }}
+                            onClick={() => setManagedClub(c)}
                             className="px-3 py-1.5 text-primary text-label-md hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px]">settings</span>
+                            Gérer
+                          </button>
+                          <button
+                            onClick={() => { setClubFilter(c.id); setActiveTab('users'); load(c.id) }}
+                            className="px-3 py-1.5 text-on-surface-variant text-label-md hover:bg-surface-container rounded-lg transition-colors flex items-center gap-1">
                             <span className="material-symbols-outlined text-[16px]">groups</span>
                             Membres
                           </button>
