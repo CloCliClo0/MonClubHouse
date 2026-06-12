@@ -199,6 +199,23 @@ const runMigrations = async () => {
   try { await sequelize.query('ALTER TABLE licencies MODIFY COLUMN equipe_id INT NULL'); console.log('[Migration] licencies.equipe_id nullable'); } catch (e) {}
   try { await sequelize.query('ALTER TABLE licencies MODIFY COLUMN club_id INT NULL'); console.log('[Migration] licencies.club_id nullable'); } catch (e) {}
 
+  // matchs : colonnes manquantes (lieu, rapport, heure)
+  try { await sequelize.query('ALTER TABLE matchs ADD COLUMN heure TIME NULL'); console.log('[Migration] matchs.heure ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE matchs ADD COLUMN lieu VARCHAR(500) NULL'); console.log('[Migration] matchs.lieu ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE matchs ADD COLUMN rapport TEXT NULL'); console.log('[Migration] matchs.rapport ajouté'); } catch (e) {}
+
+  // notifications : colonnes manquantes (lien, lu_at)
+  try { await sequelize.query('ALTER TABLE notifications ADD COLUMN lien VARCHAR(500) NULL'); console.log('[Migration] notifications.lien ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE notifications ADD COLUMN lu_at DATETIME NULL'); console.log('[Migration] notifications.lu_at ajouté'); } catch (e) {}
+
+  // convocations : colonnes manquantes (reponse_at, notifie, notifie_at)
+  try { await sequelize.query('ALTER TABLE convocations ADD COLUMN reponse_at DATETIME NULL'); console.log('[Migration] convocations.reponse_at ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE convocations ADD COLUMN notifie TINYINT(1) DEFAULT 0'); console.log('[Migration] convocations.notifie ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE convocations ADD COLUMN notifie_at DATETIME NULL'); console.log('[Migration] convocations.notifie_at ajouté'); } catch (e) {}
+
+  // sports : colonnes manquantes (nb_joueurs_equipe)
+  try { await sequelize.query('ALTER TABLE sports ADD COLUMN nb_joueurs_equipe INT DEFAULT 11'); console.log('[Migration] sports.nb_joueurs_equipe ajouté'); } catch (e) {}
+
   try {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS equipe_coachs (
@@ -284,7 +301,7 @@ const runMigrations = async () => {
 
   // Notifications : nouveaux types et send_at
   try {
-    await sequelize.query(`ALTER TABLE notifications MODIFY COLUMN type ENUM('convocation','match','message','resultat','systeme','rappel','annulation','vote','arbitrage','rappel_veille') NOT NULL`);
+    await sequelize.query(`ALTER TABLE notifications MODIFY COLUMN type ENUM('convocation','match','message','resultat','systeme','rappel','annulation','info','vote','arbitrage','rappel_veille') NOT NULL`);
     console.log('[Migration] notifications.type étendu');
   } catch (e) { /* déjà ok */ }
   try {
