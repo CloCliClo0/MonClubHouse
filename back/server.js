@@ -133,6 +133,7 @@ app.use('/api/scraper',      scraperRoutes);
 app.use('/api/ai-scraper',   aiScraperRoutes);
 app.use('/api/votes',        voteRoutes);
 app.use('/api/arbitrage',    arbitrageRoutes);
+app.use('/api/diagnostic',   require('./routes/diagnostic'));
 
 // Auth Google (hors /api pour le redirect OAuth)
 app.use('/auth', authRoutes);

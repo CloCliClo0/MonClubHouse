@@ -6,306 +6,544 @@
 <title>MonClubHouse — Diagnostic API</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 24px; }
-  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; color: #f1f5f9; }
-  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 24px; }
-  .summary { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-  .stat { background: #1e2130; border-radius: 10px; padding: 14px 20px; min-width: 100px; text-align: center; border: 1px solid #2d3450; }
-  .stat .n { font-size: 28px; font-weight: 800; line-height: 1; }
-  .stat .l { font-size: 11px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
-  .n-ok { color: #22c55e; } .n-err { color: #ef4444; } .n-warn { color: #f59e0b; } .n-tot { color: #818cf8; }
-  .section { margin-bottom: 20px; }
-  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569; margin-bottom: 8px; padding-left: 4px; }
-  .card { background: #1e2130; border-radius: 10px; overflow: hidden; border: 1px solid #2d3450; }
-  .row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #1a1f35; transition: background .1s; }
-  .row:last-child { border-bottom: none; }
-  .row:hover { background: #252b40; }
-  .badge { font-size: 10px; font-weight: 700; border-radius: 5px; padding: 2px 7px; min-width: 38px; text-align: center; flex-shrink: 0; }
-  .b-ok   { background: #166534; color: #86efac; }
-  .b-err  { background: #7f1d1d; color: #fca5a5; }
-  .b-warn { background: #78350f; color: #fcd34d; }
-  .b-skip { background: #1e293b; color: #475569; }
-  .b-run  { background: #1e3a5f; color: #93c5fd; }
-  .method { font-size: 10px; font-weight: 700; color: #64748b; min-width: 36px; flex-shrink: 0; }
-  .url { font-size: 12px; font-family: 'Consolas', monospace; color: #a5b4fc; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .status { font-size: 11px; font-weight: 700; min-width: 34px; text-align: right; flex-shrink: 0; }
-  .s-ok  { color: #22c55e; } .s-err { color: #ef4444; } .s-warn { color: #f59e0b; }
-  .msg { font-size: 11px; color: #475569; flex: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
-  .time { font-size: 10px; color: #334155; min-width: 42px; text-align: right; flex-shrink: 0; }
-  .spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid #2563eb; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .controls { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
-  button { background: #4f46e5; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 24px; font-size: 14px; }
+  h1 { font-size: 20px; font-weight: 700; color: #f1f5f9; }
+  h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569; margin: 20px 0 8px; }
+  .subtitle { font-size: 12px; color: #64748b; margin: 2px 0 16px; }
+  .row-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  button { background: #4f46e5; color: #fff; border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s, opacity .15s; display: inline-flex; align-items: center; gap: 6px; }
   button:hover { background: #6366f1; }
-  button:disabled { background: #374151; color: #6b7280; cursor: not-allowed; }
-  .token-info { font-size: 11px; padding: 6px 12px; border-radius: 6px; background: #1e2130; border: 1px solid #2d3450; color: #64748b; }
-  .token-ok { color: #22c55e; border-color: #166534; }
-  .token-ko { color: #ef4444; border-color: #7f1d1d; }
-  .progress { height: 3px; background: #1e293b; border-radius: 2px; overflow: hidden; margin-bottom: 20px; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.secondary { background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
+  button.secondary:hover { background: #263148; color: #e2e8f0; }
+  button.danger { background: #7f1d1d; border: 1px solid #991b1b; }
+  button.danger:hover { background: #991b1b; }
+
+  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stat { background: #1e2130; border-radius: 9px; padding: 12px 18px; min-width: 90px; text-align: center; border: 1px solid #2d3450; }
+  .stat .n { font-size: 24px; font-weight: 800; line-height: 1; }
+  .stat .l { font-size: 10px; color: #64748b; margin-top: 3px; text-transform: uppercase; letter-spacing: .5px; }
+  .n-ok { color: #22c55e; } .n-err { color: #ef4444; } .n-warn { color: #f59e0b; } .n-tot { color: #818cf8; } .n-ms { color: #38bdf8; }
+
+  .progress { height: 3px; background: #1e293b; border-radius: 2px; overflow: hidden; margin-bottom: 16px; }
   .progress-bar { height: 100%; background: #4f46e5; transition: width .2s; }
+
+  .filter-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .filter-btn { background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .filter-btn.active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+
+  .section { margin-bottom: 16px; }
+  .card { background: #1e2130; border-radius: 9px; overflow: hidden; border: 1px solid #2d3450; }
+  .erow { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid #1a1f35; cursor: pointer; transition: background .1s; user-select: none; }
+  .erow:last-of-type { border-bottom: none; }
+  .erow:hover { background: #252b40; }
+  .badge { font-size: 10px; font-weight: 700; border-radius: 5px; padding: 2px 7px; min-width: 42px; text-align: center; flex-shrink: 0; }
+  .b-ok   { background: #166534; color: #86efac; } .b-err { background: #7f1d1d; color: #fca5a5; }
+  .b-warn { background: #78350f; color: #fcd34d; } .b-skip { background: #1e293b; color: #475569; }
+  .b-run  { background: #1e3a5f; color: #93c5fd; }
+  .method { font-size: 10px; font-weight: 700; color: #64748b; min-width: 32px; flex-shrink: 0; }
+  .url { font-size: 11px; font-family: 'Consolas', monospace; color: #a5b4fc; flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lbl { font-size: 11px; color: #475569; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .msg { font-size: 10px; color: #475569; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+  .etime { font-size: 10px; font-family: monospace; color: #334155; min-width: 40px; text-align: right; flex-shrink: 0; }
+  .slow { color: #f59e0b !important; }
+  .expand-body { background: #161b27; padding: 10px 14px; font-size: 10px; font-family: monospace; color: #7dd3fc; white-space: pre; overflow-x: auto; max-height: 200px; overflow-y: auto; border-top: 1px solid #1a1f35; display: none; }
+  .expand-body.open { display: block; }
+  .spinner { display: inline-block; width: 8px; height: 8px; border: 2px solid #2563eb; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .token-badge { font-size: 11px; padding: 5px 12px; border-radius: 6px; background: #1e2130; border: 1px solid #2d3450; color: #64748b; }
+  .token-ok { color: #22c55e; border-color: #166534; } .token-ko { color: #ef4444; border-color: #7f1d1d; }
+
+  /* Server info panel */
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+  .info-tile { background: #1e2130; border: 1px solid #2d3450; border-radius: 8px; padding: 10px 14px; }
+  .info-tile.warn { border-color: #991b1b; background: #1a0f0f; }
+  .info-tile .il { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #475569; margin-bottom: 4px; }
+  .info-tile .iv { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+  .info-tile.warn .iv { color: #fca5a5; }
+  .info-tile .is { font-size: 10px; color: #475569; margin-top: 2px; }
+
+  .tag { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 600; font-family: monospace; margin: 2px; }
+  .tag-ok { background: #14532d; color: #86efac; } .tag-err { background: #450a0a; color: #fca5a5; }
+
+  .export-group { display: flex; gap: 6px; }
+  #toast { position: fixed; bottom: 20px; right: 20px; background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 10px 16px; font-size: 12px; transform: translateY(60px); transition: transform .2s; z-index: 99; }
+  #toast.show { transform: translateY(0); }
 </style>
 </head>
 <body>
 
-<h1>🔬 Diagnostic API — MonClubHouse</h1>
-<p class="subtitle" id="ts"></p>
+<div id="toast"></div>
 
-<div class="controls">
-  <button id="btn-run" onclick="runAll()">▶ Tester toutes les routes</button>
-  <button onclick="runAll(true)">🔁 Rejouer les erreurs</button>
-  <span class="token-info" id="token-info">Vérification du token…</span>
+<h1>🔬 Diagnostic — MonClubHouse</h1>
+<p class="subtitle" id="subtitle">Chargement…</p>
+
+<div class="row-bar">
+  <button id="btn-run" onclick="runAll()">▶ Tout tester</button>
+  <button class="secondary" onclick="runAll(true)">🔁 Rejouer erreurs</button>
+  <button class="secondary" id="btn-stop" onclick="stopRun()" style="display:none" >■ Arrêter</button>
+  <button class="secondary" onclick="loadServerInfo()">⟳ Serveur</button>
+  <span class="token-badge" id="token-badge">…</span>
+  <span style="flex:1"></span>
+  <div class="export-group">
+    <button class="secondary" onclick="exportData('json')">⬇ JSON</button>
+    <button class="secondary" onclick="exportData('csv')">⬇ CSV</button>
+    <button class="secondary" onclick="exportData('txt')">⬇ Rapport</button>
+    <button class="secondary" onclick="copyReport()">📋 Copier</button>
+  </div>
 </div>
 
 <div class="progress"><div class="progress-bar" id="progress" style="width:0%"></div></div>
 
 <div class="summary" id="summary"></div>
 
+<!-- Filtre -->
+<div class="filter-bar" id="filter-bar" style="display:none">
+  <span style="font-size:11px;color:#64748b">Filtre :</span>
+  <button class="filter-btn active" onclick="setFilter('all')">Tout</button>
+  <button class="filter-btn" onclick="setFilter('ok')">✓ OK</button>
+  <button class="filter-btn" onclick="setFilter('warn')">! Auth</button>
+  <button class="filter-btn" onclick="setFilter('err')">✗ Erreurs</button>
+  <span style="margin-left:auto;font-size:10px;color:#475569" id="slowest-label"></span>
+</div>
+
+<!-- Server info -->
+<div id="server-section" style="display:none">
+  <h2>État du serveur</h2>
+  <div class="card" style="padding:14px">
+    <div class="info-grid" id="server-tiles"></div>
+    <div style="margin-top:12px" id="schema-tags"></div>
+    <div style="margin-top:10px" id="env-tags"></div>
+    <div style="margin-top:10px" id="db-counts"></div>
+  </div>
+</div>
+
+<!-- Résultats API -->
 <div id="results"></div>
 
 <script>
 const BASE = window.location.origin;
+const TOKEN_KEY = 'token';
 
-// Récupère le token JWT depuis localStorage (clé 'token' pour MonClubHouse)
-function getToken() {
-  return localStorage.getItem('token');
-}
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
 
+// ── Endpoints ──────────────────────────────────────────────────────────
 const ENDPOINTS = [
-  // ── Santé ──────────────────────────────
-  { section: 'Santé', method: 'GET', path: '/api/ping',     auth: false, label: 'Ping serveur' },
-  { section: 'Santé', method: 'GET', path: '/health',       auth: false, label: 'Health check' },
+  // Santé
+  { s:'Santé',    m:'GET', p:'/api/ping',                   l:'Ping serveur',          auth:false },
+  { s:'Santé',    m:'GET', p:'/health',                     l:'Health check',           auth:false },
+  { s:'Santé',    m:'GET', p:'/api/diagnostic',             l:'Diagnostic serveur',     auth:true  },
 
-  // ── Auth ───────────────────────────────
-  { section: 'Auth', method: 'GET', path: '/api/profil',                     auth: true,  label: 'Profil utilisateur' },
-  { section: 'Auth', method: 'GET', path: '/api/profil/notifications',        auth: true,  label: 'Mes notifications' },
-  { section: 'Auth', method: 'GET', path: '/api/profil/historique',           auth: true,  label: 'Historique connexions' },
+  // Auth / Profil
+  { s:'Auth',     m:'GET', p:'/api/profil',                 l:'Mon profil',             auth:true  },
+  { s:'Auth',     m:'GET', p:'/api/profil/notifications',   l:'Notifications',          auth:true  },
+  { s:'Auth',     m:'GET', p:'/api/profil/historique',      l:'Historique connexions',  auth:true  },
+  { s:'Auth',     m:'GET', p:'/api/profil/enfants',         l:'Mes enfants (parent)',   auth:true  },
 
-  // ── Clubs ──────────────────────────────
-  { section: 'Clubs', method: 'GET', path: '/api/clubs',                      auth: true,  label: 'Liste des clubs' },
+  // Clubs
+  { s:'Clubs',    m:'GET', p:'/api/clubs',                  l:'Liste clubs',            auth:true  },
 
-  // ── Équipes ────────────────────────────
-  { section: 'Équipes', method: 'GET', path: '/api/equipes',                  auth: true,  label: 'Liste équipes' },
-  { section: 'Équipes', method: 'GET', path: '/api/equipes/categories-coach', auth: true,  label: 'Catégories du coach' },
+  // Équipes
+  { s:'Équipes',  m:'GET', p:'/api/equipes',                l:'Toutes équipes',         auth:true  },
+  { s:'Équipes',  m:'GET', p:'/api/equipes/categories-coach', l:'Catégories coach',     auth:true  },
 
-  // ── Licenciés ──────────────────────────
-  { section: 'Licenciés', method: 'GET', path: '/api/licencies',              auth: true,  label: 'Liste licenciés' },
+  // Licenciés
+  { s:'Licenciés',m:'GET', p:'/api/licencies',              l:'Liste licenciés',        auth:true  },
 
-  // ── Matchs ─────────────────────────────
-  { section: 'Matchs', method: 'GET', path: '/api/matchs',                    auth: true,  label: 'Liste matchs' },
-  { section: 'Matchs', method: 'GET', path: '/api/matchs?type=entrainement',  auth: true,  label: 'Entraînements' },
+  // Matchs
+  { s:'Matchs',   m:'GET', p:'/api/matchs',                 l:'Tous matchs',            auth:true  },
+  { s:'Matchs',   m:'GET', p:'/api/matchs?type=entrainement', l:'Entraînements',        auth:true  },
+  { s:'Matchs',   m:'GET', p:'/api/matchs?statut=programme', l:'Matchs programmés',    auth:true  },
 
-  // ── Convocations ───────────────────────
-  { section: 'Convocations', method: 'GET', path: '/api/matchs/convocations', auth: true,  label: 'Mes convocations' },
+  // Chat
+  { s:'Chat',     m:'GET', p:'/api/chat/channels',          l:'Channels',               auth:true  },
 
-  // ── Chat ───────────────────────────────
-  { section: 'Chat', method: 'GET', path: '/api/chat/channels',               auth: true,  label: 'Channels' },
+  // Résultats
+  { s:'Résultats', m:'GET', p:'/api/resultats',             l:'Résultats',              auth:true  },
 
-  // ── Résultats ──────────────────────────
-  { section: 'Résultats', method: 'GET', path: '/api/resultats',              auth: true,  label: 'Liste résultats' },
+  // Admin
+  { s:'Admin',    m:'GET', p:'/api/admin/dashboard',        l:'Dashboard admin',        auth:true  },
+  { s:'Admin',    m:'GET', p:'/api/admin/users',            l:'Tous les membres',       auth:true  },
 
-  // ── Admin ──────────────────────────────
-  { section: 'Admin', method: 'GET', path: '/api/admin/dashboard',            auth: true,  label: 'Dashboard admin' },
-  { section: 'Admin', method: 'GET', path: '/api/admin/users',                auth: true,  label: 'Liste membres' },
+  // Codes
+  { s:'Codes',    m:'GET', p:'/api/codes',                  l:"Codes d'invitation",     auth:true  },
+  { s:'Codes',    m:'POST', p:'/api/codes/validate',        l:'Valider un code',        auth:true, body:{code:'TEST'}, expectStatus:404 },
 
-  // ── Codes d\'accès ─────────────────────
-  { section: 'Codes', method: 'GET', path: '/api/codes',                      auth: true,  label: 'Codes d\'invitation' },
+  // Adversaires
+  { s:'Adversaires', m:'GET', p:'/api/adversaires',         l:'Adversaires',            auth:true  },
 
-  // ── Adversaires ────────────────────────
-  { section: 'Adversaires', method: 'GET', path: '/api/adversaires',          auth: true,  label: 'Liste adversaires' },
+  // Championnat
+  { s:'Championnat', m:'GET', p:'/api/championnat/equipes', l:'Équipes champ.',         auth:true  },
+  { s:'Championnat', m:'GET', p:'/api/championnat/matchs',  l:'Matchs champ.',          auth:true  },
 
-  // ── Championnat ────────────────────────
-  { section: 'Championnat', method: 'GET', path: '/api/championnat/equipes',  auth: true,  label: 'Équipes championnat' },
+  // Arbitrage
+  { s:'Arbitrage',m:'GET', p:'/api/arbitrage/presences',   l:'Présences arbitrage',    auth:true  },
+  { s:'Arbitrage',m:'GET', p:'/api/arbitrage/mes-presences', l:'Mes inscriptions',     auth:true  },
+  { s:'Arbitrage',m:'GET', p:'/api/arbitrage/stats',       l:'Stats arbitrage',        auth:true  },
 
-  // ── Votes & Arbitrage ──────────────────
-  { section: 'Votes & Arbitrage', method: 'GET', path: '/api/votes/history',  auth: true,  label: 'Historique votes' },
-  { section: 'Votes & Arbitrage', method: 'GET', path: '/api/arbitrage',       auth: true,  label: 'Arbitrage (liste)' },
+  // Upload
+  { s:'Upload',   m:'GET', p:'/api/upload',                 l:'Service upload',         auth:true  },
 ];
 
+// ── State ─────────────────────────────────────────────────────────────
 let results = {};
+let currentFilter = 'all';
 let running = false;
+let aborted = false;
+let serverData = null;
 
-async function testEndpoint(ep, token) {
-  const headers = { 'Content-Type': 'application/json' };
+// ── Run ───────────────────────────────────────────────────────────────
+async function runAll(onlyErrors = false) {
+  if (running) return;
+  running = true; aborted = false;
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('btn-stop').style.display = 'inline-flex';
+
+  const token = getToken();
+  const eps = onlyErrors
+    ? ENDPOINTS.filter(ep => { const r = results[ep.m+ep.p]; return !r || !isOk(r.status, ep); })
+    : ENDPOINTS;
+
+  if (!onlyErrors) results = {};
+  renderAll();
+
+  for (let i = 0; i < eps.length; i++) {
+    if (aborted) break;
+    document.getElementById('progress').style.width = `${Math.round((i/eps.length)*100)}%`;
+    const ep = eps[i];
+    const r = await fetchEp(ep, token);
+    results[ep.m + ep.p] = r;
+    updateRow(ep, r);
+    updateSummary();
+    updateSlowLabel();
+  }
+
+  document.getElementById('progress').style.width = '100%';
+  document.getElementById('btn-run').disabled = false;
+  document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('filter-bar').style.display = 'flex';
+  running = false;
+  document.getElementById('subtitle').textContent =
+    `Dernière exécution : ${new Date().toLocaleTimeString('fr-FR')} — ${Object.values(results).filter(r => r.ok).length}/${ENDPOINTS.length} routes OK`;
+  loadServerInfo();
+}
+
+function stopRun() { aborted = true; }
+
+async function fetchEp(ep, token) {
+  const headers = {};
   if (ep.auth && token) headers['Authorization'] = `Bearer ${token}`;
-
+  if (ep.body) headers['Content-Type'] = 'application/json';
   const t0 = performance.now();
   try {
-    const res = await fetch(BASE + ep.path, {
-      method: ep.method,
+    const res = await fetch(BASE + ep.p, {
+      method: ep.m,
       headers,
-      signal: AbortSignal.timeout(8000)
+      body: ep.body ? JSON.stringify(ep.body) : undefined,
+      signal: AbortSignal.timeout(8000),
     });
     const ms = Math.round(performance.now() - t0);
     let body = null;
     try { body = await res.json(); } catch {}
-
-    return {
-      status: res.status,
-      ok: res.ok,
-      ms,
-      msg: body?.message || (res.ok ? 'OK' : 'Erreur')
-    };
+    const expected = ep.expectStatus;
+    const ok = expected ? res.status === expected : res.ok;
+    return { status: res.status, ok, ms, msg: body?.message || (ok ? 'OK' : 'Erreur'), body };
   } catch (err) {
     const ms = Math.round(performance.now() - t0);
-    if (err.name === 'TimeoutError') return { status: 0, ok: false, ms, msg: 'Timeout (8s)' };
-    return { status: 0, ok: false, ms, msg: err.message };
+    const msg = err?.name === 'TimeoutError' ? 'Timeout (8s)' : (err?.message || 'Réseau indisponible');
+    return { status: 0, ok: false, ms, msg, body: null };
   }
 }
 
-function classifyStatus(status) {
-  if (status === 0)              return 'err';
+function isOk(status, ep) {
+  if (ep?.expectStatus) return status === ep.expectStatus;
+  return status >= 200 && status < 300;
+}
+
+// ── Server Info ───────────────────────────────────────────────────────
+async function loadServerInfo() {
+  const token = getToken();
+  if (!token) return;
+  try {
+    const res = await fetch(BASE + '/api/diagnostic', {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    serverData = data.data;
+    renderServerInfo(serverData);
+  } catch {}
+}
+
+function renderServerInfo(d) {
+  const sec = document.getElementById('server-section');
+  sec.style.display = 'block';
+  const memPct = d.server.memory.heap_pct;
+  const dbOk = d.database.ok;
+
+  document.getElementById('server-tiles').innerHTML = [
+    tile('Node.js', d.server.node_version, d.server.env),
+    tile('Uptime', d.server.uptime_human, `PID ${d.server.pid}`),
+    tile('Heap mémoire', `${d.server.memory.heap_used_mb}/${d.server.memory.heap_total_mb} MB`, `${memPct}% utilisé`, memPct > 80),
+    tile('RSS', `${d.server.memory.rss_mb} MB`, ''),
+    tile('DB ping', dbOk ? `${d.database.ping_ms}ms` : 'Erreur', dbOk ? d.database.dialect : (d.database.error || ''), !dbOk),
+    tile('Load avg', d.server.os.load_avg[0], `${d.server.os.cpus} CPU(s)`, d.server.os.load_avg[0] > d.server.os.cpus),
+    tile('RAM libre', `${d.server.os.free_mem_mb} MB`, `/ ${d.server.os.total_mem_mb} MB`),
+    tile('App URL', d.server.app_url || '—', ''),
+  ].join('');
+
+  // Schema
+  const sTags = d.schema.map(s =>
+    `<span class="tag ${s.exists ? 'tag-ok' : 'tag-err'}">${s.exists ? '✓' : '✗'} ${s.table}</span>`
+  ).join('');
+  document.getElementById('schema-tags').innerHTML = `<div style="font-size:10px;color:#475569;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Schéma DB</div>${sTags}`;
+
+  // Env
+  const eTags = Object.entries(d.env).map(([k,v]) =>
+    `<span class="tag ${v.startsWith('✓') ? 'tag-ok' : 'tag-err'}">${v.startsWith('✓') ? '✓' : '✗'} ${k}</span>`
+  ).join('');
+  document.getElementById('env-tags').innerHTML = `<div style="font-size:10px;color:#475569;margin-bottom:4px;margin-top:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Variables d'env</div>${eTags}`;
+
+  // DB counts
+  const cTags = Object.entries(d.database.counts).map(([k,v]) =>
+    `<span class="tag" style="background:#1e293b;color:#94a3b8;border:1px solid #334155">${k}: <strong>${v !== null ? v : '⚠'}</strong></span>`
+  ).join('');
+  document.getElementById('db-counts').innerHTML = `<div style="font-size:10px;color:#475569;margin-bottom:4px;margin-top:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Comptages</div>${cTags}`;
+}
+
+function tile(label, value, sub, warn = false) {
+  return `<div class="info-tile${warn ? ' warn' : ''}"><div class="il">${label}</div><div class="iv">${value}</div>${sub ? `<div class="is">${sub}</div>` : ''}</div>`;
+}
+
+// ── Render ────────────────────────────────────────────────────────────
+function classify(status, ep) {
+  if (ep?.expectStatus) return status === ep.expectStatus ? 'ok' : 'err';
+  if (!status) return 'err';
   if (status >= 200 && status < 300) return 'ok';
   if (status === 401 || status === 403) return 'warn';
   return 'err';
 }
 
-function statusClass(status) {
-  const c = classifyStatus(status);
-  return c === 'ok' ? 's-ok' : c === 'warn' ? 's-warn' : 's-err';
-}
-function badgeClass(status) {
-  const c = classifyStatus(status);
-  return c === 'ok' ? 'b-ok' : c === 'warn' ? 'b-warn' : c === 'err' ? 'b-err' : 'b-skip';
-}
-function badgeText(status) {
-  if (status === 0) return 'ERR';
-  if (status === 401) return '401';
-  if (status === 403) return '403';
-  if (status === 404) return '404';
-  if (status === 500) return '500';
-  if (status >= 200 && status < 300) return 'OK';
-  return status;
-}
-
-function renderRow(ep, result) {
-  const key = ep.method + ep.path;
-  const r = result || results[key];
-  const isRunning = !r;
-
-  const badge = isRunning
-    ? `<span class="badge b-run"><span class="spinner"></span></span>`
-    : `<span class="badge ${badgeClass(r.status)}">${badgeText(r.status)}</span>`;
-
-  const statusEl = isRunning
-    ? `<span class="status" style="color:#475569">…</span>`
-    : `<span class="status ${statusClass(r.status)}">${r.status || '—'}</span>`;
-
-  const msgEl = isRunning
-    ? `<span class="msg"></span>`
-    : `<span class="msg" title="${r.msg}">${r.msg}</span>`;
-
-  const timeEl = isRunning
-    ? `<span class="time"></span>`
-    : `<span class="time">${r.ms}ms</span>`;
-
-  return `
-    <div class="row" id="row-${key.replace(/[^a-zA-Z0-9]/g, '_')}">
-      ${badge}
-      <span class="method">${ep.method}</span>
-      <span class="url" title="${ep.path}">${ep.path}</span>
-      ${statusEl}
-      ${msgEl}
-      ${timeEl}
-    </div>`;
-}
-
-function renderAll(onlyErrors = false) {
-  const sections = {};
-  for (const ep of ENDPOINTS) {
-    if (!sections[ep.section]) sections[ep.section] = [];
-    sections[ep.section].push(ep);
-  }
-
+function renderAll() {
+  const sections = [...new Set(ENDPOINTS.map(e => e.s))];
   let html = '';
-  for (const [sec, eps] of Object.entries(sections)) {
-    const rows = eps
-      .filter(ep => !onlyErrors || !results[ep.method + ep.path]?.ok)
-      .map(ep => renderRow(ep));
-    if (rows.length === 0) continue;
-    html += `<div class="section">
-      <div class="section-title">${sec}</div>
-      <div class="card">${rows.join('')}</div>
+  for (const sec of sections) {
+    const eps = ENDPOINTS.filter(e => e.s === sec);
+    html += `<div class="section" data-section="${sec}">
+      <h2>${sec}</h2>
+      <div class="card">${eps.map(ep => rowHtml(ep, results[ep.m+ep.p])).join('')}</div>
     </div>`;
   }
   document.getElementById('results').innerHTML = html;
+  applyFilter();
+
+  // Click handlers
+  document.querySelectorAll('.erow').forEach(el => {
+    el.addEventListener('click', () => {
+      const body = el.nextElementSibling;
+      if (body && body.classList.contains('expand-body')) body.classList.toggle('open');
+    });
+  });
+}
+
+function rowHtml(ep, r) {
+  const key = ep.m + ep.p;
+  const isRunning = r === undefined;
+  const cls = r ? classify(r.status, ep) : 'run';
+  const badgeText = r
+    ? (r.status === 0 ? 'ERR' : (r.status === 200 ? 'OK' : r.status))
+    : '…';
+  const badgeCls = { ok:'b-ok', warn:'b-warn', err:'b-err', run:'b-run' }[cls] || 'b-skip';
+  const timeCls = r && r.ms > 500 ? ' slow' : '';
+  const bodyStr = r?.body ? JSON.stringify(r.body, null, 2) : '';
+
+  return `<div class="erow" id="erow-${btoa(key).replace(/=/g,'_')}" data-cls="${cls}">
+    <span class="badge ${badgeCls}">${isRunning ? '<span class="spinner"></span>' : badgeText}</span>
+    <span class="method">${ep.m}</span>
+    <span class="url">${ep.p}</span>
+    <span class="lbl">${ep.l}</span>
+    <span class="msg">${r ? r.msg : ''}</span>
+    <span class="etime${timeCls}">${r ? r.ms+'ms' : ''}</span>
+  </div>${bodyStr ? `<div class="expand-body" id="body-${btoa(key).replace(/=/g,'_')}">${bodyStr}</div>` : ''}`;
 }
 
 function updateRow(ep, r) {
-  const key = ep.method + ep.path;
-  const id = 'row-' + key.replace(/[^a-zA-Z0-9]/g, '_');
+  const key = ep.m + ep.p;
+  const id = 'erow-' + btoa(key).replace(/=/g,'_');
   const el = document.getElementById(id);
   if (!el) return;
-  el.outerHTML = renderRow(ep, r);
+  const cls = classify(r.status, ep);
+  const badgeCls = { ok:'b-ok', warn:'b-warn', err:'b-err' }[cls] || 'b-err';
+  el.dataset.cls = cls;
+  el.querySelector('.badge').className = `badge ${badgeCls}`;
+  el.querySelector('.badge').textContent = r.status === 0 ? 'ERR' : (r.status === 200 ? 'OK' : r.status);
+  el.querySelector('.msg').textContent = r.msg;
+  const te = el.querySelector('.etime');
+  te.textContent = r.ms + 'ms';
+  te.className = 'etime' + (r.ms > 500 ? ' slow' : '');
+  if (r.body) {
+    let bodyEl = document.getElementById('body-' + btoa(key).replace(/=/g,'_'));
+    if (!bodyEl) {
+      bodyEl = document.createElement('div');
+      bodyEl.className = 'expand-body';
+      bodyEl.id = 'body-' + btoa(key).replace(/=/g,'_');
+      el.after(bodyEl);
+      el.addEventListener('click', () => bodyEl.classList.toggle('open'));
+    }
+    bodyEl.textContent = JSON.stringify(r.body, null, 2);
+  }
+  applyFilter();
 }
 
 function updateSummary() {
-  let ok = 0, err = 0, warn = 0;
-  for (const r of Object.values(results)) {
-    const c = classifyStatus(r.status);
-    if (c === 'ok') ok++;
-    else if (c === 'warn') warn++;
+  let ok = 0, warn = 0, err = 0, totalMs = 0, count = 0;
+  for (const [key, r] of Object.entries(results)) {
+    const ep = ENDPOINTS.find(e => e.m + e.p === key);
+    const cls = classify(r.status, ep);
+    if (cls === 'ok') ok++;
+    else if (cls === 'warn') warn++;
     else err++;
+    if (r.ms) { totalMs += r.ms; count++; }
   }
-  const tot = Object.keys(results).length;
+  const avg = count ? Math.round(totalMs / count) : 0;
   document.getElementById('summary').innerHTML = `
     <div class="stat"><div class="n n-ok">${ok}</div><div class="l">OK</div></div>
-    <div class="stat"><div class="n n-warn">${warn}</div><div class="l">Auth 401/403</div></div>
+    <div class="stat"><div class="n n-warn">${warn}</div><div class="l">Auth 401</div></div>
     <div class="stat"><div class="n n-err">${err}</div><div class="l">Erreurs</div></div>
-    <div class="stat"><div class="n n-tot">${tot}/${ENDPOINTS.length}</div><div class="l">Testés</div></div>
+    <div class="stat"><div class="n n-tot">${Object.keys(results).length}/${ENDPOINTS.length}</div><div class="l">Testés</div></div>
+    <div class="stat"><div class="n n-ms">${avg}ms</div><div class="l">Moy. resp.</div></div>
   `;
 }
 
-async function runAll(onlyErrors = false) {
-  if (running) return;
-  running = true;
-  document.getElementById('btn-run').disabled = true;
-
-  const token = getToken();
-  const tokenEl = document.getElementById('token-info');
-  if (token) {
-    tokenEl.textContent = '🔐 Token JWT trouvé ✓';
-    tokenEl.className = 'token-info token-ok';
-  } else {
-    tokenEl.textContent = '⚠ Pas de token — seules les routes publiques seront testées';
-    tokenEl.className = 'token-info token-ko';
+function updateSlowLabel() {
+  let slowest = null;
+  for (const [key, r] of Object.entries(results)) {
+    if (!slowest || r.ms > slowest.ms) slowest = { key, ms: r.ms };
   }
-
-  const eps = onlyErrors
-    ? ENDPOINTS.filter(ep => !results[ep.method + ep.path]?.ok)
-    : ENDPOINTS;
-
-  if (!onlyErrors) results = {};
-  renderAll(onlyErrors);
-
-  for (let i = 0; i < eps.length; i++) {
-    const ep = eps[i];
-    document.getElementById('progress').style.width = `${Math.round((i / eps.length) * 100)}%`;
-    const r = await testEndpoint(ep, token);
-    results[ep.method + ep.path] = r;
-    updateRow(ep, r);
-    updateSummary();
+  if (slowest) {
+    const ep = ENDPOINTS.find(e => e.m + e.p === slowest.key);
+    document.getElementById('slowest-label').textContent = `Plus lente : ${ep?.p || slowest.key} (${slowest.ms}ms)`;
   }
-
-  document.getElementById('progress').style.width = '100%';
-  document.getElementById('btn-run').disabled = false;
-  running = false;
-
-  document.getElementById('ts').textContent =
-    `Dernière exécution : ${new Date().toLocaleTimeString('fr-FR')} — ${Object.values(results).filter(r => r.ok).length}/${ENDPOINTS.length} routes OK`;
 }
 
-// Init
-document.getElementById('ts').textContent = window.location.origin;
-const t = getToken();
-const el = document.getElementById('token-info');
-if (t) {
-  el.textContent = `🔐 Token JWT trouvé (${t.slice(0, 12)}…)`;
-  el.className = 'token-info token-ok';
-  // Lancer automatiquement si token présent
+// ── Filtre ────────────────────────────────────────────────────────────
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  document.querySelectorAll('.erow').forEach(el => {
+    const cls = el.dataset.cls || 'run';
+    const vis = currentFilter === 'all' || cls === currentFilter || (currentFilter === 'err' && cls === 'run');
+    el.style.display = vis ? 'flex' : 'none';
+    const bodyEl = el.nextElementSibling;
+    if (bodyEl?.classList.contains('expand-body')) bodyEl.style.display = vis ? '' : 'none';
+  });
+  // Cacher sections vides
+  document.querySelectorAll('.section').forEach(sec => {
+    const visible = [...sec.querySelectorAll('.erow')].some(e => e.style.display !== 'none');
+    sec.style.display = visible ? '' : 'none';
+  });
+}
+
+// ── Export ────────────────────────────────────────────────────────────
+function exportData(format) {
+  const ts = new Date().toISOString();
+  let content, filename, type;
+
+  if (format === 'json') {
+    content = JSON.stringify({ timestamp: ts, results: Object.entries(results).map(([key, r]) => {
+      const ep = ENDPOINTS.find(e => e.m + e.p === key);
+      return { section: ep?.s, method: ep?.m, path: ep?.p, label: ep?.l, ...r };
+    }), server: serverData }, null, 2);
+    filename = `diag-${ts.slice(0,10)}.json`; type = 'application/json';
+
+  } else if (format === 'csv') {
+    const rows = ['Section,Méthode,Route,Label,Statut,OK,Temps(ms),Message'];
+    for (const [key, r] of Object.entries(results)) {
+      const ep = ENDPOINTS.find(e => e.m + e.p === key);
+      rows.push(`"${ep?.s}","${ep?.m}","${ep?.p}","${ep?.l}",${r.status},${r.ok},${r.ms},"${r.msg}"`);
+    }
+    content = rows.join('\n'); filename = `diag-${ts.slice(0,10)}.csv`; type = 'text/csv';
+
+  } else {
+    const ok  = Object.entries(results).filter(([k,r]) => { const ep = ENDPOINTS.find(e=>e.m+e.p===k); return classify(r.status, ep)==='ok'; }).length;
+    const err = Object.entries(results).filter(([k,r]) => { const ep = ENDPOINTS.find(e=>e.m+e.p===k); return classify(r.status, ep)==='err'; }).length;
+    const warn= Object.entries(results).filter(([k,r]) => { const ep = ENDPOINTS.find(e=>e.m+e.p===k); return classify(r.status, ep)==='warn'; }).length;
+
+    content = `MonClubHouse — Rapport Diagnostic API\n${'='.repeat(44)}\nDate : ${new Date().toLocaleString('fr-FR')}\n`;
+    content += `Serveur : ${BASE}\n\nRÉSUMÉ\n${'─'.repeat(20)}\n${ok} OK | ${warn} Auth | ${err} Erreur(s) | ${Object.keys(results).length}/${ENDPOINTS.length} testées\n\n`;
+
+    const secs = [...new Set(ENDPOINTS.map(e=>e.s))];
+    for (const sec of secs) {
+      const eps = ENDPOINTS.filter(e=>e.s===sec).filter(e=>results[e.m+e.p]);
+      if (!eps.length) continue;
+      content += `\n${sec}\n${'─'.repeat(30)}\n`;
+      eps.forEach(ep => {
+        const r = results[ep.m+ep.p];
+        const cls = classify(r.status, ep);
+        const icon = cls==='ok'?'✓': cls==='warn'?'!':'✗';
+        content += `  ${icon} [${r.status||'?'}] ${ep.m} ${ep.p} — ${r.ms}ms — ${r.msg}\n`;
+      });
+    }
+    if (serverData) {
+      content += `\nSERVEUR\n${'─'.repeat(30)}\n`;
+      content += `  Node.js    : ${serverData.server.node_version}\n`;
+      content += `  Env        : ${serverData.server.env}\n`;
+      content += `  Uptime     : ${serverData.server.uptime_human}\n`;
+      content += `  Heap       : ${serverData.server.memory.heap_used_mb}/${serverData.server.memory.heap_total_mb} MB (${serverData.server.memory.heap_pct}%)\n`;
+      content += `  DB ping    : ${serverData.database.ping_ms}ms\n`;
+      content += `  DB status  : ${serverData.database.ok ? 'OK' : 'ERREUR — ' + serverData.database.error}\n`;
+    }
+    filename = `diag-${ts.slice(0,10)}.txt`; type = 'text/plain';
+  }
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+  toast(`Export ${format.toUpperCase()} téléchargé`);
+}
+
+async function copyReport() {
+  const lines = ['MonClubHouse — Diagnostic rapide'];
+  lines.push(`Date : ${new Date().toLocaleString('fr-FR')}`);
+  lines.push('');
+  for (const [key, r] of Object.entries(results)) {
+    const ep = ENDPOINTS.find(e => e.m + e.p === key);
+    const cls = classify(r.status, ep);
+    lines.push(`${cls==='ok'?'✓':cls==='warn'?'!':'✗'} [${r.status}] ${ep?.m} ${ep?.p} (${r.ms}ms)`);
+  }
+  try {
+    await navigator.clipboard.writeText(lines.join('\n'));
+    toast('Rapport copié dans le presse-papier');
+  } catch { toast('Impossible de copier — utilise Export Rapport'); }
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+const token = getToken();
+const badge = document.getElementById('token-badge');
+if (token) {
+  badge.textContent = `🔐 Connecté (${token.slice(0,12)}…)`;
+  badge.className = 'token-badge token-ok';
+  document.getElementById('subtitle').textContent = BASE;
+  loadServerInfo();
   runAll();
 } else {
-  el.textContent = '⚠ Pas de token JWT dans localStorage — connectez-vous d\'abord sur le site puis revenez ici';
-  el.className = 'token-info token-ko';
+  badge.textContent = '⚠ Pas de token — connectez-vous d\'abord sur le site';
+  badge.className = 'token-badge token-ko';
+  document.getElementById('subtitle').textContent = `${BASE} — routes publiques seulement`;
+  runAll(); // teste quand même les routes publiques
 }
 </script>
 </body>
