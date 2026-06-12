@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MonClubHouse — Diagnostic API</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; color: #f1f5f9; }
+  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+  .summary { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat { background: #1e2130; border-radius: 10px; padding: 14px 20px; min-width: 100px; text-align: center; border: 1px solid #2d3450; }
+  .stat .n { font-size: 28px; font-weight: 800; line-height: 1; }
+  .stat .l { font-size: 11px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+  .n-ok { color: #22c55e; } .n-err { color: #ef4444; } .n-warn { color: #f59e0b; } .n-tot { color: #818cf8; }
+  .section { margin-bottom: 20px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569; margin-bottom: 8px; padding-left: 4px; }
+  .card { background: #1e2130; border-radius: 10px; overflow: hidden; border: 1px solid #2d3450; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #1a1f35; transition: background .1s; }
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: #252b40; }
+  .badge { font-size: 10px; font-weight: 700; border-radius: 5px; padding: 2px 7px; min-width: 38px; text-align: center; flex-shrink: 0; }
+  .b-ok   { background: #166534; color: #86efac; }
+  .b-err  { background: #7f1d1d; color: #fca5a5; }
+  .b-warn { background: #78350f; color: #fcd34d; }
+  .b-skip { background: #1e293b; color: #475569; }
+  .b-run  { background: #1e3a5f; color: #93c5fd; }
+  .method { font-size: 10px; font-weight: 700; color: #64748b; min-width: 36px; flex-shrink: 0; }
+  .url { font-size: 12px; font-family: 'Consolas', monospace; color: #a5b4fc; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status { font-size: 11px; font-weight: 700; min-width: 34px; text-align: right; flex-shrink: 0; }
+  .s-ok  { color: #22c55e; } .s-err { color: #ef4444; } .s-warn { color: #f59e0b; }
+  .msg { font-size: 11px; color: #475569; flex: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+  .time { font-size: 10px; color: #334155; min-width: 42px; text-align: right; flex-shrink: 0; }
+  .spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid #2563eb; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .controls { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+  button { background: #4f46e5; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  button:hover { background: #6366f1; }
+  button:disabled { background: #374151; color: #6b7280; cursor: not-allowed; }
+  .token-info { font-size: 11px; padding: 6px 12px; border-radius: 6px; background: #1e2130; border: 1px solid #2d3450; color: #64748b; }
+  .token-ok { color: #22c55e; border-color: #166534; }
+  .token-ko { color: #ef4444; border-color: #7f1d1d; }
+  .progress { height: 3px; background: #1e293b; border-radius: 2px; overflow: hidden; margin-bottom: 20px; }
+  .progress-bar { height: 100%; background: #4f46e5; transition: width .2s; }
+</style>
+</head>
+<body>
+
+<h1>🔬 Diagnostic API — MonClubHouse</h1>
+<p class="subtitle" id="ts"></p>
+
+<div class="controls">
+  <button id="btn-run" onclick="runAll()">▶ Tester toutes les routes</button>
+  <button onclick="runAll(true)">🔁 Rejouer les erreurs</button>
+  <span class="token-info" id="token-info">Vérification du token…</span>
+</div>
+
+<div class="progress"><div class="progress-bar" id="progress" style="width:0%"></div></div>
+
+<div class="summary" id="summary"></div>
+
+<div id="results"></div>
+
+<script>
+const BASE = window.location.origin;
+
+// Récupère le token JWT depuis localStorage (clé 'token' pour MonClubHouse)
+function getToken() {
+  return localStorage.getItem('token');
+}
+
+const ENDPOINTS = [
+  // ── Santé ──────────────────────────────
+  { section: 'Santé', method: 'GET', path: '/api/ping',     auth: false, label: 'Ping serveur' },
+  { section: 'Santé', method: 'GET', path: '/health',       auth: false, label: 'Health check' },
+
+  // ── Auth ───────────────────────────────
+  { section: 'Auth', method: 'GET', path: '/api/profil',                     auth: true,  label: 'Profil utilisateur' },
+  { section: 'Auth', method: 'GET', path: '/api/profil/notifications',        auth: true,  label: 'Mes notifications' },
+  { section: 'Auth', method: 'GET', path: '/api/profil/historique',           auth: true,  label: 'Historique connexions' },
+
+  // ── Clubs ──────────────────────────────
+  { section: 'Clubs', method: 'GET', path: '/api/clubs',                      auth: true,  label: 'Liste des clubs' },
+
+  // ── Équipes ────────────────────────────
+  { section: 'Équipes', method: 'GET', path: '/api/equipes',                  auth: true,  label: 'Liste équipes' },
+  { section: 'Équipes', method: 'GET', path: '/api/equipes/categories-coach', auth: true,  label: 'Catégories du coach' },
+
+  // ── Licenciés ──────────────────────────
+  { section: 'Licenciés', method: 'GET', path: '/api/licencies',              auth: true,  label: 'Liste licenciés' },
+
+  // ── Matchs ─────────────────────────────
+  { section: 'Matchs', method: 'GET', path: '/api/matchs',                    auth: true,  label: 'Liste matchs' },
+  { section: 'Matchs', method: 'GET', path: '/api/matchs?type=entrainement',  auth: true,  label: 'Entraînements' },
+
+  // ── Convocations ───────────────────────
+  { section: 'Convocations', method: 'GET', path: '/api/matchs/convocations', auth: true,  label: 'Mes convocations' },
+
+  // ── Chat ───────────────────────────────
+  { section: 'Chat', method: 'GET', path: '/api/chat/channels',               auth: true,  label: 'Channels' },
+
+  // ── Résultats ──────────────────────────
+  { section: 'Résultats', method: 'GET', path: '/api/resultats',              auth: true,  label: 'Liste résultats' },
+
+  // ── Admin ──────────────────────────────
+  { section: 'Admin', method: 'GET', path: '/api/admin/dashboard',            auth: true,  label: 'Dashboard admin' },
+  { section: 'Admin', method: 'GET', path: '/api/admin/users',                auth: true,  label: 'Liste membres' },
+
+  // ── Codes d\'accès ─────────────────────
+  { section: 'Codes', method: 'GET', path: '/api/codes',                      auth: true,  label: 'Codes d\'invitation' },
+
+  // ── Adversaires ────────────────────────
+  { section: 'Adversaires', method: 'GET', path: '/api/adversaires',          auth: true,  label: 'Liste adversaires' },
+
+  // ── Championnat ────────────────────────
+  { section: 'Championnat', method: 'GET', path: '/api/championnat/equipes',  auth: true,  label: 'Équipes championnat' },
+
+  // ── Votes & Arbitrage ──────────────────
+  { section: 'Votes & Arbitrage', method: 'GET', path: '/api/votes/history',  auth: true,  label: 'Historique votes' },
+  { section: 'Votes & Arbitrage', method: 'GET', path: '/api/arbitrage',       auth: true,  label: 'Arbitrage (liste)' },
+];
+
+let results = {};
+let running = false;
+
+async function testEndpoint(ep, token) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (ep.auth && token) headers['Authorization'] = `Bearer ${token}`;
+
+  const t0 = performance.now();
+  try {
+    const res = await fetch(BASE + ep.path, {
+      method: ep.method,
+      headers,
+      signal: AbortSignal.timeout(8000)
+    });
+    const ms = Math.round(performance.now() - t0);
+    let body = null;
+    try { body = await res.json(); } catch {}
+
+    return {
+      status: res.status,
+      ok: res.ok,
+      ms,
+      msg: body?.message || (res.ok ? 'OK' : 'Erreur')
+    };
+  } catch (err) {
+    const ms = Math.round(performance.now() - t0);
+    if (err.name === 'TimeoutError') return { status: 0, ok: false, ms, msg: 'Timeout (8s)' };
+    return { status: 0, ok: false, ms, msg: err.message };
+  }
+}
+
+function classifyStatus(status) {
+  if (status === 0)              return 'err';
+  if (status >= 200 && status < 300) return 'ok';
+  if (status === 401 || status === 403) return 'warn';
+  return 'err';
+}
+
+function statusClass(status) {
+  const c = classifyStatus(status);
+  return c === 'ok' ? 's-ok' : c === 'warn' ? 's-warn' : 's-err';
+}
+function badgeClass(status) {
+  const c = classifyStatus(status);
+  return c === 'ok' ? 'b-ok' : c === 'warn' ? 'b-warn' : c === 'err' ? 'b-err' : 'b-skip';
+}
+function badgeText(status) {
+  if (status === 0) return 'ERR';
+  if (status === 401) return '401';
+  if (status === 403) return '403';
+  if (status === 404) return '404';
+  if (status === 500) return '500';
+  if (status >= 200 && status < 300) return 'OK';
+  return status;
+}
+
+function renderRow(ep, result) {
+  const key = ep.method + ep.path;
+  const r = result || results[key];
+  const isRunning = !r;
+
+  const badge = isRunning
+    ? `<span class="badge b-run"><span class="spinner"></span></span>`
+    : `<span class="badge ${badgeClass(r.status)}">${badgeText(r.status)}</span>`;
+
+  const statusEl = isRunning
+    ? `<span class="status" style="color:#475569">…</span>`
+    : `<span class="status ${statusClass(r.status)}">${r.status || '—'}</span>`;
+
+  const msgEl = isRunning
+    ? `<span class="msg"></span>`
+    : `<span class="msg" title="${r.msg}">${r.msg}</span>`;
+
+  const timeEl = isRunning
+    ? `<span class="time"></span>`
+    : `<span class="time">${r.ms}ms</span>`;
+
+  return `
+    <div class="row" id="row-${key.replace(/[^a-zA-Z0-9]/g, '_')}">
+      ${badge}
+      <span class="method">${ep.method}</span>
+      <span class="url" title="${ep.path}">${ep.path}</span>
+      ${statusEl}
+      ${msgEl}
+      ${timeEl}
+    </div>`;
+}
+
+function renderAll(onlyErrors = false) {
+  const sections = {};
+  for (const ep of ENDPOINTS) {
+    if (!sections[ep.section]) sections[ep.section] = [];
+    sections[ep.section].push(ep);
+  }
+
+  let html = '';
+  for (const [sec, eps] of Object.entries(sections)) {
+    const rows = eps
+      .filter(ep => !onlyErrors || !results[ep.method + ep.path]?.ok)
+      .map(ep => renderRow(ep));
+    if (rows.length === 0) continue;
+    html += `<div class="section">
+      <div class="section-title">${sec}</div>
+      <div class="card">${rows.join('')}</div>
+    </div>`;
+  }
+  document.getElementById('results').innerHTML = html;
+}
+
+function updateRow(ep, r) {
+  const key = ep.method + ep.path;
+  const id = 'row-' + key.replace(/[^a-zA-Z0-9]/g, '_');
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.outerHTML = renderRow(ep, r);
+}
+
+function updateSummary() {
+  let ok = 0, err = 0, warn = 0;
+  for (const r of Object.values(results)) {
+    const c = classifyStatus(r.status);
+    if (c === 'ok') ok++;
+    else if (c === 'warn') warn++;
+    else err++;
+  }
+  const tot = Object.keys(results).length;
+  document.getElementById('summary').innerHTML = `
+    <div class="stat"><div class="n n-ok">${ok}</div><div class="l">OK</div></div>
+    <div class="stat"><div class="n n-warn">${warn}</div><div class="l">Auth 401/403</div></div>
+    <div class="stat"><div class="n n-err">${err}</div><div class="l">Erreurs</div></div>
+    <div class="stat"><div class="n n-tot">${tot}/${ENDPOINTS.length}</div><div class="l">Testés</div></div>
+  `;
+}
+
+async function runAll(onlyErrors = false) {
+  if (running) return;
+  running = true;
+  document.getElementById('btn-run').disabled = true;
+
+  const token = getToken();
+  const tokenEl = document.getElementById('token-info');
+  if (token) {
+    tokenEl.textContent = '🔐 Token JWT trouvé ✓';
+    tokenEl.className = 'token-info token-ok';
+  } else {
+    tokenEl.textContent = '⚠ Pas de token — seules les routes publiques seront testées';
+    tokenEl.className = 'token-info token-ko';
+  }
+
+  const eps = onlyErrors
+    ? ENDPOINTS.filter(ep => !results[ep.method + ep.path]?.ok)
+    : ENDPOINTS;
+
+  if (!onlyErrors) results = {};
+  renderAll(onlyErrors);
+
+  for (let i = 0; i < eps.length; i++) {
+    const ep = eps[i];
+    document.getElementById('progress').style.width = `${Math.round((i / eps.length) * 100)}%`;
+    const r = await testEndpoint(ep, token);
+    results[ep.method + ep.path] = r;
+    updateRow(ep, r);
+    updateSummary();
+  }
+
+  document.getElementById('progress').style.width = '100%';
+  document.getElementById('btn-run').disabled = false;
+  running = false;
+
+  document.getElementById('ts').textContent =
+    `Dernière exécution : ${new Date().toLocaleTimeString('fr-FR')} — ${Object.values(results).filter(r => r.ok).length}/${ENDPOINTS.length} routes OK`;
+}
+
+// Init
+document.getElementById('ts').textContent = window.location.origin;
+const t = getToken();
+const el = document.getElementById('token-info');
+if (t) {
+  el.textContent = `🔐 Token JWT trouvé (${t.slice(0, 12)}…)`;
+  el.className = 'token-info token-ok';
+  // Lancer automatiquement si token présent
+  runAll();
+} else {
+  el.textContent = '⚠ Pas de token JWT dans localStorage — connectez-vous d\'abord sur le site puis revenez ici';
+  el.className = 'token-info token-ko';
+}
+</script>
+</body>
+</html>
