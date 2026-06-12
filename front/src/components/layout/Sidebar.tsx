@@ -27,6 +27,7 @@ export default function Sidebar({ open, onClose }: Props) {
     STATS:       { path: '/statistiques', icon: 'bar_chart',            label: t.nav.statistiques  },
     MON_CLUB:    { path: '/mon-club',     icon: 'home_work',            label: t.nav.monClub       },
     ADMIN:       { path: '/admin',        icon: 'admin_panel_settings', label: t.nav.administration},
+    SUPER_ADMIN: { path: '/super-admin',  icon: 'shield_person',        label: 'Gestion clubs'     },
     SCRAPER:     { path: '/scraper',      icon: 'code_blocks',          label: 'Import FFF'        },
   }
 
@@ -34,7 +35,7 @@ export default function Sidebar({ open, onClose }: Props) {
 
   const NAV_BY_ROLE: Record<string, NavGroup[]> = {
     superadmin: [
-      { label: t.nav.administration, items: [NAV.ADMIN] },
+      { label: t.nav.administration, items: [NAV.ADMIN, NAV.SUPER_ADMIN] },
       { label: 'Outils',            items: [NAV.SCRAPER] },
     ],
     admin: [

@@ -37,6 +37,7 @@ import RaccourcisPage from './pages/RaccourcisPage'
 import PresencePage from './pages/PresencePage'
 import VotePage from './pages/VotePage'
 import ArbitragePage from './pages/ArbitragePage'
+import SuperAdminPage from './pages/SuperAdminPage'
 
 export default function App() {
   return (
@@ -78,6 +79,7 @@ export default function App() {
           <Route path="/mes-presences"            element={<PresencePage />} />
           <Route path="/vote/:matchId"          element={<VotePage />} />
           <Route path="/arbitrage"              element={<ArbitragePage />} />
+          <Route path="/super-admin"            element={<SuperAdminPage />} />
           <Route path="/aide"                   element={<HelpPage />} />
           <Route path="/aide/documentation"     element={<DocumentationPage />} />
           <Route path="/aide/support"           element={<SupportPage />} />
