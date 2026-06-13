@@ -1,4 +1,4 @@
-const { InviteCode, Equipe, Club, User, Licencie } = require('../models');
+const { InviteCode, Equipe, Club, User, Licencie, Category } = require('../models');
 const { Op } = require('sequelize');
 const crypto = require('crypto');
 
@@ -19,7 +19,8 @@ const listCodes = async (req, res) => {
     const codes = await InviteCode.findAll({
       where,
       include: [
-        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'], required: false },
+        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'], required: false,
+          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] },
         { model: Club,   as: 'club',   attributes: ['id', 'nom'],             required: false },
       ],
       order: [['created_at', 'DESC']],
@@ -45,11 +46,14 @@ const createCode = async (req, res) => {
 
     let equipe = null;
     if (equipe_id) {
-      equipe = await Equipe.findOne({ where: { id: equipe_id, club_id } });
+      equipe = await Equipe.findOne({
+        where: { id: equipe_id, club_id },
+        include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }],
+      });
       if (!equipe) return res.status(404).json({ success: false, message: 'Équipe introuvable' });
     }
 
-    const catLabel = (categorie || equipe?.categorie || '').replace(/\s+/g, '').slice(0, 4).toUpperCase() || 'MCH';
+    const catLabel = (categorie || equipe?.categorie?.nom || '').replace(/\s+/g, '').slice(0, 4).toUpperCase() || 'MCH';
     let code, exists = true;
     while (exists) {
       code = makeCode(catLabel);
@@ -59,7 +63,7 @@ const createCode = async (req, res) => {
     const newCode = await InviteCode.create({
       code,
       equipe_id: equipe_id || null,
-      categorie: categorie || equipe?.categorie || null,
+      categorie: categorie || equipe?.categorie?.nom || null,
       club_id,
       role,
       label,

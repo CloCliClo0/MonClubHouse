@@ -1,13 +1,15 @@
-const { Equipe, Licencie, User, Sport, Match, EquipeCoach } = require('../models');
+const { Equipe, Licencie, User, Sport, Match, EquipeCoach, Category } = require('../models');
 const { validationResult } = require('express-validator');
 const { Op } = require('sequelize');
+
+const CATEGORY_INCLUDE = { model: Category, as: 'categorie', attributes: ['id', 'nom', 'couleur'], required: false };
 
 const getAll = async (req, res) => {
   try {
     const where = { actif: true };
     if (req.query.club_id) where.club_id = req.query.club_id;
     if (req.query.sport_id) where.sport_id = req.query.sport_id;
-    if (req.query.categorie) where.categorie = req.query.categorie;
+    if (req.query.categorie_id) where.categorie_id = req.query.categorie_id;
 
     const role = req.user?.role;
 
@@ -23,18 +25,19 @@ const getAll = async (req, res) => {
     } else if (['joueur', 'parent'].includes(role)) {
       const licencies = await Licencie.findAll({
         where: { user_id: req.user.id },
-        include: [{ model: Equipe, as: 'equipe', attributes: ['categorie'] }],
+        include: [{ model: Equipe, as: 'equipe', attributes: ['categorie_id'] }],
         raw: true,
         nest: true,
       });
-      const categories = [...new Set(licencies.map(l => l.equipe?.categorie).filter(Boolean))];
-      if (categories.length === 0) return res.json({ success: true, data: [] });
-      where.categorie = { [Op.in]: categories };
+      const categorieIds = [...new Set(licencies.map(l => l.equipe?.categorie_id).filter(Boolean))];
+      if (categorieIds.length === 0) return res.json({ success: true, data: [] });
+      where.categorie_id = { [Op.in]: categorieIds };
     }
 
     const equipes = await Equipe.findAll({
       where,
       include: [
+        CATEGORY_INCLUDE,
         { model: Sport, as: 'sport', required: false },
         { model: User, as: 'coachs_extra', attributes: ['id', 'nom', 'prenom'], through: { attributes: [] }, required: false },
         { model: Licencie, as: 'licencies', where: { statut: 'actif' }, required: false, attributes: ['id'] },
@@ -55,6 +58,7 @@ const getById = async (req, res) => {
   try {
     const equipe = await Equipe.findByPk(req.params.id, {
       include: [
+        CATEGORY_INCLUDE,
         { model: Sport, as: 'sport', required: false },
         {
           model: Licencie, as: 'licencies',
@@ -81,9 +85,12 @@ const create = async (req, res) => {
       const defaultSport = await Sport.findOne({ order: [['id', 'ASC']] });
       if (defaultSport) data.sport_id = defaultSport.id;
     }
+    // categorie_id can be passed directly; ignore old categorie string
+    delete data.categorie;
 
     const equipe = await Equipe.create(data);
-    return res.status(201).json({ success: true, data: equipe });
+    const withCat = await Equipe.findByPk(equipe.id, { include: [CATEGORY_INCLUDE] });
+    return res.status(201).json({ success: true, data: withCat });
   } catch (err) {
     console.error('[equipe.create]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -94,8 +101,11 @@ const update = async (req, res) => {
   try {
     const equipe = await Equipe.findByPk(req.params.id);
     if (!equipe) return res.status(404).json({ success: false, message: 'Équipe introuvable' });
-    await equipe.update(req.body);
-    return res.json({ success: true, data: equipe });
+    const data = { ...req.body };
+    delete data.categorie;
+    await equipe.update(data);
+    const withCat = await Equipe.findByPk(equipe.id, { include: [CATEGORY_INCLUDE] });
+    return res.json({ success: true, data: withCat });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
@@ -140,10 +150,16 @@ const getCategoriesCoach = async (req, res) => {
 
     const equipes = await Equipe.findAll({
       where: { actif: true, id: { [Op.in]: linkedIds } },
-      attributes: ['id', 'nom', 'categorie'],
-      raw: true,
+      include: [CATEGORY_INCLUDE],
     });
-    const categories = [...new Set(equipes.map(e => e.categorie).filter(Boolean))];
+    const seen = new Set();
+    const categories = [];
+    for (const e of equipes) {
+      if (e.categorie && !seen.has(e.categorie.id)) {
+        seen.add(e.categorie.id);
+        categories.push(e.categorie.toJSON());
+      }
+    }
     return res.json({ success: true, data: categories });
   } catch (err) {
     console.error('[equipe.getCategoriesCoach]', err.message);

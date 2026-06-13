@@ -1,4 +1,4 @@
-const { User, Licencie, Convocation, Match, Equipe } = require('../models');
+const { User, Licencie, Convocation, Match, Equipe, Category } = require('../models');
 const { validationResult } = require('express-validator');
 
 const getProfil = async (req, res) => {
@@ -7,7 +7,8 @@ const getProfil = async (req, res) => {
       attributes: { exclude: ['password_hash', 'refresh_token', 'google_id'] },
       include: [{
         model: Licencie, as: 'licence',
-        include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] }]
+        include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
+          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] }]
       }]
     });
     return res.json({ success: true, data: user });

@@ -1,4 +1,4 @@
-const { User, InviteCode, Equipe, Licencie } = require('../models');
+const { User, InviteCode, Equipe, Licencie, Category } = require('../models');
 const { Op } = require('sequelize');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../config/jwt');
 const { validationResult } = require('express-validator');
@@ -45,7 +45,8 @@ const register = async (req, res) => {
           actif: true,
           [Op.or]: [{ expires_at: null }, { expires_at: { [Op.gt]: new Date() } }],
         },
-        include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'], required: false }],
+        include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'], required: false,
+          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] }],
       });
 
       if (!invite) {

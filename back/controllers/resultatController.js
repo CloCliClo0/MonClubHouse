@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { Match, Equipe, Convocation, User, Licencie } = require('../models');
+const { Match, Equipe, Convocation, User, Licencie, Category } = require('../models');
 const { Op } = require('sequelize');
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
@@ -14,7 +14,8 @@ const getResultatsLocaux = async (req, res) => {
 
     const matchs = await Match.findAll({
       where,
-      include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] }],
+      include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
+        include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] }],
       order: [['date', 'DESC']],
       limit: parseInt(req.query.limit) || 20
     });

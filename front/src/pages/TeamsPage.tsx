@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 
+type Category = { id: number; nom: string; couleur: string }
+
 type Team = {
   id: number
   nom: string
-  categorie: string
+  categorie?: Category | null
   genre: string
   format: string
   couleur_maillot: string
@@ -29,11 +31,13 @@ export default function TeamsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const categories = ['Tous', ...Array.from(new Set(teams.map(t => t.categorie)))]
+  const categories = ['Tous', ...Array.from(new Set(
+    teams.map(t => t.categorie?.nom).filter((n): n is string => Boolean(n))
+  ))]
 
   const filtered = teams.filter(t => {
     const matchSearch = t.nom.toLowerCase().includes(search.toLowerCase())
-    const matchFilter = filter === 'Tous' || t.categorie === filter
+    const matchFilter = filter === 'Tous' || t.categorie?.nom === filter
     return matchSearch && matchFilter
   })
 
@@ -111,7 +115,9 @@ export default function TeamsPage() {
                   <div>
                     <h3 className="text-headline-md text-on-surface">{team.nom}</h3>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="px-2 py-0.5 bg-surface-container-low text-on-surface-variant rounded text-label-md">{team.categorie}</span>
+                      {team.categorie && (
+                        <span className="px-2 py-0.5 bg-surface-container-low text-on-surface-variant rounded text-label-md">{team.categorie.nom}</span>
+                      )}
                       <span className="px-2 py-0.5 bg-surface-container-low text-on-surface-variant rounded text-label-md">{team.genre}</span>
                       <span className="px-2 py-0.5 bg-surface-container-low text-on-surface-variant rounded text-label-md">{team.format}v{team.format}</span>
                     </div>

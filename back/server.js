@@ -35,6 +35,7 @@ const scraperRoutes      = require('./routes/scraper');
 const aiScraperRoutes    = require('./routes/aiScraper');
 const voteRoutes         = require('./routes/vote');
 const arbitrageRoutes    = require('./routes/arbitrage');
+const categoriesRoutes   = require('./routes/categories');
 
 const app = express();
 const server = http.createServer(app);
@@ -133,6 +134,7 @@ app.use('/api/scraper',      scraperRoutes);
 app.use('/api/ai-scraper',   aiScraperRoutes);
 app.use('/api/votes',        voteRoutes);
 app.use('/api/arbitrage',    arbitrageRoutes);
+app.use('/api/categories',   categoriesRoutes);
 app.use('/api/diagnostic',   require('./routes/diagnostic'));
 
 // Auth Google (hors /api pour le redirect OAuth)
@@ -364,6 +366,42 @@ const runMigrations = async () => {
     `);
     console.log('[Migration] arbitrage_presences créée');
   } catch (e) { /* déjà existante */ }
+
+  // Table categories (nouvelle)
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        club_id    INT NOT NULL,
+        nom        VARCHAR(100) NOT NULL,
+        couleur    VARCHAR(7) DEFAULT '#1b4332',
+        actif      TINYINT(1) DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('[Migration] categories créée');
+  } catch (e) { /* déjà existante */ }
+
+  // equipes : ajouter categorie_id FK vers categories
+  try { await sequelize.query('ALTER TABLE equipes ADD COLUMN categorie_id INT NULL'); console.log('[Migration] equipes.categorie_id ajouté'); } catch (e) {}
+  try { await sequelize.query('ALTER TABLE equipes ADD CONSTRAINT fk_equipes_categorie FOREIGN KEY (categorie_id) REFERENCES categories(id) ON DELETE SET NULL'); console.log('[Migration] equipes.categorie_id FK ajouté'); } catch (e) {}
+
+  // Migrer les données : créer une Category par valeur unique de categorie par club, puis mettre à jour categorie_id
+  try {
+    await sequelize.query(`
+      INSERT IGNORE INTO categories (club_id, nom)
+      SELECT DISTINCT club_id, categorie FROM equipes WHERE categorie IS NOT NULL AND categorie != ''
+    `);
+    await sequelize.query(`
+      UPDATE equipes e
+      JOIN categories c ON e.club_id = c.club_id AND e.categorie = c.nom
+      SET e.categorie_id = c.id
+      WHERE e.categorie IS NOT NULL AND e.categorie_id IS NULL
+    `);
+    console.log('[Migration] Données categorie → categorie_id migrées');
+  } catch (e) { console.warn('[Migration] Données categorie skip:', e.message); }
 };
 
 const connectDB = async (retries = 10, delay = 5000) => {

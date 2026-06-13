@@ -19,6 +19,7 @@ const EquipeCoach = require('./EquipeCoach');
 const MatchEvent = require('./MatchEvent');
 const PlayerVote = require('./PlayerVote');
 const ArbitragePresence = require('./ArbitragePresence');
+const Category = require('./Category');
 
 // Associations Club
 Club.hasMany(Terrain, { foreignKey: 'club_id', as: 'terrains' });
@@ -26,6 +27,11 @@ Terrain.belongsTo(Club, { foreignKey: 'club_id', as: 'club' });
 
 Club.hasMany(Equipe, { foreignKey: 'club_id', as: 'equipes' });
 Equipe.belongsTo(Club, { foreignKey: 'club_id', as: 'club' });
+
+Club.hasMany(Category, { foreignKey: 'club_id', as: 'categories' });
+Category.belongsTo(Club, { foreignKey: 'club_id', as: 'club' });
+Category.hasMany(Equipe, { foreignKey: 'categorie_id', as: 'equipes' });
+Equipe.belongsTo(Category, { foreignKey: 'categorie_id', as: 'categorie' });
 
 Club.hasMany(User, { foreignKey: 'club_id', as: 'membres' });
 User.belongsTo(Club, { foreignKey: 'club_id', as: 'club' });
@@ -138,4 +144,5 @@ module.exports = {
   MatchEvent,
   PlayerVote,
   ArbitragePresence,
+  Category,
 };

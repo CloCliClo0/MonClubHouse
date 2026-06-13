@@ -1,4 +1,4 @@
-const { Match, Equipe, Terrain, Convocation, Composition, User } = require('../models');
+const { Match, Equipe, Terrain, Convocation, Composition, User, Category } = require('../models');
 const { validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 
@@ -23,7 +23,8 @@ const getAll = async (req, res) => {
     const matchs = await Match.findAll({
       where,
       include: [
-        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] },
+        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
+          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] },
         { model: Terrain, as: 'terrain', attributes: ['id', 'nom', 'adresse'], required: false }
       ],
       order: [['date', 'ASC']]
@@ -38,7 +39,8 @@ const getById = async (req, res) => {
   try {
     const match = await Match.findByPk(req.params.id, {
       include: [
-        { model: Equipe, as: 'equipe' },
+        { model: Equipe, as: 'equipe',
+          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] },
         { model: Terrain, as: 'terrain', required: false },
         {
           model: Convocation, as: 'convocations',

@@ -1,4 +1,4 @@
-const { Licencie, User, Equipe } = require('../models');
+const { Licencie, User, Equipe, Category } = require('../models');
 const { validationResult } = require('express-validator');
 
 const getAll = async (req, res) => {
@@ -14,7 +14,8 @@ const getAll = async (req, res) => {
           model: User, as: 'user', attributes: ['id', 'nom', 'prenom', 'email', 'avatar', 'telephone', 'parent_id'],
           include: [{ model: User, as: 'parent', attributes: ['id', 'nom', 'prenom', 'email', 'telephone'], required: false }]
         },
-        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] }
+        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
+          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] }
       ]
     });
     return res.json({ success: true, data: licencies });
