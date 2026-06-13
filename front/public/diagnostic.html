@@ -148,6 +148,9 @@ const ENDPOINTS = [
   { s:'Équipes',  m:'GET', p:'/api/equipes',                l:'Toutes équipes',         auth:true  },
   { s:'Équipes',  m:'GET', p:'/api/equipes/categories-coach', l:'Catégories coach',     auth:true  },
 
+  // Catégories
+  { s:'Catégories', m:'GET', p:'/api/categories',           l:'Liste catégories',       auth:true  },
+
   // Licenciés
   { s:'Licenciés',m:'GET', p:'/api/licencies',              l:'Liste licenciés',        auth:true  },
 
@@ -160,7 +163,10 @@ const ENDPOINTS = [
   { s:'Chat',     m:'GET', p:'/api/chat/channels',          l:'Channels',               auth:true  },
 
   // Résultats
-  { s:'Résultats', m:'GET', p:'/api/resultats',             l:'Résultats',              auth:true  },
+  { s:'Résultats', m:'GET', p:'/api/resultats',             l:'Résultats locaux',       auth:true  },
+  { s:'Résultats', m:'GET', p:'/api/resultats/stats/buteurs',  l:'Stats buteurs',       auth:true  },
+  { s:'Résultats', m:'GET', p:'/api/resultats/stats/equipes',  l:'Stats équipes',       auth:true  },
+  { s:'Résultats', m:'GET', p:'/api/resultats/stats/presence', l:'Stats présence',      auth:true  },
 
   // Admin
   { s:'Admin',    m:'GET', p:'/api/admin/dashboard',        l:'Dashboard admin',        auth:true  },
@@ -168,22 +174,23 @@ const ENDPOINTS = [
 
   // Codes
   { s:'Codes',    m:'GET', p:'/api/codes',                  l:"Codes d'invitation",     auth:true  },
-  { s:'Codes',    m:'POST', p:'/api/codes/validate',        l:'Valider un code',        auth:true, body:{code:'TEST'}, expectStatus:404 },
+  { s:'Codes',    m:'POST', p:'/api/codes/validate',        l:'Valider un code (test)', auth:true, body:{code:'TEST'}, expectStatus:404 },
 
   // Adversaires
   { s:'Adversaires', m:'GET', p:'/api/adversaires',         l:'Adversaires',            auth:true  },
 
-  // Championnat (feature optionnelle — 404 si non configurée = normal)
-  { s:'Championnat', m:'GET', p:'/api/championnat/equipes', l:'Équipes champ.',  auth:true, expectStatus:404 },
-  { s:'Championnat', m:'GET', p:'/api/championnat/matchs',  l:'Matchs champ.',   auth:true, expectStatus:404 },
+  // Championnat
+  { s:'Championnat', m:'GET', p:'/api/championnat',         l:'Classement (sans params → vide OK)', auth:true },
+  { s:'Championnat', m:'GET', p:'/api/championnat/list',    l:'Liste championnats',     auth:true  },
+  { s:'Championnat', m:'GET', p:'/api/championnat/coachs?equipe_id=0', l:'Coachs équipe (id=0 → vide)', auth:true },
 
   // Arbitrage
   { s:'Arbitrage',m:'GET', p:'/api/arbitrage/presences',   l:'Présences arbitrage',    auth:true  },
   { s:'Arbitrage',m:'GET', p:'/api/arbitrage/mes-presences', l:'Mes inscriptions',     auth:true  },
   { s:'Arbitrage',m:'GET', p:'/api/arbitrage/stats',       l:'Stats arbitrage',        auth:true  },
 
-  // Upload
-  { s:'Upload',   m:'GET', p:'/api/upload',                 l:'Service upload',         auth:true  },
+  // AI Scraper
+  { s:'AI Scraper', m:'GET', p:'/api/ai-scraper/quota',    l:'Quota analyse IA',       auth:true  },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────

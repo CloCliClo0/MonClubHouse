@@ -1,4 +1,4 @@
-const { sequelize, User, Club, Equipe, Match, Licencie, InviteCode, Notification, Convocation, Message, Channel } = require('../models');
+const { sequelize, User, Club, Equipe, Match, Licencie, InviteCode, Notification, Convocation, Message, Channel, Category, ChEquipe, ChMatch } = require('../models');
 const os = require('os');
 
 const getServerDiagnostic = async (req, res) => {
@@ -22,7 +22,7 @@ const getServerDiagnostic = async (req, res) => {
   // ── Table counts ──
   const counts = {};
   const countErrors = {};
-  const models = { User, Club, Equipe, Match, Licencie, InviteCode, Notification, Convocation, Message, Channel };
+  const models = { User, Club, Equipe, Match, Licencie, InviteCode, Notification, Convocation, Message, Channel, Category, ChEquipe, ChMatch };
   await Promise.all(
     Object.entries(models).map(async ([name, Model]) => {
       try { counts[name] = await Model.count(); }
@@ -39,7 +39,7 @@ const getServerDiagnostic = async (req, res) => {
       'users', 'clubs', 'equipes', 'licencies', 'matchs', 'convocations',
       'invite_codes', 'notifications', 'channels', 'messages', 'adversaires',
       'equipe_coachs', 'match_events', 'player_votes', 'arbitrage_presences',
-      'terrains', 'compositions',
+      'terrains', 'compositions', 'categories', 'ch_equipes', 'ch_matchs', 'sports',
     ];
     for (const t of expectedTables) {
       schemaChecks.push({ table: t, exists: tables.includes(t) });
@@ -47,15 +47,26 @@ const getServerDiagnostic = async (req, res) => {
 
     // Vérifier colonnes critiques
     const criticalColumns = [
-      { table: 'users',        column: 'pied_fort' },
-      { table: 'users',        column: 'poste' },
-      { table: 'equipes',      column: 'couleur' },
-      { table: 'equipes',      column: 'niveau' },
-      { table: 'invite_codes', column: 'categorie' },
-      { table: 'invite_codes', column: 'uses_count' },
-      { table: 'invite_codes', column: 'max_uses' },
-      { table: 'invite_codes', column: 'label' },
-      { table: 'notifications','column': 'send_at' },
+      { table: 'users',         column: 'pied_fort' },
+      { table: 'users',         column: 'poste' },
+      { table: 'equipes',       column: 'couleur' },
+      { table: 'equipes',       column: 'niveau' },
+      { table: 'equipes',       column: 'categorie_id' },
+      { table: 'invite_codes',  column: 'categorie' },
+      { table: 'invite_codes',  column: 'uses_count' },
+      { table: 'invite_codes',  column: 'max_uses' },
+      { table: 'invite_codes',  column: 'label' },
+      { table: 'invite_codes',  column: 'created_by' },
+      { table: 'invite_codes',  column: 'expires_at' },
+      { table: 'matchs',        column: 'heure' },
+      { table: 'matchs',        column: 'lieu' },
+      { table: 'matchs',        column: 'rapport' },
+      { table: 'convocations',  column: 'reponse_at' },
+      { table: 'convocations',  column: 'notifie' },
+      { table: 'notifications', column: 'send_at' },
+      { table: 'notifications', column: 'lien' },
+      { table: 'notifications', column: 'lu_at' },
+      { table: 'sports',        column: 'nb_joueurs_equipe' },
     ];
     for (const { table, column } of criticalColumns) {
       try {
