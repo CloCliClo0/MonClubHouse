@@ -143,7 +143,7 @@ export default function GoogleCompletePage() {
               </div>
               <h1 className="text-headline-md text-on-surface">Bienvenue !</h1>
               <p className="text-body-md text-on-surface-variant mt-1">
-                {joinInfo ? `Vous avez rejoint ${joinInfo.equipe.nom}` : 'Inscription terminée.'}
+                {joinInfo ? `Vous avez rejoint ${joinInfo.equipe?.nom ?? 'l\'équipe'}` : 'Inscription terminée.'}
               </p>
             </>
           )}

@@ -95,7 +95,7 @@ export default function JoinPage() {
           <p className="text-body-md text-on-surface-variant mt-1">
             {step === 'code' ? 'Entrez le code fourni par votre club'
               : step === 'child' ? 'Sélectionnez le joueur que vous accompagnez'
-              : `Vous avez rejoint ${joinInfo?.equipe.nom}`}
+              : `Vous avez rejoint ${joinInfo?.equipe?.nom ?? 'l\'équipe'}`}
           </p>
         </div>
 

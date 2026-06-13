@@ -376,7 +376,7 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
                     <select required value={newCode.equipe_id} onChange={e => setNewCode(f => ({ ...f, equipe_id: e.target.value }))}
                       className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
                       <option value="">Choisir une équipe</option>
-                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
+                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie}</option>)}
                     </select>
                   </div>
                 )}
@@ -745,7 +745,7 @@ export default function AdminPage() {
                       required
                       className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
                       <option value="">Choisir une catégorie</option>
-                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
+                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie}</option>)}
                     </select>
                   </div>
                 )}
@@ -1122,7 +1122,7 @@ export default function AdminPage() {
                     className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
                   >
                     <option value="">Sans équipe spécifique</option>
-                    {assignEquipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
+                    {assignEquipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie}</option>)}
                   </select>
                 </div>
               )}
