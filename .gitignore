@@ -11,6 +11,7 @@ coverage/
 .cache/
 
 structure.sql
+fix_db.sql
 donnees.sql
 
 *.sqlite
