@@ -15,7 +15,7 @@ type Licencie = {
 }
 
 type TeamDetail = {
-  id: number; nom: string; categorie: string; genre: string; format: string
+  id: number; nom: string; categorie?: { id: number; nom: string } | null; genre: string; format: string
   couleur_maillot: string; description?: string; actif: boolean
   coach?: { id: number; nom: string; prenom: string; email: string }
   licencies: Licencie[]
@@ -49,6 +49,8 @@ export default function TeamDetailPage() {
 
   // Edition infos équipe
   const [editForm, setEditForm] = useState<Partial<TeamDetail>>({})
+  const [editCategorieId, setEditCategorieId] = useState<number | ''>('')
+  const [clubCategories, setClubCategories] = useState<{ id: number; nom: string }[]>([])
   const [saving, setSaving]     = useState(false)
   const [editMsg, setEditMsg]   = useState('')
 
@@ -63,10 +65,15 @@ export default function TeamDetailPage() {
       .then(r => {
         setTeam(r.data.data)
         setEditForm(r.data.data)
+        setEditCategorieId(r.data.data.categorie?.id ?? '')
       })
       .catch(() => navigate('/equipes'))
       .finally(() => setLoading(false))
   }
+
+  useEffect(() => {
+    api.get('/categories').then(r => setClubCategories(r.data.data || [])).catch(() => {})
+  }, [])
 
   useEffect(() => { load() }, [id])
 
@@ -136,7 +143,7 @@ export default function TeamDetailPage() {
     setSaving(true)
     setEditMsg('')
     try {
-      await api.put(`/equipes/${id}`, editForm)
+      await api.put(`/equipes/${id}`, { ...editForm, categorie_id: editCategorieId || null })
       load()
       setEditMsg('Enregistré !')
       setTimeout(() => setEditMsg(''), 2500)
@@ -179,7 +186,7 @@ export default function TeamDetailPage() {
           <div className="flex-1 min-w-[160px]">
             <h2 className="text-headline-lg text-on-surface">{team.nom}</h2>
             <div className="flex gap-2 mt-1.5 flex-wrap">
-              <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant">{team.categorie}</span>
+              {team.categorie && <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant">{team.categorie.nom}</span>}
               <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant">{team.genre}</span>
               <span className="px-2 py-0.5 bg-surface-container-low rounded text-label-md text-on-surface-variant">{team.format}v{team.format}</span>
               <span className={`px-2 py-0.5 rounded text-label-md ${team.actif ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
@@ -386,9 +393,10 @@ export default function TeamDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-label-md text-on-surface-variant">Catégorie</label>
-                <select value={editForm.categorie || ''} onChange={e => setEditForm(f => ({ ...f, categorie: e.target.value }))}
+                <select value={editCategorieId} onChange={e => setEditCategorieId(e.target.value ? Number(e.target.value) : '')}
                   className="w-full px-4 py-2.5 border border-outline-variant rounded-lg focus:outline-none focus:border-primary text-body-md bg-white">
-                  {['U7','U8','U9','U10','U11','U12','U13','U14','U15','U16','U17','U18','U19','U20','U21','Senior','Veteran','Loisir'].map(c => <option key={c}>{c}</option>)}
+                  <option value="">— Aucune —</option>
+                  {clubCategories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">

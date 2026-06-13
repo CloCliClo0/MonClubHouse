@@ -3,7 +3,7 @@ import api from '../services/api'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Equipe = { id: number; nom: string; categorie: string; coach_id: number | null }
+type Equipe = { id: number; nom: string; categorie?: { id: number; nom: string } | null; coach_id: number | null }
 
 type MatchItem = {
   id: number
@@ -124,7 +124,7 @@ export default function SaisonPage() {
       .then(r => {
         const data: Equipe[] = r.data.data || r.data || []
         setEquipes(data)
-        if (data.length > 0) setSelectedCat(data[0].categorie)
+        if (data.length > 0) setSelectedCat(data[0].categorie?.nom || '')
       })
       .catch(() => setEquipes([]))
       .finally(() => setLoadingEquipes(false))
@@ -137,7 +137,7 @@ export default function SaisonPage() {
   }, [])
 
   const teamsInCat = useMemo(
-    () => equipes.filter(e => e.categorie === selectedCat),
+    () => equipes.filter(e => e.categorie?.nom === selectedCat),
     [equipes, selectedCat]
   )
 
@@ -146,7 +146,7 @@ export default function SaisonPage() {
     else setSelectedTeamId(null)
   }, [teamsInCat])
 
-  const categories = [...new Set(equipes.map(e => e.categorie))]
+  const categories = [...new Set(equipes.map(e => e.categorie?.nom).filter(Boolean))] as string[]
 
   // ── Chargement matchs ─────────────────────────────────────────────────────
 

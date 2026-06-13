@@ -14,8 +14,10 @@ type Club = {
 
 type Terrain = { id: number; nom: string; type: string; capacite: number | null; adresse: string }
 
+type Category = { id: number; nom: string; couleur?: string }
+
 type Equipe = {
-  id: number; nom: string; categorie: string; genre: string; format: string
+  id: number; nom: string; categorie?: Category | null; genre: string; format: string
   couleur_maillot: string | null; coach_id: number | null; description: string | null
   coach?: { id: number; nom: string; prenom: string }
   coachs_extra?: { id: number; nom: string; prenom: string }[]
@@ -26,7 +28,7 @@ type UserShort = { id: number; nom: string; prenom: string; role: string }
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const BLANK_TERRAIN  = { nom: '', type: 'gazon_naturel', capacite: '', adresse: '' }
-const BLANK_EQUIPE   = { nom: '', categorie: 'Senior', genre: 'masculin', format: '11', couleur_maillot: '#0f5238', description: '' }
+const BLANK_EQUIPE   = { nom: '', genre: 'masculin', format: '11', couleur_maillot: '#0f5238', description: '' }
 
 const TERRAIN_TYPES = [
   { v: 'gazon_naturel',     l: 'Gazon naturel'    },
@@ -35,11 +37,6 @@ const TERRAIN_TYPES = [
   { v: 'gymnase',           l: 'Gymnase'           },
   { v: 'piste',             l: 'Piste'             },
   { v: 'autre',             l: 'Autre'             },
-]
-
-const ALL_CATEGORIES = [
-  'U7','U8','U9','U10','U11','U12','U13','U14','U15',
-  'U16','U17','U18','U19','U20','U21','Senior','Veteran','Loisir',
 ]
 
 const GENRES = [
@@ -150,25 +147,28 @@ export default function ClubPage() {
 
   // ── Équipes ───────────────────────────────────────────────────────
   const [equipes, setEquipes]       = useState<Equipe[]>([])
+  const [clubCategories, setClubCategories] = useState<Category[]>([])
   const [coaches, setCoaches]       = useState<UserShort[]>([])
   const [equipeModal, setEquipeModal] = useState<{ open: false } | { open: true; editing: Equipe | null }>({ open: false })
   const [equipeForm, setEquipeForm]   = useState(BLANK_EQUIPE)
+  const [equipeModalCatId, setEquipeModalCatId] = useState<number>(0)
   const [selectedCoachIds, setSelectedCoachIds] = useState<number[]>([])
   const [savingEquipe, setSavingEquipe] = useState(false)
   const [equipeError, setEquipeError]   = useState<string | null>(null)
   const [deleteEquipeId, setDeleteEquipeId] = useState<number | null>(null)
-  const [selectedCatView, setSelectedCatView] = useState<string | null>(null)
+  const [selectedCatView, setSelectedCatView] = useState<number | null>(null)
 
   // ── Load ──────────────────────────────────────────────────────────
 
   const load = async () => {
     setLoading(true)
     try {
-      const [cRes, tRes, eRes, uRes] = await Promise.all([
+      const [cRes, tRes, eRes, uRes, catRes] = await Promise.all([
         api.get('/clubs').catch(() => null),
         api.get('/clubs/terrains').catch(() => null),
         api.get('/equipes').catch(() => null),
         api.get('/admin/users').catch(() => null),
+        api.get('/categories').catch(() => null),
       ])
 
       // GET /clubs ne retourne que id/nom/logo/ville/couleur_primaire
@@ -186,6 +186,7 @@ export default function ClubPage() {
       setForm(c || {})
       setTerrains(tRes?.data?.data || [])
       setEquipes(eRes?.data?.data || eRes?.data || [])
+      setClubCategories(catRes?.data?.data || [])
       const users: UserShort[] = uRes?.data?.data || []
       setCoaches(users.filter(u => ['coach', 'dirigeant', 'admin', 'superadmin'].includes(u.role)))
     } finally {
@@ -198,17 +199,20 @@ export default function ClubPage() {
   // ── Derived ───────────────────────────────────────────────────────
 
   const equipesByCategorie = useMemo(() =>
-    ALL_CATEGORIES.reduce((acc, cat) => {
-      const teams = equipes.filter(e => e.categorie === cat)
-      if (teams.length) acc[cat] = teams
+    equipes.reduce((acc, eq) => {
+      if (eq.categorie?.id) {
+        if (!acc[eq.categorie.id]) acc[eq.categorie.id] = []
+        acc[eq.categorie.id].push(eq)
+      }
       return acc
-    }, {} as Record<string, Equipe[]>)
+    }, {} as Record<number, Equipe[]>)
   , [equipes])
 
-  const usedCategories = useMemo(
-    () => ALL_CATEGORIES.filter(cat => !!equipesByCategorie[cat]),
-    [equipesByCategorie]
-  )
+  const usedCategories = useMemo(() => {
+    const seen = new Map<number, Category>()
+    equipes.forEach(e => { if (e.categorie?.id) seen.set(e.categorie.id, e.categorie) })
+    return [...seen.values()]
+  }, [equipes])
 
   // ── Club handlers ─────────────────────────────────────────────────
 
@@ -248,18 +252,20 @@ export default function ClubPage() {
 
   // ── Equipe handlers ───────────────────────────────────────────────
 
-  const openAddEquipe = (presetCat?: string) => {
-    setEquipeForm({ ...BLANK_EQUIPE, categorie: presetCat || 'Senior' })
+  const openAddEquipe = (presetCatId?: number) => {
+    setEquipeForm(BLANK_EQUIPE)
+    setEquipeModalCatId(presetCatId || 0)
     setSelectedCoachIds([])
     setEquipeError(null)
     setEquipeModal({ open: true, editing: null })
   }
   const openEditEquipe = (e: Equipe) => {
     setEquipeForm({
-      nom: e.nom, categorie: e.categorie, genre: e.genre, format: e.format,
+      nom: e.nom, genre: e.genre, format: e.format,
       couleur_maillot: e.couleur_maillot || '#0f5238',
       description: e.description || '',
     })
+    setEquipeModalCatId(e.categorie?.id || 0)
     const ids = e.coachs_extra && e.coachs_extra.length > 0
       ? e.coachs_extra.map(c => c.id)
       : e.coach_id ? [e.coach_id] : []
@@ -274,13 +280,13 @@ export default function ClubPage() {
     )
 
   const handleSaveEquipe = async () => {
-    if (!equipeForm.nom.trim() || !equipeForm.categorie) return
+    if (!equipeForm.nom.trim()) return
     setSavingEquipe(true)
     setEquipeError(null)
     try {
       const payload = {
         nom:             equipeForm.nom.trim(),
-        categorie:       equipeForm.categorie,
+        categorie_id:    equipeModalCatId || null,
         genre:           equipeForm.genre,
         format:          equipeForm.format,
         couleur_maillot: equipeForm.couleur_maillot,
@@ -378,10 +384,12 @@ export default function ClubPage() {
               </button>
             )}
             {activeTab === 'categories' && (
-              <button onClick={() => openAddEquipe(selectedCatView || undefined)}
+              <button onClick={() => openAddEquipe(selectedCatView ?? undefined)}
                 className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary/90 transition-colors shadow-sm">
                 <span className="material-symbols-outlined text-[20px]">add</span>
-                {selectedCatView ? `Équipe ${selectedCatView}` : 'Nouvelle équipe'}
+                {selectedCatView
+                  ? `Équipe ${clubCategories.find(c => c.id === selectedCatView)?.nom || ''}`
+                  : 'Nouvelle équipe'}
               </button>
             )}
           </>
@@ -615,7 +623,7 @@ export default function ClubPage() {
             </div>
           </div>
 
-          {/* Filtres catégories — toutes les catégories disponibles */}
+          {/* Filtres catégories */}
           <div className="bg-white border border-[#e8e8f0] rounded-xl p-4">
             <p className="text-label-md text-on-surface-variant mb-3">Catégories</p>
             <div className="flex gap-2 flex-wrap">
@@ -629,25 +637,25 @@ export default function ClubPage() {
               >
                 Toutes ({usedCategories.length})
               </button>
-              {ALL_CATEGORIES.map(cat => {
-                const count = equipesByCategorie[cat]?.length || 0
+              {clubCategories.map(cat => {
+                const count = equipesByCategorie[cat.id]?.length || 0
                 const isActive = count > 0
                 return (
                   <button
-                    key={cat}
-                    onClick={() => setSelectedCatView(cat)}
+                    key={cat.id}
+                    onClick={() => setSelectedCatView(cat.id)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-label-md transition-all ${
-                      selectedCatView === cat
+                      selectedCatView === cat.id
                         ? 'bg-primary text-white shadow-sm'
                         : isActive
                           ? 'bg-surface-container text-on-surface border border-outline-variant hover:border-primary/40'
                           : 'bg-white text-on-surface-variant/50 border border-dashed border-outline-variant hover:text-on-surface hover:border-primary/40'
                     }`}
                   >
-                    {cat}
+                    {cat.nom}
                     {isActive && (
                       <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-                        selectedCatView === cat ? 'bg-white/20' : 'bg-primary/10 text-primary'
+                        selectedCatView === cat.id ? 'bg-white/20' : 'bg-primary/10 text-primary'
                       }`}>
                         {count}
                       </span>
@@ -664,9 +672,11 @@ export default function ClubPage() {
             <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-[#e8e8f0] flex items-center justify-between bg-surface-container-low/30">
                 <div className="flex items-center gap-3">
-                  <span className="px-3 py-1 bg-primary text-white rounded-full text-label-md font-bold">{selectedCatView}</span>
+                  <span className="px-3 py-1 bg-primary text-white rounded-full text-label-md font-bold">
+                    {clubCategories.find(c => c.id === selectedCatView)?.nom || ''}
+                  </span>
                   <span className="text-body-sm text-on-surface-variant">
-                    {equipesByCategorie[selectedCatView]?.length
+                    {(equipesByCategorie[selectedCatView] || []).length > 0
                       ? `${equipesByCategorie[selectedCatView].length} équipe${equipesByCategorie[selectedCatView].length > 1 ? 's' : ''}`
                       : 'Aucune équipe dans cette catégorie'}
                   </span>
@@ -682,17 +692,19 @@ export default function ClubPage() {
                 )}
               </div>
 
-              {!equipesByCategorie[selectedCatView]?.length ? (
+              {!(equipesByCategorie[selectedCatView] || []).length ? (
                 <div className="py-14 text-center text-on-surface-variant">
                   <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">sports_soccer</span>
-                  <p className="text-body-md font-medium">Aucune équipe en {selectedCatView}</p>
+                  <p className="text-body-md font-medium">
+                    Aucune équipe en {clubCategories.find(c => c.id === selectedCatView)?.nom || ''}
+                  </p>
                   {canManage && (
                     <button
                       onClick={() => openAddEquipe(selectedCatView)}
                       className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-label-md mx-auto hover:bg-primary/90 transition-colors"
                     >
                       <span className="material-symbols-outlined text-[18px]">add</span>
-                      Créer la première équipe {selectedCatView}
+                      Créer la première équipe {clubCategories.find(c => c.id === selectedCatView)?.nom || ''}
                     </button>
                   )}
                 </div>
@@ -729,22 +741,22 @@ export default function ClubPage() {
           ) : (
             /* ── Vue de toutes les catégories actives ── */
             usedCategories.map(cat => (
-              <div key={cat} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+              <div key={cat.id} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
                 <div className="px-5 py-3 border-b border-[#e8e8f0] flex items-center justify-between bg-surface-container-low/30">
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => setSelectedCatView(cat)}
+                      onClick={() => setSelectedCatView(cat.id)}
                       className="px-3 py-1 bg-primary text-white rounded-full text-label-md font-bold hover:bg-primary/80 transition-colors"
                     >
-                      {cat}
+                      {cat.nom}
                     </button>
                     <span className="text-body-sm text-on-surface-variant">
-                      {equipesByCategorie[cat].length} équipe{equipesByCategorie[cat].length > 1 ? 's' : ''}
+                      {equipesByCategorie[cat.id].length} équipe{equipesByCategorie[cat.id].length > 1 ? 's' : ''}
                     </span>
                   </div>
                   {canManage && (
                     <button
-                      onClick={() => openAddEquipe(cat)}
+                      onClick={() => openAddEquipe(cat.id)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-primary hover:bg-primary/10 rounded-lg text-label-md transition-colors"
                     >
                       <span className="material-symbols-outlined text-[18px]">add</span>Ajouter
@@ -752,7 +764,7 @@ export default function ClubPage() {
                   )}
                 </div>
                 <div className="divide-y divide-[#e8e8f0]">
-                  {equipesByCategorie[cat].map(eq => (
+                  {equipesByCategorie[cat.id].map(eq => (
                     <EquipeRow
                       key={eq.id} eq={eq} canManage={canManage}
                       onEdit={() => openEditEquipe(eq)}
@@ -842,11 +854,12 @@ export default function ClubPage() {
 
               {/* Catégorie */}
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Catégorie *</label>
+                <label className="text-label-md text-on-surface-variant">Catégorie</label>
                 <div className="relative">
-                  <select value={equipeForm.categorie} onChange={e => setEF('categorie', e.target.value)}
+                  <select value={equipeModalCatId} onChange={e => setEquipeModalCatId(Number(e.target.value))}
                     className="w-full appearance-none px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary pr-8 bg-white">
-                    {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    <option value={0}>— Aucune —</option>
+                    {clubCategories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                   </select>
                   <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
                 </div>

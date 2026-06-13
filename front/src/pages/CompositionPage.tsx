@@ -27,7 +27,7 @@ type ApiMatch = {
   type: string
   championnat: string | null
   statut: string
-  equipe: { id: number; nom: string; categorie: string }
+  equipe: { id: number; nom: string; categorie?: { id: number; nom: string } | null }
   terrain: { id: number; nom: string; adresse: string } | null
 }
 

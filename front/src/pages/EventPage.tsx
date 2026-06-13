@@ -20,7 +20,7 @@ type MatchEvent = {
   score_equipe?: number
   score_adversaire?: number
   notes?: string
-  equipe: { id: number; nom: string; categorie: string; couleur_maillot?: string }
+  equipe: { id: number; nom: string; categorie?: { id: number; nom: string } | null; couleur_maillot?: string }
   terrain?: { nom: string; adresse?: string }
   convocations: Convocation[]
 }
@@ -247,7 +247,7 @@ export default function EventPage() {
                 )}
                 <span className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px]">sports_soccer</span>
-                  {event.equipe.categorie}
+                  {event.equipe.categorie?.nom}
                 </span>
               </div>
 

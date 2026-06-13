@@ -57,9 +57,10 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
 
   // Équipes
   const [equipes, setEquipes] = useState<EquipeDetail[]>([])
+  const [clubCategories, setClubCategories] = useState<CategoryRef[]>([])
   const [eqLoading, setEqLoading] = useState(false)
   const [showEqForm, setShowEqForm] = useState(false)
-  const [eqForm, setEqForm] = useState({ nom: '', categorie: '', niveau: '', couleur: '#1b4332' })
+  const [eqForm, setEqForm] = useState({ nom: '', categorie_id: '', niveau: '', couleur: '#1b4332' })
   const [eqSaving, setEqSaving] = useState(false)
 
   // Membres
@@ -80,6 +81,7 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
     if (tab === 'equipes') {
       setEqLoading(true)
       api.get(`/equipes?club_id=${club.id}`).then(r => setEquipes(r.data.data || [])).catch(() => setEquipes([])).finally(() => setEqLoading(false))
+      api.get('/categories').then(r => setClubCategories(r.data.data || [])).catch(() => {})
     }
     if (tab === 'membres') {
       setMembresLoading(true)
@@ -103,10 +105,10 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
   const createEquipe = async (e: React.FormEvent) => {
     e.preventDefault(); setEqSaving(true)
     try {
-      await api.post('/equipes', { ...eqForm, club_id: club.id })
+      await api.post('/equipes', { ...eqForm, categorie_id: eqForm.categorie_id ? parseInt(eqForm.categorie_id) : null, club_id: club.id })
       const r = await api.get(`/equipes?club_id=${club.id}`)
       setEquipes(r.data.data || [])
-      setShowEqForm(false); setEqForm({ nom: '', categorie: '', niveau: '', couleur: '#1b4332' })
+      setShowEqForm(false); setEqForm({ nom: '', categorie_id: '', niveau: '', couleur: '#1b4332' })
     } catch {}
     finally { setEqSaving(false) }
   }
@@ -243,9 +245,12 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
                     placeholder="Ex : U15 A" className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">Catégorie *</label>
-                  <input required value={eqForm.categorie} onChange={e => setEqForm(f => ({ ...f, categorie: e.target.value }))}
-                    placeholder="Ex : U15" className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                  <label className="text-label-md text-on-surface-variant">Catégorie</label>
+                  <select value={eqForm.categorie_id} onChange={e => setEqForm(f => ({ ...f, categorie_id: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary bg-white">
+                    <option value="">Sans catégorie</option>
+                    {clubCategories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                  </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-label-md text-on-surface-variant">Niveau</label>
@@ -749,7 +754,7 @@ export default function AdminPage() {
                       required
                       className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
                       <option value="">Choisir une catégorie</option>
-                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
+                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie?.nom ? `${eq.categorie.nom} — ` : ''}{eq.nom}</option>)}
                     </select>
                   </div>
                 )}

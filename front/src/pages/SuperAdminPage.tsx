@@ -5,7 +5,8 @@ type Club = {
   id: number; nom: string; logo?: string; ville?: string; email?: string
   telephone?: string; description?: string; couleur_primaire?: string; actif: boolean
 }
-type Equipe = { id: number; nom: string; categorie: string; niveau?: string; couleur?: string; actif: boolean }
+type Category = { id: number; nom: string; couleur?: string }
+type Equipe = { id: number; nom: string; categorie?: Category | null; niveau?: string; couleur?: string; actif: boolean }
 type Role = 'superadmin' | 'admin' | 'dirigeant' | 'coach' | 'joueur' | 'parent' | 'visiteur'
 type User = { id: number; nom: string; prenom: string; email: string; role: Role; actif: boolean; derniere_connexion: string | null }
 type InviteCode = { id: number; code: string; role: string; label?: string; uses_count: number; max_uses: number; actif: boolean; categorie?: string; equipe?: { id: number; nom: string } }
@@ -38,18 +39,19 @@ export default function SuperAdminPage() {
 
   // Équipes / Catégories
   const [equipes, setEquipes] = useState<Equipe[]>([])
+  const [clubCategories, setClubCategories] = useState<Category[]>([])
   const [eqLoading, setEqLoading] = useState(false)
   // Création catégorie
   const [showCatForm, setShowCatForm] = useState(false)
   const [catForm, setCatForm] = useState({ categorie: '', couleur: '#1b4332' })
   const [catSaving, setCatSaving] = useState(false)
   // Création équipe dans une catégorie
-  const [addEqInCat, setAddEqInCat] = useState<string | null>(null) // categorie name
+  const [addEqInCat, setAddEqInCat] = useState<number | null>(null)
   const [eqForm, setEqForm] = useState({ nom: '', niveau: '' })
   const [eqSaving, setEqSaving] = useState(false)
   // Joueurs par catégorie (expanded)
-  const [expandedCat, setExpandedCat] = useState<string | null>(null)
-  const [catJoueurs, setCatJoueurs] = useState<Record<string, User[]>>({})
+  const [expandedCat, setExpandedCat] = useState<number | null>(null)
+  const [catJoueurs, setCatJoueurs] = useState<Record<number, User[]>>({})
 
   // Membres
   const [membres, setMembres] = useState<User[]>([])
@@ -79,7 +81,13 @@ export default function SuperAdminPage() {
     if (!selectedClub) return
     if (tab === 'equipes') {
       setEqLoading(true)
-      api.get(`/equipes?club_id=${selectedClub.id}`).then(r => setEquipes(r.data.data || [])).catch(() => setEquipes([])).finally(() => setEqLoading(false))
+      Promise.all([
+        api.get(`/equipes?club_id=${selectedClub.id}`).catch(() => null),
+        api.get(`/categories?club_id=${selectedClub.id}`).catch(() => null),
+      ]).then(([eRes, catRes]) => {
+        setEquipes(eRes?.data?.data || [])
+        setClubCategories(catRes?.data?.data || [])
+      }).finally(() => setEqLoading(false))
     }
     if (tab === 'membres') {
       setMemLoading(true)
@@ -89,6 +97,7 @@ export default function SuperAdminPage() {
       setCodesLoading(true)
       api.get(`/codes?club_id=${selectedClub.id}`).then(r => setCodes(r.data.data || [])).catch(() => setCodes([])).finally(() => setCodesLoading(false))
       api.get(`/equipes?club_id=${selectedClub.id}`).then(r => setEquipes(r.data.data || [])).catch(() => {})
+      api.get(`/categories?club_id=${selectedClub.id}`).then(r => setClubCategories(r.data.data || [])).catch(() => {})
     }
   }, [tab, selectedClub])
 
@@ -110,12 +119,17 @@ export default function SuperAdminPage() {
     setEquipes(r.data.data || [])
   }
 
-  // Créer une catégorie = créer une équipe vide avec ce nom de catégorie
+  const reloadCategories = async () => {
+    if (!selectedClub) return
+    const r = await api.get(`/categories?club_id=${selectedClub.id}`)
+    setClubCategories(r.data.data || [])
+  }
+
   const createCategorie = async (e: React.FormEvent) => {
     e.preventDefault(); if (!selectedClub) return; setCatSaving(true)
     try {
-      await api.post('/equipes', { nom: catForm.categorie, categorie: catForm.categorie, couleur: catForm.couleur, club_id: selectedClub.id })
-      await reloadEquipes()
+      await api.post('/categories', { nom: catForm.categorie, couleur: catForm.couleur, club_id: selectedClub.id })
+      await reloadCategories()
       setShowCatForm(false); setCatForm({ categorie: '', couleur: '#1b4332' })
     } catch {}
     finally { setCatSaving(false) }
@@ -124,26 +138,25 @@ export default function SuperAdminPage() {
   const createEquipeDansCat = async (e: React.FormEvent) => {
     e.preventDefault(); if (!selectedClub || !addEqInCat) return; setEqSaving(true)
     try {
-      // Récupère la couleur de la catégorie
-      const couleurCat = equipes.find(eq => eq.categorie === addEqInCat)?.couleur || '#1b4332'
-      await api.post('/equipes', { nom: eqForm.nom, categorie: addEqInCat, niveau: eqForm.niveau || undefined, couleur: couleurCat, club_id: selectedClub.id })
+      const cat = clubCategories.find(c => c.id === addEqInCat)
+      await api.post('/equipes', { nom: eqForm.nom, categorie_id: addEqInCat, niveau: eqForm.niveau || undefined, couleur_maillot: cat?.couleur || '#1b4332', club_id: selectedClub.id })
       await reloadEquipes()
       setAddEqInCat(null); setEqForm({ nom: '', niveau: '' })
     } catch {}
     finally { setEqSaving(false) }
   }
 
-  const loadJoueursCat = async (categorie: string) => {
+  const loadJoueursCat = async (catId: number) => {
     if (!selectedClub) return
-    if (expandedCat === categorie) { setExpandedCat(null); return }
-    setExpandedCat(categorie)
-    if (catJoueurs[categorie]) return
+    if (expandedCat === catId) { setExpandedCat(null); return }
+    setExpandedCat(catId)
+    if (catJoueurs[catId]) return
     try {
-      const equipeIds = equipes.filter(e => e.categorie === categorie).map(e => e.id)
+      const equipeIds = equipes.filter(e => e.categorie?.id === catId).map(e => e.id)
       const results = await Promise.all(equipeIds.map(id => api.get(`/licencies?equipe_id=${id}`).catch(() => ({ data: { data: [] } }))))
       const joueurs = results.flatMap(r => r.data.data || [])
       const unique = joueurs.filter((j, i, arr) => arr.findIndex(x => x.user_id === j.user_id) === i)
-      setCatJoueurs(prev => ({ ...prev, [categorie]: unique }))
+      setCatJoueurs(prev => ({ ...prev, [catId]: unique }))
     } catch {}
   }
 
@@ -170,8 +183,6 @@ export default function SuperAdminPage() {
     const matchSearch = `${u.prenom} ${u.nom} ${u.email}`.toLowerCase().includes(memSearch.toLowerCase())
     return matchSearch && (memRole === 'Tous' || u.role === memRole)
   })
-
-  const categories = [...new Set(equipes.map(e => e.categorie).filter(Boolean))]
 
   // ── Sélection du club ──────────────────────────────────────────
   if (!selectedClub) return (
@@ -373,7 +384,7 @@ export default function SuperAdminPage() {
 
           {eqLoading ? (
             <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-24 bg-surface-container-low rounded-xl animate-pulse" />)}</div>
-          ) : categories.length === 0 ? (
+          ) : clubCategories.length === 0 ? (
             <div className="py-16 text-center bg-white border border-[#e8e8f0] rounded-xl text-on-surface-variant">
               <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">folder_open</span>
               <p className="text-headline-md mb-1">Aucune catégorie</p>
@@ -381,29 +392,29 @@ export default function SuperAdminPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {categories.map(cat => {
-                const eqsDeCat = equipes.filter(e => e.categorie === cat)
-                const couleurCat = eqsDeCat[0]?.couleur || '#1b4332'
-                const joueursCat = catJoueurs[cat] || []
+              {clubCategories.map(cat => {
+                const eqsDeCat = equipes.filter(e => e.categorie?.id === cat.id)
+                const couleurCat = cat.couleur || '#1b4332'
+                const joueursCat = catJoueurs[cat.id] || []
                 return (
-                  <div key={cat} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+                  <div key={cat.id} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
                     {/* Header catégorie */}
                     <div className="px-5 py-4 flex items-center gap-3 border-b border-[#e8e8f0]">
                       <div className="w-4 h-4 rounded-full shrink-0" style={{ background: couleurCat }} />
                       <div className="flex-1">
-                        <p className="text-label-lg font-bold text-on-surface">{cat}</p>
+                        <p className="text-label-lg font-bold text-on-surface">{cat.nom}</p>
                         <p className="text-body-sm text-on-surface-variant">
                           {eqsDeCat.length} équipe{eqsDeCat.length > 1 ? 's' : ''}
-                          {expandedCat === cat && joueursCat.length > 0 ? ` · ${joueursCat.length} joueur${joueursCat.length > 1 ? 's' : ''}` : ''}
+                          {expandedCat === cat.id && joueursCat.length > 0 ? ` · ${joueursCat.length} joueur${joueursCat.length > 1 ? 's' : ''}` : ''}
                         </p>
                       </div>
-                      <button onClick={() => loadJoueursCat(cat)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-label-md transition-colors ${expandedCat === cat ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low'}`}>
+                      <button onClick={() => loadJoueursCat(cat.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-label-md transition-colors ${expandedCat === cat.id ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low'}`}>
                         <span className="material-symbols-outlined text-[16px]">person</span>
                         Joueurs
-                        <span className="material-symbols-outlined text-[14px]">{expandedCat === cat ? 'expand_less' : 'expand_more'}</span>
+                        <span className="material-symbols-outlined text-[14px]">{expandedCat === cat.id ? 'expand_less' : 'expand_more'}</span>
                       </button>
-                      <button onClick={() => { setAddEqInCat(addEqInCat === cat ? null : cat); setEqForm({ nom: '', niveau: '' }); setShowCatForm(false) }}
+                      <button onClick={() => { setAddEqInCat(addEqInCat === cat.id ? null : cat.id); setEqForm({ nom: '', niveau: '' }); setShowCatForm(false) }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-label-md hover:bg-primary-container transition-colors">
                         <span className="material-symbols-outlined text-[16px]">add</span>
                         Équipe
@@ -411,12 +422,12 @@ export default function SuperAdminPage() {
                     </div>
 
                     {/* Formulaire ajout équipe dans cette catégorie */}
-                    {addEqInCat === cat && (
+                    {addEqInCat === cat.id && (
                       <form onSubmit={createEquipeDansCat} className="px-5 py-4 bg-primary/5 border-b border-[#e8e8f0] flex items-end gap-3 flex-wrap">
                         <div className="flex-1 min-w-[150px] space-y-1">
                           <label className="text-label-md text-on-surface-variant">Nom de l'équipe *</label>
                           <input required value={eqForm.nom} onChange={e => setEqForm(f => ({ ...f, nom: e.target.value }))}
-                            placeholder={`Ex : ${cat} A`}
+                            placeholder={`Ex : ${cat.nom} A`}
                             className="w-full px-3 py-2 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary bg-white" />
                         </div>
                         <div className="flex-1 min-w-[130px] space-y-1">
@@ -455,7 +466,7 @@ export default function SuperAdminPage() {
                     </div>
 
                     {/* Joueurs de la catégorie (expanded) */}
-                    {expandedCat === cat && (
+                    {expandedCat === cat.id && (
                       <div className="border-t border-[#e8e8f0] bg-surface-container-low/50">
                         {joueursCat.length === 0 ? (
                           <p className="px-5 py-4 text-body-sm text-on-surface-variant">Aucun joueur dans cette catégorie.</p>
@@ -579,11 +590,11 @@ export default function SuperAdminPage() {
                 </div>
                 {['joueur', 'parent', 'coach'].includes(codeForm.role) && (
                   <div className="space-y-1">
-                    <label className="text-label-md text-on-surface-variant">Catégorie *</label>
-                    <select required value={codeForm.categorie} onChange={e => setCodeForm(f => ({ ...f, categorie: e.target.value }))}
+                    <label className="text-label-md text-on-surface-variant">Catégorie</label>
+                    <select value={codeForm.categorie} onChange={e => setCodeForm(f => ({ ...f, categorie: e.target.value }))}
                       className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
-                      <option value="">Choisir une catégorie</option>
-                      {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      <option value="">— Aucune —</option>
+                      {clubCategories.map(cat => <option key={cat.id} value={cat.nom}>{cat.nom}</option>)}
                     </select>
                   </div>
                 )}

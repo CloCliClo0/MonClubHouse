@@ -13,7 +13,7 @@ export default function JoinPage() {
   const [code, setCode]     = useState((searchParams.get('code') || '').toUpperCase())
   const [loading, setLoading] = useState(false)
   const [error, setError]   = useState('')
-  const [joinInfo, setJoinInfo] = useState<{ equipe: { nom: string; categorie: string }; role: string } | null>(null)
+  const [joinInfo, setJoinInfo] = useState<{ equipe?: { nom: string } | null; role: string } | null>(null)
 
   // Pour parents : liste des joueurs du club
   const [players, setPlayers]     = useState<Player[]>([])

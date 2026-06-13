@@ -28,7 +28,7 @@ type Match = {
   score_equipe?: number
   score_adversaire?: number
   notes?: string
-  equipe: { id: number; nom: string; categorie: string; couleur_maillot?: string }
+  equipe: { id: number; nom: string; categorie?: { id: number; nom: string } | null; couleur_maillot?: string }
   terrain?: { nom: string }
   convocations: Convocation[]
 }
@@ -214,7 +214,7 @@ export default function MatchDetailPage() {
         <div style={{ background: isLive ? 'linear-gradient(135deg,#7f1d1d,#b91c1c)' : 'linear-gradient(135deg,#1b4332,#2d6a4f)' }} className="px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-white/15 text-white text-label-md px-3 py-1 rounded-full">{match.equipe.categorie}</span>
+              <span className="bg-white/15 text-white text-label-md px-3 py-1 rounded-full">{match.equipe.categorie?.nom}</span>
               <span className="bg-white/15 text-white text-label-md px-3 py-1 rounded-full capitalize">{match.type}</span>
               <span className={`text-label-md px-3 py-1 rounded-full font-semibold ${
                 isLive ? 'bg-red-400 text-white animate-pulse' :

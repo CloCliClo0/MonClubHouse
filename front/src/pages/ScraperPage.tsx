@@ -8,7 +8,7 @@ type ParsedMatch = {
   selected: boolean
 }
 
-type Equipe = { id: number; nom: string; categorie: string }
+type Equipe = { id: number; nom: string; categorie?: { id: number; nom: string } | null }
 type Quota  = { used: number; limit: number; remaining: number }
 
 function currentSeason(): string {
@@ -221,7 +221,7 @@ export default function ScraperPage() {
             <select value={selectedEqId} onChange={e => setSelectedEqId(e.target.value)}
               className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all">
               {equipes.map(eq => (
-                <option key={eq.id} value={eq.id}>{eq.nom} ({eq.categorie})</option>
+                <option key={eq.id} value={eq.id}>{eq.nom}{eq.categorie?.nom ? ` (${eq.categorie.nom})` : ''}</option>
               ))}
             </select>
           </div>

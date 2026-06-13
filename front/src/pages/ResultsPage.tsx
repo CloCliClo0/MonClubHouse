@@ -12,7 +12,7 @@ type Match = {
   type: string
   domicile_exterieur: string
   championnat: string
-  equipe: { nom: string; categorie: string }
+  equipe: { nom: string; categorie?: { id: number; nom: string } | null }
 }
 
 type Standing = {
@@ -59,10 +59,10 @@ export default function ResultsPage() {
   }, [])
 
   // Catégories dynamiques depuis les matchs réels
-  const categories = ['Tous', ...Array.from(new Set(matches.map(m => m.equipe?.categorie).filter(Boolean)))]
+  const categories = ['Tous', ...Array.from(new Set(matches.map(m => m.equipe?.categorie?.nom).filter(Boolean)))] as string[]
 
   const filtered = matches.filter(m =>
-    cat === 'Tous' || m.equipe?.categorie === cat
+    cat === 'Tous' || m.equipe?.categorie?.nom === cat
   )
 
   const played   = filtered.filter(m => m.statut === 'termine')
@@ -159,7 +159,7 @@ export default function ResultsPage() {
                       onClick={() => m.statut === 'termine' && navigate(`/resultats/${m.id}`)}>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <span className="text-label-md text-on-surface-variant">{m.championnat || m.equipe?.categorie}</span>
+                          <span className="text-label-md text-on-surface-variant">{m.championnat || m.equipe?.categorie?.nom}</span>
                           <span className="text-on-surface-variant/40">•</span>
                           <span className="text-label-md text-on-surface-variant">
                             {(() => { const d = new Date((m.date||'').replace(' ','T')); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) })()}

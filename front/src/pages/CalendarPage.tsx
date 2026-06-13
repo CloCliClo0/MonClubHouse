@@ -8,10 +8,10 @@ type CalEvent = {
   date: string
   type: string
   statut: string
-  equipe: { id: number; nom: string; categorie: string }
+  equipe: { id: number; nom: string; categorie?: { id: number; nom: string } | null }
   terrain?: { nom: string }
 }
-type Equipe = { id: number; nom: string; categorie: string; coach_id?: number }
+type Equipe = { id: number; nom: string; categorie?: { id: number; nom: string } | null; coach_id?: number }
 
 type ViewMode = 'mois' | 'semaine' | 'jour'
 const DAYS = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM']
@@ -100,7 +100,7 @@ export default function CalendarPage() {
                 <option value="all">Tout le club</option>
               )}
               {equipes.map(eq => (
-                <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>
+                <option key={eq.id} value={eq.id}>{eq.categorie?.nom ? `${eq.categorie.nom} — ` : ''}{eq.nom}</option>
               ))}
             </select>
           )}

@@ -5,7 +5,7 @@ import api from '../services/api'
 type EventType = 'match' | 'amical' | 'coupe' | 'entrainement' | 'tournoi' | 'plateau' | 'reunion' | 'autre'
 type Step = 1 | 2 | 3 | 4
 
-type Equipe  = { id: number; nom: string; categorie: string }
+type Equipe  = { id: number; nom: string; categorie?: { id: number; nom: string } | null }
 type Terrain = { id: number; nom: string; type: string }
 
 const EVENT_TYPES: { key: EventType; label: string; icon: string; color: string; desc: string }[] = [
@@ -236,7 +236,7 @@ export default function CreateEventPage() {
                     className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10">
                     <option value="">Sélectionner une équipe</option>
                     {equipes.map(eq => (
-                      <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>
+                      <option key={eq.id} value={eq.id}>{eq.categorie?.nom ? `${eq.categorie.nom} — ` : ''}{eq.nom}</option>
                     ))}
                   </select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>

@@ -1,22 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 
-const CATEGORIES = ['U7','U8','U9','U10','U11','U12','U13','U14','U15','U16','U17','U18','U19','U20','U21','Senior','Veteran','Loisir']
-const GENRES     = [{ v: 'masculin', l: 'Masculin' }, { v: 'feminin', l: 'Féminin' }, { v: 'mixte', l: 'Mixte' }, { v: 'handisport', l: 'Handisport' }]
-const FORMATS    = ['4','5','7','8','11','15','autre']
-const COULEURS   = ['#0f5238','#dc2626','#d97706','#16a34a','#0369a1','#7c3aed','#db2777','#0891b2','#64748b','#1b4332','#2b2d42']
+type Category = { id: number; nom: string; couleur: string }
+
+const GENRES  = [{ v: 'masculin', l: 'Masculin' }, { v: 'feminin', l: 'Féminin' }, { v: 'mixte', l: 'Mixte' }, { v: 'handisport', l: 'Handisport' }]
+const FORMATS = ['4','5','7','8','11','15','autre']
+const COULEURS = ['#0f5238','#dc2626','#d97706','#16a34a','#0369a1','#7c3aed','#db2777','#0891b2','#64748b','#1b4332','#2b2d42']
 
 export default function CreateTeamPage() {
   const navigate = useNavigate()
+  const [categories, setCategories] = useState<Category[]>([])
   const [form, setForm] = useState({
-    nom: '', categorie: 'Senior', genre: 'masculin', format: '11',
+    nom: '', categorie_id: '' as string | number, genre: 'masculin', format: '11',
     couleur_maillot: '#0f5238', description: '',
   })
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+  useEffect(() => {
+    api.get('/categories').then(r => setCategories(r.data.data || [])).catch(() => {})
+  }, [])
+
+  const set = (k: string, v: string | number) => setForm(f => ({ ...f, [k]: v }))
+
+  const selectedCat = categories.find(c => c.id === Number(form.categorie_id))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,7 +32,10 @@ export default function CreateTeamPage() {
     setLoading(true)
     setError('')
     try {
-      await api.post('/equipes', form)
+      await api.post('/equipes', {
+        ...form,
+        categorie_id: form.categorie_id ? Number(form.categorie_id) : null,
+      })
       navigate('/equipes')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de la création')
@@ -64,7 +75,9 @@ export default function CreateTeamPage() {
             <div>
               <p className="text-headline-md text-on-surface">{form.nom || 'Nom de l\'équipe'}</p>
               <div className="flex gap-2 mt-1 flex-wrap">
-                <span className="text-label-md text-on-surface-variant bg-white px-2 py-0.5 rounded border border-[#e8e8f0]">{form.categorie}</span>
+                {selectedCat && (
+                  <span className="text-label-md text-on-surface-variant bg-white px-2 py-0.5 rounded border border-[#e8e8f0]">{selectedCat.nom}</span>
+                )}
                 <span className="text-label-md text-on-surface-variant bg-white px-2 py-0.5 rounded border border-[#e8e8f0]">{form.genre}</span>
                 <span className="text-label-md text-on-surface-variant bg-white px-2 py-0.5 rounded border border-[#e8e8f0]">{form.format}v{form.format}</span>
               </div>
@@ -82,14 +95,18 @@ export default function CreateTeamPage() {
           <div className="grid grid-cols-2 gap-4">
             {/* Catégorie */}
             <div className="space-y-1.5">
-              <label className="text-label-md text-on-surface-variant">Catégorie *</label>
+              <label className="text-label-md text-on-surface-variant">Catégorie</label>
               <div className="relative">
-                <select value={form.categorie} onChange={e => set('categorie', e.target.value)}
+                <select value={form.categorie_id} onChange={e => set('categorie_id', e.target.value)}
                   className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-xl text-body-md focus:outline-none focus:border-primary transition-all pr-10 bg-white">
-                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                  <option value="">Sans catégorie</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                 </select>
                 <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
               </div>
+              {categories.length === 0 && (
+                <p className="text-body-sm text-on-surface-variant/70">Créez des catégories dans Administration.</p>
+              )}
             </div>
 
             {/* Format */}
@@ -130,7 +147,7 @@ export default function CreateTeamPage() {
                   style={{ backgroundColor: c }} />
               ))}
               <label className="cursor-pointer">
-                <input type="color" value={form.couleur_maillot} onChange={e => set('couleur_maillot', e.target.value)}
+                <input type="color" value={String(form.couleur_maillot)} onChange={e => set('couleur_maillot', e.target.value)}
                   className="sr-only" />
                 <div className="w-9 h-9 rounded-full border-2 border-dashed border-outline-variant flex items-center justify-center hover:border-primary transition-colors">
                   <span className="material-symbols-outlined text-[16px] text-on-surface-variant">palette</span>
@@ -142,7 +159,7 @@ export default function CreateTeamPage() {
           {/* Description */}
           <div className="space-y-1.5">
             <label className="text-label-md text-on-surface-variant">Description (optionnel)</label>
-            <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={3}
+            <textarea value={String(form.description)} onChange={e => set('description', e.target.value)} rows={3}
               placeholder="Informations complémentaires sur cette équipe…"
               className="w-full px-4 py-3 border border-outline-variant rounded-xl text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none" />
           </div>

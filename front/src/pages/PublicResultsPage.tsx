@@ -10,7 +10,7 @@ type Match = {
   statut: string
   domicile_exterieur: string
   championnat: string
-  equipe?: { nom: string; categorie: string }
+  equipe?: { nom: string; categorie?: { id: number; nom: string } | null }
 }
 
 type Standing = {
@@ -75,11 +75,11 @@ export default function PublicResultsPage() {
   const losses = matches.filter(m => getResult(m) === 'Défaite').length
 
   // Catégories disponibles
-  const cats = ['Toutes', ...Array.from(new Set(matches.map(m => m.equipe?.categorie).filter(Boolean)))] as string[]
+  const cats = ['Toutes', ...Array.from(new Set(matches.map(m => m.equipe?.categorie?.nom).filter(Boolean)))] as string[]
 
   const filteredMatches = matches.filter(m => {
     const matchSearch = search.trim().toLowerCase()
-    const matchesCat  = catFilter === 'Toutes' || m.equipe?.categorie === catFilter
+    const matchesCat  = catFilter === 'Toutes' || m.equipe?.categorie?.nom === catFilter
     const matchesSearch = !matchSearch ||
       m.adversaire?.toLowerCase().includes(matchSearch) ||
       m.equipe?.nom?.toLowerCase().includes(matchSearch) ||
@@ -202,7 +202,7 @@ export default function PublicResultsPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-body-sm text-on-surface-variant">
-                              {m.championnat || m.equipe?.categorie} • {new Date(m.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                              {m.championnat || m.equipe?.categorie?.nom} • {new Date(m.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </p>
                             <div className="flex items-center gap-3 mt-1 flex-wrap">
                               <span className="text-label-lg text-primary font-bold">{m.equipe?.nom}</span>
