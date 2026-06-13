@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, requireRole } = require('../middlewares/auth');
+const { authenticate } = require('../middlewares/auth');
+const { requireRole } = require('../middlewares/rbac');
 const ctrl = require('../controllers/categoryController');
 
 router.get('/', authenticate, ctrl.getByClub);
