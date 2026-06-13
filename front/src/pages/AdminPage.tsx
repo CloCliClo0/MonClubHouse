@@ -376,7 +376,7 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
                     <select required value={newCode.equipe_id} onChange={e => setNewCode(f => ({ ...f, equipe_id: e.target.value }))}
                       className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
                       <option value="">Choisir une équipe</option>
-                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie}</option>)}
+                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
                     </select>
                   </div>
                 )}
@@ -470,6 +470,7 @@ export default function AdminPage() {
   const [error, setError]     = useState('')
   const [assignForm, setAssignForm] = useState({ club_id: '', role: 'joueur' as Role, equipe_id: '' })
   const [assignEquipes, setAssignEquipes] = useState<Equipe[]>([])
+  const [assignCategorie, setAssignCategorie] = useState('')
 
   // ── État codes ────────────────────────────────────────────
   const [codes, setCodes]         = useState<InviteCode[]>([])
@@ -567,6 +568,7 @@ export default function AdminPage() {
   const openAssign = (u: User) => {
     setAssignForm({ club_id: String(u.club_id || ''), role: u.role, equipe_id: '' })
     setAssignEquipes([])
+    setAssignCategorie('')
     if (u.club_id) api.get(`/equipes?club_id=${u.club_id}`).then(r => setAssignEquipes(r.data.data || [])).catch(() => {})
     setError('')
     setModal({ type: 'assign', user: u })
@@ -745,7 +747,7 @@ export default function AdminPage() {
                       required
                       className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
                       <option value="">Choisir une catégorie</option>
-                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie}</option>)}
+                      {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie} — {eq.nom}</option>)}
                     </select>
                   </div>
                 )}
@@ -1112,18 +1114,35 @@ export default function AdminPage() {
                 </select>
               </div>
 
-              {/* Équipe (optionnel, pour joueur/coach/parent) */}
+              {/* Catégorie (optionnel, pour joueur/coach/parent) */}
               {['joueur', 'coach', 'parent'].includes(assignForm.role) && assignEquipes.length > 0 && (
                 <div className="space-y-1.5">
-                  <label className="text-label-md text-on-surface-variant">Catégorie / Équipe <span className="text-on-surface-variant/60">(optionnel)</span></label>
+                  <label className="text-label-md text-on-surface-variant">
+                    Catégorie <span className="text-on-surface-variant/60">(optionnel)</span>
+                  </label>
                   <select
-                    value={assignForm.equipe_id}
-                    onChange={e => setAssignForm(f => ({ ...f, equipe_id: e.target.value }))}
+                    value={assignCategorie}
+                    onChange={e => {
+                      setAssignCategorie(e.target.value)
+                      const first = assignEquipes.find(eq => eq.categorie === e.target.value)
+                      setAssignForm(f => ({ ...f, equipe_id: first ? String(first.id) : '' }))
+                    }}
                     className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
                   >
-                    <option value="">Sans équipe spécifique</option>
-                    {assignEquipes.map(eq => <option key={eq.id} value={eq.id}>{eq.categorie}</option>)}
+                    <option value="">Sans catégorie spécifique</option>
+                    {[...new Set(assignEquipes.map(e => e.categorie).filter(Boolean))].map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
+                  {assignCategorie && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {assignEquipes.filter(e => e.categorie === assignCategorie).map(eq => (
+                        <span key={eq.id} className="px-2.5 py-1 bg-primary/10 text-primary text-label-md rounded-full border border-primary/20">
+                          {eq.nom}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
