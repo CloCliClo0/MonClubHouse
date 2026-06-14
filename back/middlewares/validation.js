@@ -23,9 +23,10 @@ const validateClub = [
 
 const validateEquipe = [
   body('nom').trim().notEmpty().isLength({ max: 200 }).withMessage('Nom requis'),
-  body('categorie').notEmpty().withMessage('Catégorie requise'),
+  body('categorie_id').optional().isInt({ min: 1 }).withMessage('Catégorie invalide'),
   body('sport_id').optional().isInt({ min: 1 }).withMessage('Sport invalide'),
-  body('genre').optional().isIn(['masculin', 'feminin', 'mixte', 'handisport']).withMessage('Genre invalide')
+  body('niveau').optional().trim().isLength({ max: 100 }),
+  body('couleur').optional().trim().isLength({ max: 7 })
 ];
 
 const validateMatch = [
