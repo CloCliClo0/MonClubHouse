@@ -21,7 +21,19 @@ const getAll = async (req, res) => {
       });
       const linkedIds = coachLinks.map(l => l.equipe_id);
       if (linkedIds.length === 0) return res.json({ success: true, data: [] });
-      where.id = { [Op.in]: linkedIds };
+
+      // Expand to all equipes in the same categories as direct assignments
+      const linkedEquipes = await Equipe.findAll({
+        where: { id: { [Op.in]: linkedIds }, actif: true },
+        attributes: ['id', 'categorie_id'],
+        raw: true,
+      });
+      const categorieIds = [...new Set(linkedEquipes.map(e => e.categorie_id).filter(Boolean))];
+      if (categorieIds.length > 0) {
+        where.categorie_id = { [Op.in]: categorieIds };
+      } else {
+        where.id = { [Op.in]: linkedIds };
+      }
     } else if (['joueur', 'parent'].includes(role)) {
       const licencies = await Licencie.findAll({
         where: { user_id: req.user.id },
@@ -122,6 +134,20 @@ const remove = async (req, res) => {
   }
 };
 
+const addCoach = async (req, res) => {
+  try {
+    const equipe = await Equipe.findByPk(req.params.id);
+    if (!equipe) return res.status(404).json({ success: false, message: 'Équipe introuvable' });
+    const { user_id } = req.body;
+    if (!user_id) return res.status(400).json({ success: false, message: 'user_id requis' });
+    await EquipeCoach.findOrCreate({ where: { equipe_id: equipe.id, user_id } });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[equipe.addCoach]', err.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 const updateCoachs = async (req, res) => {
   try {
     const equipe = await Equipe.findByPk(req.params.id);
@@ -167,4 +193,4 @@ const getCategoriesCoach = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, update, remove, updateCoachs, getCategoriesCoach };
+module.exports = { getAll, getById, create, update, remove, addCoach, updateCoachs, getCategoriesCoach };

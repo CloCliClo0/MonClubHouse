@@ -598,6 +598,15 @@ export default function AdminPage() {
           club_id: assignForm.club_id ? parseInt(assignForm.club_id) : null,
           role:    assignForm.role,
         })
+        // Si on assigne un coach à une catégorie, créer les liens equipe_coachs
+        if (assignForm.role === 'coach' && assignCategorie) {
+          const equipesInCat = assignEquipes.filter(e => String(e.categorie?.id) === assignCategorie)
+          await Promise.all(
+            equipesInCat.map(eq =>
+              api.post(`/equipes/${eq.id}/coachs/add`, { user_id: modal.user.id }).catch(() => {})
+            )
+          )
+        }
         load()
         setModal({ type: 'none' })
       }
