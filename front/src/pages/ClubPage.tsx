@@ -27,8 +27,9 @@ type UserShort = { id: number; nom: string; prenom: string; role: string }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const BLANK_TERRAIN  = { nom: '', type: 'gazon_naturel', capacite: '', adresse: '' }
-const BLANK_EQUIPE   = { nom: '', genre: 'masculin', format: '11', couleur_maillot: '#0f5238', description: '' }
+const BLANK_TERRAIN   = { nom: '', type: 'gazon_naturel', capacite: '', adresse: '' }
+const BLANK_EQUIPE    = { nom: '', genre: 'masculin', format: '11', couleur_maillot: '#0f5238', description: '' }
+const BLANK_CATEGORY  = { nom: '', couleur: '#1b4332' }
 
 const TERRAIN_TYPES = [
   { v: 'gazon_naturel',     l: 'Gazon naturel'    },
@@ -157,6 +158,12 @@ export default function ClubPage() {
   const [equipeError, setEquipeError]   = useState<string | null>(null)
   const [deleteEquipeId, setDeleteEquipeId] = useState<number | null>(null)
   const [selectedCatView, setSelectedCatView] = useState<number | null>(null)
+
+  // ── Catégories ────────────────────────────────────────────────
+  const [catModal, setCatModal] = useState<{ open: false } | { open: true; editing: Category | null }>({ open: false })
+  const [catForm, setCatForm]   = useState(BLANK_CATEGORY)
+  const [savingCat, setSavingCat]   = useState(false)
+  const [deleteCatId, setDeleteCatId] = useState<number | null>(null)
 
   // ── Load ──────────────────────────────────────────────────────────
 
@@ -316,6 +323,34 @@ export default function ClubPage() {
 
   const setEF = (k: string, v: string) => setEquipeForm(f => ({ ...f, [k]: v }))
 
+  // ── Category handlers ─────────────────────────────────────────
+
+  const openAddCategory = () => {
+    setCatForm(BLANK_CATEGORY)
+    setCatModal({ open: true, editing: null })
+  }
+  const openEditCategory = (cat: Category) => {
+    setCatForm({ nom: cat.nom, couleur: cat.couleur || '#1b4332' })
+    setCatModal({ open: true, editing: cat })
+  }
+  const handleSaveCategory = async () => {
+    if (!catForm.nom.trim()) return
+    setSavingCat(true)
+    try {
+      if (catModal.open && catModal.editing) {
+        await api.put(`/categories/${catModal.editing.id}`, catForm)
+      } else {
+        await api.post('/categories', catForm)
+      }
+      load(); setCatModal({ open: false })
+    } catch {}
+    finally { setSavingCat(false) }
+  }
+  const handleDeleteCategory = async (id: number) => {
+    await api.delete(`/categories/${id}`).catch(() => {})
+    load(); setDeleteCatId(null)
+  }
+
   // ── Loading / No club ─────────────────────────────────────────────
 
   if (loading) {
@@ -384,13 +419,20 @@ export default function ClubPage() {
               </button>
             )}
             {activeTab === 'categories' && (
-              <button onClick={() => openAddEquipe(selectedCatView ?? undefined)}
-                className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary/90 transition-colors shadow-sm">
-                <span className="material-symbols-outlined text-[20px]">add</span>
-                {selectedCatView
-                  ? `Équipe ${clubCategories.find(c => c.id === selectedCatView)?.nom || ''}`
-                  : 'Nouvelle équipe'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={openAddCategory}
+                  className="flex items-center gap-2 border border-primary text-primary px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary/5 transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                  Nouvelle catégorie
+                </button>
+                <button onClick={() => openAddEquipe(selectedCatView ?? undefined)}
+                  className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary/90 transition-colors shadow-sm">
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                  {selectedCatView
+                    ? `Équipe ${clubCategories.find(c => c.id === selectedCatView)?.nom || ''}`
+                    : 'Nouvelle équipe'}
+                </button>
+              </div>
             )}
           </>
         )}
@@ -640,27 +682,50 @@ export default function ClubPage() {
               {clubCategories.map(cat => {
                 const count = equipesByCategorie[cat.id]?.length || 0
                 const isActive = count > 0
+                const isSelected = selectedCatView === cat.id
                 return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCatView(cat.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-label-md transition-all ${
-                      selectedCatView === cat.id
-                        ? 'bg-primary text-white shadow-sm'
-                        : isActive
-                          ? 'bg-surface-container text-on-surface border border-outline-variant hover:border-primary/40'
-                          : 'bg-white text-on-surface-variant/50 border border-dashed border-outline-variant hover:text-on-surface hover:border-primary/40'
-                    }`}
-                  >
-                    {cat.nom}
-                    {isActive && (
-                      <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-                        selectedCatView === cat.id ? 'bg-white/20' : 'bg-primary/10 text-primary'
-                      }`}>
-                        {count}
-                      </span>
+                  <div key={cat.id} className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => setSelectedCatView(cat.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-label-md transition-all ${
+                        isSelected
+                          ? 'bg-primary text-white shadow-sm'
+                          : isActive
+                            ? 'bg-surface-container text-on-surface border border-outline-variant hover:border-primary/40'
+                            : 'bg-white text-on-surface-variant/50 border border-dashed border-outline-variant hover:text-on-surface hover:border-primary/40'
+                      }`}
+                    >
+                      {cat.couleur && (
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.couleur }} />
+                      )}
+                      {cat.nom}
+                      {isActive && (
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                          isSelected ? 'bg-white/20' : 'bg-primary/10 text-primary'
+                        }`}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                    {canManage && (
+                      <>
+                        <button
+                          onClick={() => openEditCategory(cat)}
+                          title="Modifier la catégorie"
+                          className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant/50 hover:text-on-surface transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">edit</span>
+                        </button>
+                        <button
+                          onClick={() => setDeleteCatId(cat.id)}
+                          title="Supprimer la catégorie"
+                          className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 text-on-surface-variant/50 hover:text-error transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">delete</span>
+                        </button>
+                      </>
                     )}
-                  </button>
+                  </div>
                 )
               })}
             </div>
@@ -992,6 +1057,89 @@ export default function ClubPage() {
                 className="flex-1 py-2.5 border border-outline-variant rounded-xl text-label-lg hover:bg-surface-container-low">Annuler</button>
               <button onClick={() => handleDeleteTerrain(deleteTerrainId)}
                 className="flex-1 py-2.5 bg-error text-white rounded-xl text-label-lg hover:opacity-90">Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════ Modal Catégorie ════════════════════════════ */}
+      {catModal.open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setCatModal({ open: false })}>
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-[#e8e8f0] flex items-center justify-between">
+              <h3 className="text-headline-md">{catModal.editing ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</h3>
+              <button onClick={() => setCatModal({ open: false })} className="p-2 hover:bg-surface-container-low rounded-lg text-on-surface-variant">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-label-md text-on-surface-variant">Nom *</label>
+                <input
+                  value={catForm.nom}
+                  onChange={e => setCatForm(f => ({ ...f, nom: e.target.value }))}
+                  placeholder="Ex : Senior, U18, Féminine…"
+                  autoFocus
+                  className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-label-md text-on-surface-variant">Couleur</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={catForm.couleur}
+                    onChange={e => setCatForm(f => ({ ...f, couleur: e.target.value }))}
+                    className="w-10 h-10 rounded-lg border border-outline-variant cursor-pointer"
+                  />
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-outline-variant text-label-md">
+                    <span className="w-3 h-3 rounded-full" style={{ background: catForm.couleur }} />
+                    {catForm.nom || 'Aperçu'}
+                  </div>
+                  <span className="text-body-sm text-on-surface-variant font-mono">{catForm.couleur}</span>
+                </div>
+              </div>
+            </div>
+            <div className="p-5 border-t border-[#e8e8f0] flex justify-end gap-3">
+              <button onClick={() => setCatModal({ open: false })}
+                className="px-4 py-2.5 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">
+                Annuler
+              </button>
+              <button
+                onClick={handleSaveCategory}
+                disabled={savingCat || !catForm.nom.trim()}
+                className="px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary/90 disabled:opacity-40 flex items-center gap-2"
+              >
+                {savingCat
+                  ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>Enregistrement…</>
+                  : <><span className="material-symbols-outlined text-[18px]">{catModal.editing ? 'save' : 'add'}</span>{catModal.editing ? 'Enregistrer' : 'Créer'}</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════ Confirm suppression catégorie ══════════════ */}
+      {deleteCatId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl p-6 text-center">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-error text-[28px]">category</span>
+            </div>
+            <h3 className="text-headline-md mb-2">Supprimer cette catégorie ?</h3>
+            <p className="text-body-md text-on-surface-variant mb-6">
+              Les équipes liées ne seront pas supprimées mais n'auront plus de catégorie.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteCatId(null)}
+                className="flex-1 py-2.5 border border-outline-variant rounded-xl text-label-lg hover:bg-surface-container-low">
+                Annuler
+              </button>
+              <button onClick={() => handleDeleteCategory(deleteCatId)}
+                className="flex-1 py-2.5 bg-error text-white rounded-xl text-label-lg hover:opacity-90">
+                Supprimer
+              </button>
             </div>
           </div>
         </div>
