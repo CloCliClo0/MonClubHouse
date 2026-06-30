@@ -1,5 +1,4 @@
-const { Licencie, User, Equipe, Category } = require('../models');
-const { validationResult } = require('express-validator');
+const { Licencie, User, Equipe, Category, Convocation, Match } = require('../models');
 
 const getAll = async (req, res) => {
   try {
@@ -74,4 +73,46 @@ const changerEquipe = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, update, changerEquipe };
+// GET /licencies/mes-convocations — convocations du joueur connecté ou de ses enfants (parent)
+const mesConvocations = async (req, res) => {
+  try {
+    const matchInclude = {
+      model: Match,
+      as: 'match',
+      attributes: ['id', 'date', 'heure', 'type', 'adversaire', 'lieu', 'statut'],
+    };
+
+    let convocations = [];
+
+    if (req.user.role === 'joueur') {
+      convocations = await Convocation.findAll({
+        where: { joueur_id: req.user.id },
+        include: [matchInclude],
+        order: [[{ model: Match, as: 'match' }, 'date', 'ASC']],
+      });
+    } else if (req.user.role === 'parent') {
+      const enfants = await User.findAll({
+        where: { parent_id: req.user.id },
+        attributes: ['id', 'nom', 'prenom'],
+      });
+      if (enfants.length > 0) {
+        const enfantIds = enfants.map(e => e.id);
+        convocations = await Convocation.findAll({
+          where: { joueur_id: enfantIds },
+          include: [
+            matchInclude,
+            { model: User, as: 'joueur', attributes: ['id', 'nom', 'prenom'] },
+          ],
+          order: [[{ model: Match, as: 'match' }, 'date', 'ASC']],
+        });
+      }
+    }
+
+    return res.json({ success: true, data: convocations });
+  } catch (err) {
+    console.error('[licencie.mesConvocations]', err.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getAll, getById, create, update, changerEquipe, mesConvocations };

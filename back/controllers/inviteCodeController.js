@@ -23,11 +23,13 @@ const generateCode = () => {
  * Renvoie null si inexistant.
  */
 const findActiveCode = async (code) => {
+  const { Category } = require('../models');
   return InviteCode.findOne({
     where: { code, actif: true },
     include: [
       { model: Club,   as: 'club',   attributes: ['id', 'nom', 'couleur_primaire'], required: false },
-      { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'],        required: false }
+      { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],     required: false,
+        include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] }
     ]
   });
 };
@@ -69,7 +71,7 @@ const validateCode = async (req, res) => {
       success: true,
       data: {
         club:      { nom: invite.club.nom, couleur_primaire: invite.club.couleur_primaire },
-        equipe:    invite.equipe ? { nom: invite.equipe.nom, categorie: invite.equipe.categorie } : null,
+        equipe:    invite.equipe ? { nom: invite.equipe.nom, categorie: invite.equipe.categorie?.nom || null } : null,
         role:      invite.role,
         label:     invite.label,
         remaining: invite.max_uses - invite.uses_count
@@ -151,10 +153,12 @@ const joinByCode = async (req, res) => {
  */
 const listCodes = async (req, res) => {
   try {
+    const { Category } = require('../models');
     const codes = await InviteCode.findAll({
       where: { club_id: req.user.club_id },
       include: [
-        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] },
+        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
+          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] },
         { model: User,   as: 'createur', attributes: ['id', 'prenom', 'nom', 'email'] }
       ],
       order: [['createdAt', 'DESC']]

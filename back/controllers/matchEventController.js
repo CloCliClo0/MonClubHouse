@@ -19,7 +19,9 @@ const getByMatch = async (req, res) => {
 const addEvent = async (req, res) => {
   try {
     const { type, minute, joueur_id, equipe, description } = req.body;
-    const match = await Match.findOne({ where: { id: req.params.id, club_id: req.user.club_id } });
+    const matchWhere = { id: req.params.id };
+    if (req.user.club_id) matchWhere.club_id = req.user.club_id;
+    const match = await Match.findOne({ where: matchWhere });
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
 
     // Mettre le match en_cours si premier événement non-debut
@@ -88,7 +90,9 @@ const deleteEvent = async (req, res) => {
 // PATCH /matchs/:id/end — terminer le match (mode live)
 const endMatch = async (req, res) => {
   try {
-    const match = await Match.findOne({ where: { id: req.params.id, club_id: req.user.club_id } });
+    const matchWhere = { id: req.params.id };
+    if (req.user.club_id) matchWhere.club_id = req.user.club_id;
+    const match = await Match.findOne({ where: matchWhere });
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
     await match.update({ statut: 'termine' });
 

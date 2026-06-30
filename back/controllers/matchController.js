@@ -5,6 +5,10 @@ const { Op } = require('sequelize');
 const getAll = async (req, res) => {
   try {
     const where = { statut: { [Op.ne]: 'annule' } };
+    // Filtre par club (sauf superadmin)
+    if (req.user.role !== 'superadmin' && req.user.club_id) {
+      where.club_id = req.user.club_id;
+    }
     if (req.query.equipe_id) where.equipe_id = req.query.equipe_id;
     if (req.query.type) where.type = req.query.type;
     if (req.query.statut) where.statut = req.query.statut;

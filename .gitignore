@@ -23,3 +23,8 @@ donnees.sql
 *.tmp
 *.swp
 *.swo
+
+memory/
+context/
+changelog/
+instruction.md

@@ -101,14 +101,27 @@ const creerConvocations = async (req, res) => {
 
 const repondre = async (req, res) => {
   try {
-    const { statut, motif_absence } = req.body;
+    const { statut, motif_absence, joueur_id } = req.body;
     const validStatuts = ['present', 'absent', 'incertain'];
     if (!validStatuts.includes(statut)) {
       return res.status(400).json({ success: false, message: 'Statut invalide' });
     }
 
+    // Déterminer l'ID du joueur cible
+    let targetJoueurId = req.user.id;
+
+    if (['coach', 'dirigeant', 'admin', 'superadmin'].includes(req.user.role) && joueur_id) {
+      // Coach/admin peut répondre pour n'importe quel joueur
+      targetJoueurId = joueur_id;
+    } else if (req.user.role === 'parent' && joueur_id) {
+      // Parent peut répondre pour son enfant uniquement
+      const enfant = await User.findOne({ where: { id: joueur_id, parent_id: req.user.id } });
+      if (!enfant) return res.status(403).json({ success: false, message: 'Enfant introuvable' });
+      targetJoueurId = joueur_id;
+    }
+
     const conv = await Convocation.findOne({
-      where: { match_id: req.params.matchId, joueur_id: req.user.id },
+      where: { match_id: req.params.matchId, joueur_id: targetJoueurId },
     });
     if (!conv) return res.status(404).json({ success: false, message: 'Convocation introuvable' });
 
