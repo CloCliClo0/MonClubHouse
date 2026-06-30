@@ -20,6 +20,7 @@ export default function Sidebar({ open, onClose }: Props) {
     MESSAGES:    { path: '/messages',     icon: 'chat',                 label: t.nav.messages      },
     EQUIPES:     { path: '/equipes',      icon: 'sports_soccer',        label: t.nav.equipes       },
     CONVOCS:     { path: '/convocations', icon: 'assignment_turned_in', label: t.nav.convocations  },
+    PRESENCES:   { path: '/mes-presences',icon: 'how_to_reg',           label: t.nav.presences     },
     COMPO:       { path: '/composition',  icon: 'format_list_numbered', label: t.nav.composition   },
     ADVERSAIRES: { path: '/adversaires',  icon: 'groups',               label: t.nav.adversaires   },
     SAISON:      { path: '/saison',       icon: 'emoji_events',         label: t.nav.saison        },
@@ -30,6 +31,7 @@ export default function Sidebar({ open, onClose }: Props) {
     SUPER_ADMIN: { path: '/super-admin',  icon: 'shield_person',        label: 'Gestion clubs'     },
     DIAGNOSTIC:  { path: '/diagnostic',  icon: 'bug_report',           label: 'Diagnostic'        },
     SCRAPER:     { path: '/scraper',      icon: 'code_blocks',          label: 'Import FFF'        },
+    ARBITRAGE:   { path: '/arbitrage',   icon: 'sports_handball',       label: 'Arbitrage'         },
   }
 
   const roleLabel = t.roles[role as keyof typeof t.roles] ?? role
@@ -45,17 +47,18 @@ export default function Sidebar({ open, onClose }: Props) {
     ],
     dirigeant: [
       { label: 'Club',          items: [NAV.MON_CLUB, NAV.EQUIPES] },
-      { label: 'Planning',      items: [NAV.CALENDRIER] },
+      { label: 'Planning',      items: [NAV.CALENDRIER, NAV.ARBITRAGE] },
       { label: 'Compétition',   items: [NAV.SAISON, NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
     coach: [
       { label: 'Mon équipe',    items: [NAV.EQUIPES, NAV.CALENDRIER, NAV.CONVOCS, NAV.COMPO] },
       { label: 'Compétition',   items: [NAV.SAISON, NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
+      { label: 'Arbitrage',     items: [NAV.ARBITRAGE] },
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
-    joueur:   [{ label: 'Mon activité', items: [NAV.SAISON, NAV.CONVOCS, NAV.MESSAGES] }],
-    parent:   [{ label: 'Mon enfant',   items: [NAV.SAISON, NAV.CONVOCS, NAV.MESSAGES] }],
+    joueur:   [{ label: 'Mon activité', items: [NAV.CALENDRIER, NAV.PRESENCES, NAV.ARBITRAGE, NAV.CONVOCS, NAV.STATS, NAV.MESSAGES] }],
+    parent:   [{ label: 'Mon enfant',   items: [NAV.CALENDRIER, NAV.PRESENCES, NAV.CONVOCS, NAV.STATS, NAV.MESSAGES] }],
     visiteur: [{ label: 'Public',       items: [NAV.RESULTATS] }],
   }
 

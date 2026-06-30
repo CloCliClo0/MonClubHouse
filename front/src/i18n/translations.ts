@@ -19,6 +19,7 @@ const t = {
       parametres:    'Paramètres',
       deconnexion:   'Déconnexion',
       aide:          'Aide & Ressources',
+      presences:     'Mes présences',
       nouvelEvent:   'Nouvel événement',
     },
     // ── Commun ──────────────────────────────────────────────────────
@@ -251,6 +252,7 @@ const t = {
       parametres:    'Settings',
       deconnexion:   'Sign out',
       aide:          'Help & Resources',
+      presences:     'My Presences',
       nouvelEvent:   'New Event',
     },
     common: {

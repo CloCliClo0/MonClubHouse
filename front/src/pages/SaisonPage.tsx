@@ -379,8 +379,8 @@ export default function SaisonPage() {
         <>
           {/* Stats bar (championnat uniquement) */}
           {activeTab === 'match' && stats.P > 0 && (
-            <div className="bg-white border border-[#e8e8f0] rounded-xl p-4 mb-5 overflow-x-auto">
-              <div className="flex items-center gap-8 min-w-max">
+            <div className="bg-white border border-[#e8e8f0] rounded-xl p-4 mb-5">
+              <div className="grid grid-cols-4 gap-x-3 gap-y-3 sm:flex sm:items-center sm:gap-8">
                 {[
                   { label: 'Joués', value: stats.P, cls: 'text-on-surface' },
                   { label: 'Victoires', value: stats.W, cls: 'text-green-600' },
@@ -390,7 +390,7 @@ export default function SaisonPage() {
                   { label: 'Buts −', value: stats.GA, cls: 'text-on-surface' },
                   { label: 'Points', value: stats.Pts, cls: 'text-primary' },
                 ].map((s, i, arr) => (
-                  <div key={s.label} className={`text-center ${i < arr.length - 1 ? 'pr-8 border-r border-[#e8e8f0]' : ''}`}>
+                  <div key={s.label} className={`text-center ${i < arr.length - 1 ? 'sm:pr-8 sm:border-r sm:border-[#e8e8f0]' : ''}`}>
                     <p className={`text-2xl font-black ${s.cls}`}>{s.value}</p>
                     <p className="text-label-sm text-on-surface-variant mt-0.5">{s.label}</p>
                   </div>
@@ -400,7 +400,7 @@ export default function SaisonPage() {
           )}
 
           {/* Onglets */}
-          <div className="flex gap-1 bg-surface-container-low p-1 rounded-xl mb-5 w-fit overflow-x-auto">
+          <div className="flex gap-1 bg-surface-container-low p-1 rounded-xl mb-5 overflow-x-auto">
             {(Object.entries(TAB_LABELS) as [TabKey, { label: string; icon: string }][]).map(([tab, meta]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-label-md transition-all whitespace-nowrap ${
@@ -867,8 +867,8 @@ function ClassementView({
                           <th className="text-left px-3 py-3 text-label-md text-on-surface-variant w-10">Rg</th>
                           <th className="text-left px-3 py-3 text-label-md text-on-surface-variant">Équipe</th>
                           <th className="text-center px-2 py-3 text-label-md text-on-surface-variant">J</th>
-                          <th className="text-center px-2 py-3 text-label-md text-on-surface-variant">V</th>
-                          <th className="text-center px-2 py-3 text-label-md text-on-surface-variant">N</th>
+                          <th className="text-center px-2 py-3 text-label-md text-on-surface-variant hidden sm:table-cell">V</th>
+                          <th className="text-center px-2 py-3 text-label-md text-on-surface-variant hidden sm:table-cell">N</th>
                           <th className="text-center px-2 py-3 text-label-md text-on-surface-variant">D</th>
                           <th className="text-center px-2 py-3 text-label-md text-on-surface-variant hidden sm:table-cell">BP</th>
                           <th className="text-center px-2 py-3 text-label-md text-on-surface-variant hidden sm:table-cell">BC</th>
@@ -898,8 +898,8 @@ function ClassementView({
                               </div>
                             </td>
                             <td className="px-2 py-3 text-center text-body-md">{eq.J}</td>
-                            <td className="px-2 py-3 text-center text-body-md text-green-700 font-medium">{eq.V}</td>
-                            <td className="px-2 py-3 text-center text-body-md text-gray-500">{eq.N}</td>
+                            <td className="px-2 py-3 text-center text-body-md text-green-700 font-medium hidden sm:table-cell">{eq.V}</td>
+                            <td className="px-2 py-3 text-center text-body-md text-gray-500 hidden sm:table-cell">{eq.N}</td>
                             <td className="px-2 py-3 text-center text-body-md text-red-600">{eq.D}</td>
                             <td className="px-2 py-3 text-center text-body-md hidden sm:table-cell">{eq.BP}</td>
                             <td className="px-2 py-3 text-center text-body-md hidden sm:table-cell">{eq.BC}</td>

@@ -59,12 +59,20 @@ const getById = async (req, res) => {
   }
 };
 
+const TYPE_MAP = { plateau: 'autre', reunion: 'autre' };
+
 const create = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
   try {
-    const match = await Match.create(req.body);
+    const rawType = req.body.type;
+    const payload = {
+      ...req.body,
+      type: TYPE_MAP[rawType] ?? rawType,
+      club_id: req.body.club_id ?? req.user.club_id,
+    };
+    const match = await Match.create(payload);
     return res.status(201).json({ success: true, data: match });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur serveur' });

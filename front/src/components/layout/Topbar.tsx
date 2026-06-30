@@ -4,7 +4,7 @@ import api from '../../services/api'
 import { logout } from '../../services/auth'
 import { useLang } from '../../i18n/LangContext'
 
-type Notif = { id: number; titre: string; contenu: string; lu: boolean; created_at: string }
+type Notif = { id: number; titre: string; contenu: string; lu: boolean; created_at: string; lien?: string }
 
 const detectIOS = () =>
   /ipad|iphone|ipod/i.test(navigator.userAgent) ||
@@ -179,6 +179,11 @@ export default function Topbar({ onMenuToggle }: Props) {
                   ) : (
                     notifs.map(n => (
                       <div key={n.id}
+                        onClick={async () => {
+                          await api.patch(`/profil/notifications/${n.id}/read`).catch(() => {})
+                          setShowNotifs(false)
+                          if (n.lien) navigate(n.lien)
+                        }}
                         className={`px-4 py-3 hover:bg-surface-container-low transition-colors cursor-pointer ${!n.lu ? 'bg-blue-50/50 border-l-4 border-blue-500' : ''}`}>
                         <p className="text-label-lg text-on-surface">{n.titre}</p>
                         <p className="text-body-sm text-on-surface-variant mt-0.5 line-clamp-2">{n.contenu}</p>

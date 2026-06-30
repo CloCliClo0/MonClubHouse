@@ -184,11 +184,33 @@ server.listen(PORT, () => {
   console.log(`[Server] URL: ${process.env.APP_URL || `http://localhost:${PORT}`}`);
 });
 
+const applyStartupMigrations = async () => {
+  try {
+    const [rows] = await sequelize.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='users' AND TABLE_SCHEMA=DATABASE()");
+    const cols = rows.map(r => r.COLUMN_NAME);
+    if (!cols.includes('poste')) {
+      await sequelize.query("ALTER TABLE users ADD COLUMN poste VARCHAR(50) NULL");
+      console.log('[DB] Colonne users.poste ajoutée');
+    }
+    if (!cols.includes('pied_fort')) {
+      await sequelize.query("ALTER TABLE users ADD COLUMN pied_fort ENUM('droit','gauche','ambidextre') NULL");
+      console.log('[DB] Colonne users.pied_fort ajoutée');
+    }
+    if (!cols.includes('taille')) {
+      await sequelize.query("ALTER TABLE users ADD COLUMN taille INT NULL");
+      console.log('[DB] Colonne users.taille ajoutée');
+    }
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée :', e.message);
+  }
+};
+
 const connectDB = async (retries = 10, delay = 5000) => {
   for (let i = 1; i <= retries; i++) {
     try {
       await sequelize.authenticate();
       console.log('[DB] Connexion MySQL réussie');
+      await applyStartupMigrations();
       if (process.env.NODE_ENV === 'development') {
         await sequelize.sync({ alter: false });
         console.log('[DB] Modèles synchronisés');

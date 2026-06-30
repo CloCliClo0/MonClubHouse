@@ -19,8 +19,11 @@ const getProfil = async (req, res) => {
 
 const updateProfil = async (req, res) => {
   try {
-    const { nom, prenom, telephone, date_naissance, notif_email, notif_push } = req.body;
-    await req.user.update({ nom, prenom, telephone, date_naissance, notif_email, notif_push });
+    const { nom, prenom, telephone, date_naissance, notif_email, notif_push, poste, pied_fort, taille, avatar } = req.body;
+    const updates = { nom, prenom, telephone, date_naissance, notif_email, notif_push, poste, pied_fort };
+    if (taille !== undefined) updates.taille = taille ? parseInt(taille) : null;
+    if (avatar !== undefined) updates.avatar = avatar;
+    await req.user.update(updates);
     return res.json({ success: true, data: req.user.toSafeJSON() });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur serveur' });

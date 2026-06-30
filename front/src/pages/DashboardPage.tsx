@@ -96,16 +96,24 @@ export default function DashboardPage() {
     load()
   }, [isPlayer])
 
+  const userRole = authUser?.role || localStorage.getItem('role') || ''
+  const isAdminRole = ['admin', 'superadmin', 'dirigeant'].includes(userRole)
+
   const quickActions = isPlayer ? [
     { icon: 'event_available', label: 'Mes présences', to: '/mes-presences' },
     { icon: 'forum',           label: 'Chat',          to: '/messages'     },
     { icon: 'leaderboard',     label: 'Résultats',     to: '/resultats'    },
     { icon: 'account_circle',  label: 'Profil',        to: '/profil'       },
+  ] : isAdminRole ? [
+    { icon: 'admin_panel_settings', label: 'Administration', to: '/admin'       },
+    { icon: 'sports_soccer',        label: 'Équipes',        to: '/equipes'     },
+    { icon: 'calendar_today',       label: 'Calendrier',     to: '/calendrier'  },
+    { icon: 'forum',                label: 'Messages',       to: '/messages'    },
   ] : [
     { icon: 'assignment_turned_in', label: 'Convocations', to: '/convocations' },
-    { icon: 'forum',                label: 'Chat',         to: '/messages'     },
-    { icon: 'leaderboard',          label: 'Résultats',    to: '/resultats'    },
-    { icon: 'account_circle',       label: 'Profil',       to: '/profil'       },
+    { icon: 'format_list_numbered', label: 'Composition',  to: '/composition'  },
+    { icon: 'sports_soccer',        label: 'Équipes',      to: '/equipes'      },
+    { icon: 'forum',                label: 'Messages',     to: '/messages'     },
   ]
 
   const statCards = isPlayer ? [
@@ -278,7 +286,13 @@ export default function DashboardPage() {
           </div>
           <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg flex items-center gap-3">
             <span className="material-symbols-outlined text-primary shrink-0">lightbulb</span>
-            <p className="text-body-sm text-on-surface">Créez votre premier événement pour commencer.</p>
+            <p className="text-body-sm text-on-surface">
+              {isAdminRole
+                ? 'Gérez vos équipes et membres depuis l\'administration.'
+                : isPlayer
+                  ? 'Répondez à vos convocations depuis "Mes présences".'
+                  : 'Envoyez les convocations et composez votre équipe.'}
+            </p>
           </div>
         </div>
       </div>

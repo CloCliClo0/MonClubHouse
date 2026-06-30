@@ -24,7 +24,8 @@ const User = sequelize.define('User', {
   notif_email: { type: DataTypes.BOOLEAN, defaultValue: true },
   notif_push: { type: DataTypes.BOOLEAN, defaultValue: true },
   pied_fort: { type: DataTypes.ENUM('droit', 'gauche', 'ambidextre'), allowNull: true },
-  poste: { type: DataTypes.STRING(50), allowNull: true }
+  poste: { type: DataTypes.STRING(50), allowNull: true },
+  taille: { type: DataTypes.INTEGER, allowNull: true }
 }, {
   tableName: 'users',
   hooks: {

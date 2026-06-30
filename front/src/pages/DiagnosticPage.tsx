@@ -57,6 +57,22 @@ const ENDPOINTS: Omit<EndpointResult, 'status' | 'ok' | 'ms' | 'msg' | 'body'>[]
   // Votes & Arbitrage
   { section: 'Arbitrage',      method: 'GET', path: '/api/arbitrage/presences',    label: 'Présences arbitrage' },
   { section: 'Arbitrage',      method: 'GET', path: '/api/arbitrage/stats',        label: 'Stats arbitrage' },
+  // Licenciés
+  { section: 'Licenciés',      method: 'GET', path: '/api/licencies/mes-convocations', label: 'Mes convocations (joueur/parent)' },
+  // Résultats stats
+  { section: 'Résultats',      method: 'GET', path: '/api/resultats/stats/buteurs',    label: 'Stats buteurs' },
+  { section: 'Résultats',      method: 'GET', path: '/api/resultats/stats/equipes',    label: 'Stats équipes' },
+  { section: 'Résultats',      method: 'GET', path: '/api/resultats/stats/presence',   label: 'Stats présences' },
+  // Catégories
+  { section: 'Clubs',          method: 'GET', path: '/api/categories',                 label: 'Catégories' },
+  // Club stats
+  { section: 'Clubs',          method: 'GET', path: '/api/clubs/stats',                label: 'Stats club' },
+  // Codes
+  { section: 'Codes',          method: 'GET', path: '/api/codes/my-children',          label: 'Mes enfants (parent)' },
+  { section: 'Codes',          method: 'GET', path: '/api/codes/club-players',         label: 'Joueurs du club' },
+  // Matchs événements
+  { section: 'Matchs',         method: 'GET', path: '/api/matchs/1/events',            label: 'Événements match #1' },
+  { section: 'Matchs',         method: 'GET', path: '/api/matchs/1/convocations',      label: 'Convocations match #1' },
 ]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

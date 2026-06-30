@@ -31,6 +31,7 @@ export default function ProfilePage() {
   const [dateNaiss, setDate]  = useState('')
   const [poste, setPoste]     = useState('')
   const [piedFort, setPiedFort] = useState('')
+  const [taille, setTaille]   = useState('')
   const [notifEmail, setNotifEmail] = useState(true)
   const [notifPush, setNotifPush]   = useState(true)
   const [saving, setSaving]   = useState(false)
@@ -72,6 +73,7 @@ export default function ProfilePage() {
       setTel(u.telephone || '')
       setPoste((u as any).poste || '')
       setPiedFort((u as any).pied_fort || '')
+      setTaille((u as any).taille ? String((u as any).taille) : '')
       setDate(u.date_naissance || '')
       setNotifEmail(u.notif_email !== false)
       setNotifPush(u.notif_push !== false)
@@ -102,7 +104,7 @@ export default function ProfilePage() {
     e.preventDefault()
     setSaving(true)
     try {
-      await api.put('/profil', { prenom, nom, telephone: telephone || null, date_naissance: dateNaiss || null, poste: poste || null, pied_fort: piedFort || null, notif_email: notifEmail, notif_push: notifPush })
+      await api.put('/profil', { prenom, nom, telephone: telephone || null, date_naissance: dateNaiss || null, poste: poste || null, pied_fort: piedFort || null, taille: taille ? parseInt(taille) : null, notif_email: notifEmail, notif_push: notifPush })
       localStorage.setItem('prenom', prenom)
       await loadUser()
       flash('Profil mis à jour avec succès.')
@@ -266,6 +268,11 @@ export default function ProfilePage() {
                           <option value="ambidextre">Ambidextre</option>
                         </select>
                       </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-label-md text-on-surface-variant">Taille (cm)</label>
+                      <input value={taille} onChange={e => setTaille(e.target.value)} type="number" min="100" max="230" placeholder="Ex : 178"
+                        className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
                     </div>
                     <div className="pt-4 border-t border-[#e8e8f0] mt-2">
                       <h6 className="text-label-lg text-on-surface mb-3">Préférences de contact</h6>

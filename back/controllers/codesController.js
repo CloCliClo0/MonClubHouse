@@ -78,15 +78,28 @@ const createCode = async (req, res) => {
   }
 };
 
-// DELETE /api/codes/:id — désactiver un code
+// PATCH /api/codes/:id/disable — désactiver un code (soft)
 const deleteCode = async (req, res) => {
   try {
     const where = { id: req.params.id };
-    // Superadmin peut supprimer n'importe quel code ; les autres sont limités à leur club
     if (req.user.role !== 'superadmin') where.club_id = req.user.club_id;
     const code = await InviteCode.findOne({ where });
     if (!code) return res.status(404).json({ success: false, message: 'Code introuvable' });
     await code.update({ actif: false });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// DELETE /api/codes/:id — supprimer définitivement un code
+const hardDeleteCode = async (req, res) => {
+  try {
+    const where = { id: req.params.id };
+    if (req.user.role !== 'superadmin') where.club_id = req.user.club_id;
+    const code = await InviteCode.findOne({ where });
+    if (!code) return res.status(404).json({ success: false, message: 'Code introuvable' });
+    await code.destroy();
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -207,4 +220,4 @@ const clubPlayers = async (req, res) => {
   }
 };
 
-module.exports = { listCodes, createCode, deleteCode, validateCode, linkChild, myChildren, clubPlayers };
+module.exports = { listCodes, createCode, deleteCode, hardDeleteCode, validateCode, linkChild, myChildren, clubPlayers };

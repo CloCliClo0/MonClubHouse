@@ -3,7 +3,7 @@ const router  = express.Router();
 const { authenticate }            = require('../middlewares/auth');
 const { requireRole }             = require('../middlewares/rbac');
 const {
-  listCodes, createCode, deleteCode,
+  listCodes, createCode, deleteCode, hardDeleteCode,
   validateCode, linkChild, myChildren, clubPlayers,
 } = require('../controllers/codesController');
 
@@ -13,6 +13,7 @@ const isAdmin = requireRole('superadmin', 'admin', 'dirigeant');
 router.get('/',       authenticate, isAdmin, listCodes);
 router.post('/',      authenticate, isAdmin, createCode);
 router.patch('/:id/disable', authenticate, isAdmin, deleteCode);
+router.delete('/:id', authenticate, isAdmin, hardDeleteCode);
 
 // Utilisateur : rejoindre avec un code
 router.post('/validate', authenticate, validateCode);

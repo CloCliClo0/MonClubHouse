@@ -76,6 +76,7 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
   const [newCode, setNewCode] = useState({ equipe_id: '', role: 'joueur', label: '', max_uses: '50' })
   const [codeSaving, setCodeSaving] = useState(false)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [actifLocal, setActifLocal] = useState(club.actif)
 
   useEffect(() => {
     if (tab === 'equipes') {
@@ -132,8 +133,20 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
     finally { setCodeSaving(false) }
   }
 
+  const toggleActif = async () => {
+    const next = !actifLocal
+    await api.put(`/clubs/${club.id}`, { actif: next }).catch(() => {})
+    setActifLocal(next)
+  }
+
   const disableCode = async (id: number) => {
     await api.patch(`/codes/${id}/disable`).catch(() => {})
+    setCodes(prev => prev.map(c => c.id === id ? { ...c, actif: false } : c))
+  }
+
+  const hardDeleteCode = async (id: number) => {
+    if (!confirm('Supprimer définitivement ce code ?')) return
+    await api.delete(`/codes/${id}`).catch(() => {})
     setCodes(prev => prev.filter(c => c.id !== id))
   }
 
@@ -162,7 +175,11 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
             <p className="text-body-sm text-on-surface-variant">Gestion complète du club</p>
           </div>
         </div>
-        <span className={`px-2 py-1 rounded-full text-label-md ${club.actif ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{club.actif ? 'Actif' : 'Inactif'}</span>
+        <button onClick={toggleActif}
+          className={`px-3 py-1 rounded-full text-label-md flex items-center gap-1.5 transition-all hover:opacity-80 ${actifLocal ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          <span className="material-symbols-outlined text-[16px]">{actifLocal ? 'toggle_on' : 'toggle_off'}</span>
+          {actifLocal ? 'Actif' : 'Inactif'}
+        </button>
       </div>
 
       {/* Sous-onglets */}
@@ -430,9 +447,16 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
                       </div>
                       <p className="text-[11px] text-on-surface-variant mt-0.5">{c.uses_count}/{c.max_uses} utilisations</p>
                     </div>
-                    <button onClick={() => disableCode(c.id)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </button>
+                    <div className="flex gap-1">
+                      {c.actif && (
+                        <button onClick={() => disableCode(c.id)} title="Désactiver" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-orange-50 text-orange-500 transition-colors">
+                          <span className="material-symbols-outlined text-[18px]">block</span>
+                        </button>
+                      )}
+                      <button onClick={() => hardDeleteCode(c.id)} title="Supprimer définitivement" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error transition-colors">
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -527,6 +551,12 @@ export default function AdminPage() {
 
   const deleteCode = async (id: number) => {
     await api.patch(`/codes/${id}/disable`).catch(() => {})
+    loadCodes()
+  }
+
+  const hardDeleteCode = async (id: number) => {
+    if (!confirm('Supprimer définitivement ce code ?')) return
+    await api.delete(`/codes/${id}`).catch(() => {})
     loadCodes()
   }
 
@@ -851,11 +881,19 @@ export default function AdminPage() {
                       <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (c.uses_count / c.max_uses) * 100)}%` }} />
                     </div>
 
-                    {/* Action */}
-                    <button onClick={() => deleteCode(c.id)} title="Désactiver"
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error transition-colors">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </button>
+                    {/* Actions */}
+                    <div className="flex gap-1">
+                      {c.actif && (
+                        <button onClick={() => deleteCode(c.id)} title="Désactiver"
+                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-orange-50 text-orange-500 transition-colors">
+                          <span className="material-symbols-outlined text-[18px]">block</span>
+                        </button>
+                      )}
+                      <button onClick={() => hardDeleteCode(c.id)} title="Supprimer définitivement"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error transition-colors">
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

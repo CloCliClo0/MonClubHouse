@@ -3,9 +3,10 @@ const { validationResult } = require('express-validator');
 
 const getAll = async (req, res) => {
   try {
+    const where = req.user?.role === 'superadmin' ? {} : { actif: true };
     const clubs = await Club.findAll({
-      where: { actif: true },
-      attributes: ['id', 'nom', 'logo', 'ville', 'couleur_primaire']
+      where,
+      attributes: ['id', 'nom', 'logo', 'ville', 'couleur_primaire', 'actif']
     });
     return res.json({ success: true, data: clubs });
   } catch (err) {
