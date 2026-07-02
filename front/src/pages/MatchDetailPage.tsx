@@ -16,6 +16,7 @@ type MatchEvent = {
   equipe: 'domicile' | 'exterieur' | null
   description?: string
   joueur?: { id: number; nom: string; prenom: string }
+  passeur?: { id: number; nom: string; prenom: string }
 }
 
 type Match = {
@@ -63,11 +64,17 @@ export default function MatchDetailPage() {
   const chronoRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Formulaire ajout événement
-  const [eventType, setEventType]  = useState('but')
+  const [eventType, setEventType]   = useState('but')
   const [eventEquipe, setEventEquipe] = useState<'domicile' | 'exterieur'>('domicile')
-  const [eventJoueur, setEventJoueur] = useState<number | ''>('')
-  const [eventDesc, setEventDesc]   = useState('')
+  const [eventJoueur, setEventJoueur]  = useState<number | ''>('')
+  const [eventPasseur, setEventPasseur] = useState<number | ''>('')
+  const [eventDesc, setEventDesc]    = useState('')
   const [addingEvent, setAddingEvent] = useState(false)
+
+  // Chrono local pour l'onglet Score (saisie hors mode live)
+  const [chronoScore, setChronoScore] = useState(0)
+  const [chronoScoreRunning, setChronoScoreRunning] = useState(false)
+  const chronoScoreRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Score
   const [scoreHome, setScoreHome] = useState<number>(0)
@@ -122,7 +129,7 @@ export default function MatchDetailPage() {
     return () => { socket.disconnect() }
   }, [matchId])
 
-  // Chronomètre
+  // Chronomètre live
   useEffect(() => {
     if (chronoRunning) {
       chronoRef.current = setInterval(() => setChrono(c => c + 1), 1000)
@@ -131,6 +138,16 @@ export default function MatchDetailPage() {
     }
     return () => { if (chronoRef.current) clearInterval(chronoRef.current) }
   }, [chronoRunning])
+
+  // Chronomètre Score tab
+  useEffect(() => {
+    if (chronoScoreRunning) {
+      chronoScoreRef.current = setInterval(() => setChronoScore(c => c + 1), 1000)
+    } else {
+      if (chronoScoreRef.current) clearInterval(chronoScoreRef.current)
+    }
+    return () => { if (chronoScoreRef.current) clearInterval(chronoScoreRef.current) }
+  }, [chronoScoreRunning])
 
   const startLive = async () => {
     try {
@@ -158,9 +175,11 @@ export default function MatchDetailPage() {
         minute: Math.floor(chrono / 60) || null,
         equipe: eventEquipe,
         joueur_id: eventJoueur || undefined,
+        passeur_id: (eventType === 'but' && eventPasseur) ? eventPasseur : undefined,
         description: eventDesc || undefined,
       })
       setEventJoueur('')
+      setEventPasseur('')
       setEventDesc('')
       loadEvents()
     } catch { /* ignore */ } finally {
@@ -355,15 +374,28 @@ export default function MatchDetailPage() {
                     {match.adversaire || 'Adversaire'}
                   </button>
                 </div>
-                {/* Joueur */}
+                {/* Joueur / Buteur */}
                 {convoquesPresents.length > 0 && (
                   <select
                     value={eventJoueur}
                     onChange={e => setEventJoueur(e.target.value ? Number(e.target.value) : '')}
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
-                    <option value="">Joueur (optionnel)</option>
+                    <option value="">{eventType === 'but' ? 'Buteur (optionnel)' : 'Joueur (optionnel)'}</option>
                     {convoquesPresents.map(c => (
+                      <option key={c.joueur.id} value={c.joueur.id}>{c.joueur.prenom} {c.joueur.nom}</option>
+                    ))}
+                  </select>
+                )}
+                {/* Passeur — uniquement pour les buts de notre équipe */}
+                {eventType === 'but' && eventEquipe === 'domicile' && convoquesPresents.length > 0 && (
+                  <select
+                    value={eventPasseur}
+                    onChange={e => setEventPasseur(e.target.value ? Number(e.target.value) : '')}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    <option value="">Passeur (optionnel, si vu par le coach)</option>
+                    {convoquesPresents.filter(c => c.joueur.id !== eventJoueur).map(c => (
                       <option key={c.joueur.id} value={c.joueur.id}>{c.joueur.prenom} {c.joueur.nom}</option>
                     ))}
                   </select>
@@ -392,6 +424,7 @@ export default function MatchDetailPage() {
                         <p className="text-sm font-semibold text-gray-800">
                           {EVENT_TYPES.find(t => t.type === e.type)?.label || e.type}
                           {e.joueur && <span className="font-normal text-gray-600"> — {e.joueur.prenom} {e.joueur.nom}</span>}
+                          {e.passeur && <span className="font-normal text-gray-400"> (passeur : {e.passeur.prenom} {e.passeur.nom})</span>}
                         </p>
                         {e.equipe && <p className="text-xs text-gray-500">{e.equipe === 'domicile' ? match.equipe.nom : match.adversaire}</p>}
                       </div>
@@ -407,32 +440,60 @@ export default function MatchDetailPage() {
         )}
 
         {/* Score tab */}
-        {tab === 'score' && (
-          <div className="p-6 space-y-5">
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: match.equipe.nom, value: match.score_equipe ?? '—', color: 'text-primary' },
-                { label: 'Résultat',       value: result ?? '—',             color: result === 'Victoire' ? 'text-green-600' : result === 'Défaite' ? 'text-error' : 'text-orange-500' },
-                { label: match.adversaire || 'Adversaire', value: match.score_adversaire ?? '—', color: 'text-on-surface' },
-              ].map(s => (
-                <div key={s.label} className="bg-surface-container-low rounded-xl p-4 text-center">
-                  <p className={`text-headline-lg font-black ${s.color}`}>{s.value}</p>
-                  <p className="text-label-md text-on-surface-variant mt-1 truncate">{s.label}</p>
+        {tab === 'score' && (() => {
+          const smm = Math.floor(chronoScore / 60).toString().padStart(2, '0')
+          const sss = (chronoScore % 60).toString().padStart(2, '0')
+          return (
+            <div className="p-6 space-y-5">
+              {/* Chrono score */}
+              {canManage && match.statut !== 'termine' && !isLive && (
+                <div className="flex items-center gap-4 px-5 py-4 bg-surface-container-low rounded-xl">
+                  <span className="font-mono text-2xl font-black text-on-surface">{smm}:{sss}</span>
+                  <button
+                    onClick={() => setChronoScoreRunning(r => !r)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-label-md font-semibold transition-colors ${
+                      chronoScoreRunning
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                        : 'bg-primary/10 text-primary hover:bg-primary/20'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">{chronoScoreRunning ? 'pause' : 'play_arrow'}</span>
+                    {chronoScoreRunning ? 'Pause' : 'Démarrer le chrono'}
+                  </button>
+                  {chronoScore > 0 && (
+                    <button onClick={() => { setChronoScore(0); setChronoScoreRunning(false) }}
+                      className="p-2 rounded-lg hover:bg-surface-container text-on-surface-variant transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
-            {canManage && (
-              <div className="flex items-center gap-3 pt-2">
-                <button onClick={saveScore} disabled={saving}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-label-lg hover:bg-primary-container disabled:opacity-50 transition-colors">
-                  {saving ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <span className="material-symbols-outlined text-[18px]">save</span>}
-                  Enregistrer le score
-                </button>
-                {msg && <p className={`text-body-md ${msg.includes('Erreur') ? 'text-error' : 'text-green-600'}`}>{msg}</p>}
+              )}
+
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { label: match.equipe.nom, value: match.score_equipe ?? '—', color: 'text-primary' },
+                  { label: 'Résultat',       value: result ?? '—',             color: result === 'Victoire' ? 'text-green-600' : result === 'Défaite' ? 'text-error' : 'text-orange-500' },
+                  { label: match.adversaire || 'Adversaire', value: match.score_adversaire ?? '—', color: 'text-on-surface' },
+                ].map(s => (
+                  <div key={s.label} className="bg-surface-container-low rounded-xl p-4 text-center">
+                    <p className={`text-headline-lg font-black ${s.color}`}>{s.value}</p>
+                    <p className="text-label-md text-on-surface-variant mt-1 truncate">{s.label}</p>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-        )}
+              {canManage && (
+                <div className="flex items-center gap-3 pt-2">
+                  <button onClick={saveScore} disabled={saving}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-label-lg hover:bg-primary-container disabled:opacity-50 transition-colors">
+                    {saving ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <span className="material-symbols-outlined text-[18px]">save</span>}
+                    Enregistrer le score
+                  </button>
+                  {msg && <p className={`text-body-md ${msg.includes('Erreur') ? 'text-error' : 'text-green-600'}`}>{msg}</p>}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Présences tab */}
         {tab === 'presences' && (

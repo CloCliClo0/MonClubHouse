@@ -5,6 +5,7 @@ import Topbar from './Topbar'
 import { getToken } from '../../services/auth'
 import api from '../../services/api'
 import PhotoUpload from '../PhotoUpload'
+import { useAuth } from '../../contexts/AuthContext'
 
 type ProfileData = {
   date_naissance: string | null
@@ -17,7 +18,7 @@ type ProfileData = {
 }
 
 const ROLES_REQUIRING_PROFILE = ['joueur', 'parent', 'coach', 'dirigeant']
-const PLAYER_ROLES = ['joueur', 'coach']
+const PLAYER_ROLES = ['joueur']
 
 function isProfileComplete(p: ProfileData): boolean {
   if (!ROLES_REQUIRING_PROFILE.includes(p.role)) return true
@@ -171,19 +172,28 @@ function ProfileCompleteModal({ onDone }: { onDone: () => void }) {
 export default function AppLayout() {
   if (!getToken()) return <Navigate to="/login" replace />
 
+  const { setUser } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [profileChecked, setProfileChecked] = useState(false)
 
   useEffect(() => {
     const role = localStorage.getItem('role') || 'joueur'
-    if (!ROLES_REQUIRING_PROFILE.includes(role)) {
-      setProfileChecked(true)
-      return
-    }
     api.get('/profil').then(res => {
       const u = res.data.data
-      if (!isProfileComplete({ ...u, role })) {
+      // Persiste date_naissance et avatar dans localStorage pour AuthContext
+      if (u.date_naissance) localStorage.setItem('date_naissance', u.date_naissance)
+      if (u.avatar)         localStorage.setItem('avatar', u.avatar)
+      setUser({
+        id:             parseInt(localStorage.getItem('userId') || '0'),
+        prenom:         localStorage.getItem('prenom') || '',
+        nom:            localStorage.getItem('nom') || '',
+        email:          localStorage.getItem('email') || '',
+        role,
+        date_naissance: u.date_naissance || null,
+        avatar:         u.avatar || null,
+      })
+      if (ROLES_REQUIRING_PROFILE.includes(role) && !isProfileComplete({ ...u, role })) {
         setShowProfileModal(true)
       }
     }).catch(() => {}).finally(() => setProfileChecked(true))

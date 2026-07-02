@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import api from '../services/api'
 
 export default function AuthCallbackPage() {
   const [params] = useSearchParams()
@@ -18,7 +19,23 @@ export default function AuthCallbackPage() {
         if (payload.id)   localStorage.setItem('userId', String(payload.id))
         if (payload.role) localStorage.setItem('role',   payload.role)
       } catch {}
-      navigate(isNew ? '/google-complete' : '/dashboard', { replace: true })
+
+      const finish = () => navigate(isNew ? '/google-complete' : '/dashboard', { replace: true })
+
+      // Le JWT ne contient pas le prénom/nom : on les récupère via /auth/me
+      // pour que le dashboard et la topbar affichent le bon nom dès l'arrivée.
+      api.get('/auth/me')
+        .then((res) => {
+          const u = res.data?.data
+          if (u) {
+            localStorage.setItem('prenom', u.prenom || u.nom || '')
+            localStorage.setItem('nom',    u.nom || '')
+            localStorage.setItem('email',  u.email || '')
+            if (u.role) localStorage.setItem('role', u.role)
+          }
+        })
+        .catch(() => {})
+        .finally(finish)
     } else {
       navigate('/login?error=oauth_failed', { replace: true })
     }

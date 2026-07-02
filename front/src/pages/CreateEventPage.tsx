@@ -29,6 +29,7 @@ export default function CreateEventPage() {
   const [equipeId, setEquipeId]     = useState('')
   const [date, setDate]             = useState('')
   const [heure, setHeure]           = useState('')
+  const [heureRdv, setHeureRdv]     = useState('')
   const [terrainId, setTerrainId]   = useState('')
   const [adversaire, setAdversaire] = useState('')
   const [competition, setCompetition] = useState('')
@@ -44,6 +45,7 @@ export default function CreateEventPage() {
   const [adversaires, setAdversaires] = useState<{ id: number; nom: string }[]>([])
 
   // Récurrence entraînements
+  const [besoinArbitre, setBesoinArbitre] = useState(false)
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurDay, setRecurDay]       = useState<number>(2) // Mardi
   const [recurDateDebut, setRecurDateDebut] = useState('')
@@ -101,10 +103,16 @@ export default function CreateEventPage() {
         setTimeout(() => navigate('/calendrier'), 2000)
       } else {
         const payload: Record<string, any> = {
-          equipe_id:   parseInt(equipeId),
-          type, date: `${date}T${heure}:00`, domicile,
-          adversaire: adversaire || null, competition: competition || null,
-          statut: 'programme', notes: instructions || null,
+          equipe_id:          parseInt(equipeId),
+          type,
+          date:               `${date}T${heure}:00`,
+          heure_rdv:          heureRdv && date ? `${date}T${heureRdv}:00` : null,
+          domicile_exterieur: domicile ? 'domicile' : 'exterieur',
+          adversaire:         adversaire || null,
+          championnat:        competition || null,
+          statut:             'programme',
+          description:        instructions || null,
+          besoin_arbitre:     besoinArbitre || false,
         }
         if (terrainId) payload.terrain_id = parseInt(terrainId)
         await api.post('/matchs', payload)
@@ -268,6 +276,15 @@ export default function CreateEventPage() {
                 <input type="time" value={heure} onChange={e => setHeure(e.target.value)} required
                   className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
               </div>
+
+              {!isRecurring && (
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Heure de rendez-vous <span className="text-[11px] text-on-surface-variant/60">(optionnel)</span></label>
+                  <input type="time" value={heureRdv} onChange={e => setHeureRdv(e.target.value)}
+                    className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                  <p className="text-[11px] text-on-surface-variant/60">Heure à laquelle les joueurs doivent se retrouver (apparaît dans les convocations)</p>
+                </div>
+              )}
             </div>
 
             {/* Récurrence — uniquement pour entraînements */}
@@ -398,6 +415,20 @@ export default function CreateEventPage() {
                 placeholder="Ex : Rendez-vous 30 min avant, tenue complète obligatoire…"
                 className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none" />
             </div>
+
+            {/* Besoin d'arbitre — pour les matchs officiels, amicaux, coupes, tournois */}
+            {(['match', 'amical', 'coupe', 'tournoi'] as EventType[]).includes(type!) && (
+              <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-amber-600">sports</span>
+                  <div>
+                    <p className="text-label-lg text-on-surface">Besoin d'arbitre</p>
+                    <p className="text-body-sm text-on-surface-variant">Les joueurs majeurs pourront s'inscrire pour arbitrer</p>
+                  </div>
+                </div>
+                <Toggle on={besoinArbitre} onChange={setBesoinArbitre} />
+              </div>
+            )}
 
             <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-xl">
               <div className="flex items-center gap-3">

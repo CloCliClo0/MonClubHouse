@@ -49,6 +49,7 @@ export default function PresencePage() {
   const navigate = useNavigate()
   const [convocations, setConvocations] = useState<Convocation[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [repondingId, setRepondingId] = useState<number | null>(null)
   const [motifAbsence, setMotifAbsence] = useState('')
   const [showMotif, setShowMotif] = useState<number | null>(null)
@@ -68,10 +69,12 @@ export default function PresencePage() {
   const loadConvocations = async () => {
     try {
       setLoading(true)
+      setLoadError(false)
       const r = await api.get('/licencies/mes-convocations')
       setConvocations(r.data.data || [])
     } catch {
       setConvocations([])
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -266,6 +269,17 @@ export default function PresencePage() {
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : loadError ? (
+        <div className="text-center py-12 text-gray-400">
+          <p className="text-4xl mb-3">⚠️</p>
+          <p className="font-medium text-gray-600">Impossible de charger vos présences</p>
+          <button
+            onClick={loadConvocations}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+          >
+            Réessayer
+          </button>
         </div>
       ) : (
         <>

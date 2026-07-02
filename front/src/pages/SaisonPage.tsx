@@ -213,7 +213,7 @@ export default function SaisonPage() {
     try {
       await api.post('/matchs', {
         equipe_id: selectedTeamId, adversaire: form.adversaire.trim(), date: form.date,
-        heure_rdv: form.heure_rdv || null, type: form.type,
+        heure_rdv: form.heure_rdv && form.date ? `${form.date}T${form.heure_rdv}:00` : null, type: form.type,
         domicile_exterieur: form.domicile_exterieur,
         journee: form.journee ? Number(form.journee) : null,
         championnat: form.championnat || null, statut: 'programme',
@@ -477,7 +477,7 @@ export default function SaisonPage() {
                               <p className="text-label-md text-on-surface">
                                 {new Date(m.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                               </p>
-                              {m.heure_rdv && <p className="text-body-sm text-on-surface-variant">{m.heure_rdv.slice(0,5)}</p>}
+                              {m.heure_rdv && <p className="text-body-sm text-on-surface-variant">Rdv {(() => { try { return new Date(m.heure_rdv).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) } catch { return m.heure_rdv.slice(0,5) } })()}</p>}
                             </td>
                             <td className="px-4 py-3">
                               <p className="text-label-md text-on-surface">{m.adversaire || '—'}</p>

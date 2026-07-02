@@ -5,7 +5,10 @@ const getByMatch = async (req, res) => {
   try {
     const events = await MatchEvent.findAll({
       where: { match_id: req.params.id },
-      include: [{ model: User, as: 'joueur', attributes: ['id', 'nom', 'prenom', 'avatar'] }],
+      include: [
+        { model: User, as: 'joueur',  attributes: ['id', 'nom', 'prenom', 'avatar'] },
+        { model: User, as: 'passeur', attributes: ['id', 'nom', 'prenom'], required: false },
+      ],
       order: [['minute', 'ASC'], ['created_at', 'ASC']],
     });
     return res.json({ success: true, data: events });
@@ -18,7 +21,7 @@ const getByMatch = async (req, res) => {
 // POST /matchs/:id/events
 const addEvent = async (req, res) => {
   try {
-    const { type, minute, joueur_id, equipe, description } = req.body;
+    const { type, minute, joueur_id, passeur_id, equipe, description } = req.body;
     const matchWhere = { id: req.params.id };
     if (req.user.club_id) matchWhere.club_id = req.user.club_id;
     const match = await Match.findOne({ where: matchWhere });
@@ -33,7 +36,8 @@ const addEvent = async (req, res) => {
       match_id: match.id,
       club_id: req.user.club_id,
       type, minute: minute ?? null,
-      joueur_id: joueur_id ?? null,
+      joueur_id:  joueur_id  ?? null,
+      passeur_id: (type === 'but' && passeur_id) ? passeur_id : null,
       equipe: equipe ?? null,
       description: description ?? null,
     });
@@ -57,7 +61,10 @@ const addEvent = async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       const populated = await MatchEvent.findByPk(event.id, {
-        include: [{ model: User, as: 'joueur', attributes: ['id', 'nom', 'prenom', 'avatar'] }],
+        include: [
+          { model: User, as: 'joueur',  attributes: ['id', 'nom', 'prenom', 'avatar'] },
+          { model: User, as: 'passeur', attributes: ['id', 'nom', 'prenom'], required: false },
+        ],
       });
       io.to(`match:${match.id}`).emit('match:event', {
         event: populated,

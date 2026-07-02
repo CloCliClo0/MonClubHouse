@@ -11,7 +11,6 @@
     "seed": "npx sequelize-cli db:seed:all"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.102.0",
     "@google/generative-ai": "^0.24.1",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",

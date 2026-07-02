@@ -13,7 +13,8 @@ const MatchEvent = sequelize.define('MatchEvent', {
     allowNull: false
   },
   minute: { type: DataTypes.INTEGER, allowNull: true },
-  joueur_id: { type: DataTypes.INTEGER, allowNull: true },
+  joueur_id:  { type: DataTypes.INTEGER, allowNull: true },
+  passeur_id: { type: DataTypes.INTEGER, allowNull: true },
   equipe: { type: DataTypes.ENUM('domicile', 'exterieur'), allowNull: true },
   description: { type: DataTypes.STRING(255), allowNull: true }
 }, {

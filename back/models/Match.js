@@ -30,7 +30,8 @@ const Match = sequelize.define('Match', {
   journee:     { type: DataTypes.INTEGER, allowNull: true },
   description: { type: DataTypes.TEXT, allowNull: true },
   rapport:     { type: DataTypes.TEXT, allowNull: true },
-  actif:       { type: DataTypes.BOOLEAN, defaultValue: true },
+  actif:           { type: DataTypes.BOOLEAN, defaultValue: true },
+  besoin_arbitre:  { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
   tableName: 'matchs'
 });

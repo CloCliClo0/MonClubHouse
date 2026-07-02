@@ -55,6 +55,7 @@ const ENDPOINTS: Omit<EndpointResult, 'status' | 'ok' | 'ms' | 'msg' | 'body'>[]
   // Championnat
   { section: 'Championnat',    method: 'GET', path: '/api/championnat/equipes',    label: 'Équipes champ.' },
   // Votes & Arbitrage
+  { section: 'Arbitrage',      method: 'GET', path: '/api/arbitrage/matchs-besoin-arbitre', label: 'Matchs besoin arbitre' },
   { section: 'Arbitrage',      method: 'GET', path: '/api/arbitrage/presences',    label: 'Présences arbitrage' },
   { section: 'Arbitrage',      method: 'GET', path: '/api/arbitrage/stats',        label: 'Stats arbitrage' },
   // Licenciés

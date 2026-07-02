@@ -2,61 +2,82 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 
-interface Presence {
+interface ArbitrageUser {
+  id: number
+  nom: string
+  prenom: string
+  avatar?: string
+  telephone?: string
+}
+
+interface ArbitrageInscription {
   id: number
   user_id: number
+  match_id: number | null
   date: string
   commentaire?: string
-  user?: { id: number; nom: string; prenom: string; avatar?: string; telephone?: string }
+  user?: ArbitrageUser
 }
 
-interface ByDate { [date: string]: Presence[] }
-interface StatEntry { count: number; dates: string[]; user?: { id: number; nom: string; prenom: string; avatar?: string } }
-
-function getSaturdays(count = 8): string[] {
-  const dates: string[] = []
-  const d = new Date()
-  while (d.getDay() !== 6) d.setDate(d.getDate() + 1)
-  for (let i = 0; i < count; i++) {
-    dates.push(d.toISOString().slice(0, 10))
-    d.setDate(d.getDate() + 7)
-  }
-  return dates
+interface ArbitrageMatch {
+  id: number
+  date: string
+  adversaire?: string
+  type: string
+  domicile_exterieur?: string
+  equipe: { id: number; nom: string }
+  arbitrage_presences: ArbitrageInscription[]
 }
+
+interface StatEntry { count: number; dates: string[]; user?: ArbitrageUser }
 
 const formatDate = (d: string) =>
-  new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+function calcAge(dateNaissance: string | null | undefined): number | null {
+  if (!dateNaissance) return null
+  const dob = new Date(dateNaissance)
+  const today = new Date()
+  let age = today.getFullYear() - dob.getFullYear()
+  const m = today.getMonth() - dob.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
+  return age
+}
 
 export default function ArbitragePage() {
   const { user } = useAuth()
   const role = user?.role || 'joueur'
   const isManager = ['admin', 'superadmin', 'dirigeant', 'coach'].includes(role)
   const isAdmin   = ['admin', 'superadmin', 'dirigeant'].includes(role)
+  const isCoach   = role === 'coach'
+
+  // Vérification majorité pour joueurs
+  const age = calcAge(user?.date_naissance)
+  const isMajeur = age !== null && age >= 18
 
   type Tab = 'inscrire' | 'planning' | 'stats'
-  const [tab, setTab] = useState<Tab>(isManager ? 'planning' : 'inscrire')
+  const defaultTab: Tab = isManager ? 'planning' : (isMajeur ? 'inscrire' : 'planning')
+  const [tab, setTab] = useState<Tab>(defaultTab)
 
-  const [presences, setPresences]       = useState<ByDate>({})
-  const [mesPresences, setMesPresences] = useState<Presence[]>([])
+  const [matchs, setMatchs]             = useState<ArbitrageMatch[]>([])
+  const [mesPresences, setMesPresences] = useState<ArbitrageInscription[]>([])
   const [stats, setStats]               = useState<StatEntry[]>([])
   const [loading, setLoading]           = useState(true)
-  const [selectedDate, setSelectedDate] = useState('')
+  const [selectedMatch, setSelectedMatch] = useState<ArbitrageMatch | null>(null)
   const [commentaire, setCommentaire]   = useState('')
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState('')
-
-  const saturdays = getSaturdays(8)
 
   useEffect(() => { loadAll() }, [])
 
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [allR, mesR] = await Promise.all([
-        api.get('/arbitrage/presences'),
+      const [matchsR, mesR] = await Promise.all([
+        api.get('/arbitrage/matchs-besoin-arbitre'),
         api.get('/arbitrage/mes-presences'),
       ])
-      setPresences(allR.data.data || {})
+      setMatchs(matchsR.data.data || [])
       setMesPresences(mesR.data.data || [])
     } catch { /* ignore */ } finally {
       setLoading(false)
@@ -75,11 +96,17 @@ export default function ArbitragePage() {
   }, [tab])
 
   const sInscrire = async () => {
-    if (!selectedDate) return
+    if (!selectedMatch) return
     setSaving(true); setError('')
     try {
-      await api.post('/arbitrage/presences', { date: selectedDate, commentaire: commentaire || undefined })
-      setCommentaire(''); setSelectedDate('')
+      const matchDate = selectedMatch.date.slice(0, 10)
+      await api.post('/arbitrage/presences', {
+        match_id: selectedMatch.id,
+        date: matchDate,
+        commentaire: commentaire || undefined,
+      })
+      setCommentaire('')
+      setSelectedMatch(null)
       await loadAll()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de l\'inscription')
@@ -95,10 +122,11 @@ export default function ArbitragePage() {
     }
   }
 
-  const isInscrit = (date: string) => mesPresences.some(p => p.date === date)
+  const isInscritMatch = (matchId: number) =>
+    mesPresences.some(p => p.match_id === matchId)
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
-    ...(!isManager ? [{ key: 'inscrire' as Tab, label: 'M\'inscrire', icon: 'edit_calendar' }] : []),
+    ...((!isManager && isMajeur) ? [{ key: 'inscrire' as Tab, label: 'M\'inscrire', icon: 'edit_calendar' }] : []),
     { key: 'planning', label: isManager ? 'Organisation' : 'Planning', icon: 'calendar_view_week' },
     ...(isAdmin ? [{ key: 'stats' as Tab, label: 'Statistiques', icon: 'bar_chart' }] : []),
   ]
@@ -112,10 +140,10 @@ export default function ArbitragePage() {
           <p className="text-body-lg text-on-surface-variant mt-1">
             {isManager
               ? 'Organisation et suivi des arbitres du club'
-              : 'Inscrivez-vous pour arbitrer les matchs du samedi'}
+              : 'Inscrivez-vous pour arbitrer les matchs du club'}
           </p>
         </div>
-        {!isManager && mesPresences.length > 0 && (
+        {!isManager && isMajeur && mesPresences.length > 0 && (
           <div className="shrink-0 flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-xl">
             <span className="material-symbols-outlined text-green-600 text-[20px]">check_circle</span>
             <span className="text-label-md text-green-700">{mesPresences.length} inscription{mesPresences.length > 1 ? 's' : ''}</span>
@@ -123,20 +151,37 @@ export default function ArbitragePage() {
         )}
       </div>
 
+      {/* Avertissement non-majeur */}
+      {!isManager && !isMajeur && (
+        <div className="flex items-center gap-3 px-5 py-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <span className="material-symbols-outlined text-amber-600 text-[22px]">info</span>
+          <div>
+            <p className="text-label-lg text-amber-800">Inscription réservée aux majeurs</p>
+            <p className="text-body-sm text-amber-700">
+              {age === null
+                ? 'Votre date de naissance n\'est pas renseignée. Complétez votre profil pour accéder à l\'arbitrage.'
+                : 'Vous devez avoir 18 ans révolus pour vous inscrire comme arbitre.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Onglets */}
-      <div className="flex gap-1 bg-surface-container-low p-1 rounded-xl overflow-x-auto">
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-label-md transition-all whitespace-nowrap ${
-              tab === t.key
-                ? 'bg-white text-on-surface shadow-sm font-medium'
-                : 'text-on-surface-variant hover:text-on-surface'
-            }`}>
-            <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {tabs.length > 1 && (
+        <div className="flex gap-1 bg-surface-container-low p-1 rounded-xl overflow-x-auto">
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-label-md transition-all whitespace-nowrap ${
+                tab === t.key
+                  ? 'bg-white text-on-surface shadow-sm font-medium'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}>
+              <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -145,7 +190,7 @@ export default function ArbitragePage() {
       ) : (
         <>
           {/* ── Tab : M'inscrire ─────────────────────────────────────────────── */}
-          {tab === 'inscrire' && (
+          {tab === 'inscrire' && isMajeur && (
             <div className="space-y-5">
               {/* Mes inscriptions actuelles */}
               {mesPresences.length > 0 && (
@@ -154,86 +199,93 @@ export default function ArbitragePage() {
                     <h3 className="text-headline-md">Mes inscriptions</h3>
                   </div>
                   <div className="divide-y divide-[#e8e8f0]">
-                    {mesPresences.map(p => (
-                      <div key={p.id} className="flex items-center justify-between px-5 py-4 gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                            <span className="material-symbols-outlined text-green-600 text-[20px]">sports_handball</span>
+                    {mesPresences.map(p => {
+                      const m = matchs.find(mx => mx.id === p.match_id)
+                      return (
+                        <div key={p.id} className="flex items-center justify-between px-5 py-4 gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-green-600 text-[20px]">sports</span>
+                            </div>
+                            <div>
+                              <p className="text-label-lg text-on-surface capitalize">{formatDate(p.date)}</p>
+                              {m && <p className="text-body-sm text-on-surface-variant">{m.equipe?.nom} vs {m.adversaire || '—'}</p>}
+                              {p.commentaire && <p className="text-body-sm text-on-surface-variant">{p.commentaire}</p>}
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-label-lg text-on-surface capitalize">{formatDate(p.date)}</p>
-                            {p.commentaire && <p className="text-body-sm text-on-surface-variant">{p.commentaire}</p>}
-                          </div>
+                          <button onClick={() => seDesinscrire(p.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 border border-error/30 text-error rounded-lg text-label-md hover:bg-red-50 transition-colors">
+                            <span className="material-symbols-outlined text-[16px]">cancel</span>
+                            Se désinscrire
+                          </button>
                         </div>
-                        <button onClick={() => seDesinscrire(p.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 border border-error/30 text-error rounded-lg text-label-md hover:bg-red-50 transition-colors">
-                          <span className="material-symbols-outlined text-[16px]">cancel</span>
-                          Se désinscrire
-                        </button>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
 
-              {/* Dates disponibles */}
+              {/* Matchs disponibles */}
               <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-[#e8e8f0]">
-                  <h3 className="text-headline-md">Prochains samedis</h3>
-                  <p className="text-body-sm text-on-surface-variant">Maximum 2 arbitres par samedi</p>
+                  <h3 className="text-headline-md">Matchs nécessitant un arbitre</h3>
+                  <p className="text-body-sm text-on-surface-variant">Maximum 2 arbitres par match</p>
                 </div>
-                <div className="divide-y divide-[#e8e8f0]">
-                  {saturdays.map(date => {
-                    const count    = (presences[date] || []).length
-                    const inscrit  = isInscrit(date)
-                    const complet  = count >= 2 && !inscrit
-                    return (
-                      <button key={date} disabled={complet}
-                        onClick={() => !inscrit && !complet && setSelectedDate(date === selectedDate ? '' : date)}
-                        className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors ${
-                          inscrit  ? 'bg-green-50/60'
-                          : selectedDate === date ? 'bg-primary/5'
-                          : complet ? 'opacity-50 cursor-not-allowed bg-surface-container-lowest'
-                          : 'hover:bg-surface-container-low/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                            inscrit ? 'bg-green-100' : complet ? 'bg-surface-container' : 'bg-primary/10'
-                          }`}>
-                            <span className={`material-symbols-outlined text-[20px] ${
-                              inscrit ? 'text-green-600' : complet ? 'text-on-surface-variant' : 'text-primary'
+                {matchs.length === 0 ? (
+                  <div className="py-12 text-center text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">sports</span>
+                    <p className="text-body-md">Aucun match ne nécessite d'arbitre pour le moment</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-[#e8e8f0]">
+                    {matchs.map(m => {
+                      const count    = m.arbitrage_presences?.length ?? 0
+                      const inscrit  = isInscritMatch(m.id)
+                      const complet  = count >= 2 && !inscrit
+                      return (
+                        <button key={m.id} disabled={complet}
+                          onClick={() => !inscrit && !complet && setSelectedMatch(selectedMatch?.id === m.id ? null : m)}
+                          className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors ${
+                            inscrit    ? 'bg-green-50/60'
+                            : selectedMatch?.id === m.id ? 'bg-primary/5'
+                            : complet  ? 'opacity-50 cursor-not-allowed bg-surface-container-lowest'
+                            : 'hover:bg-surface-container-low/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                              inscrit ? 'bg-green-100' : complet ? 'bg-surface-container' : 'bg-primary/10'
                             }`}>
-                              {inscrit ? 'check_circle' : complet ? 'block' : 'event_available'}
-                            </span>
+                              <span className={`material-symbols-outlined text-[20px] ${
+                                inscrit ? 'text-green-600' : complet ? 'text-on-surface-variant' : 'text-primary'
+                              }`}>
+                                {inscrit ? 'check_circle' : complet ? 'block' : 'sports_soccer'}
+                              </span>
+                            </div>
+                            <div className="text-left">
+                              <p className="text-label-lg text-on-surface capitalize">{formatDate(m.date.slice(0, 10))}</p>
+                              <p className="text-body-sm text-on-surface-variant">
+                                {m.equipe?.nom} vs {m.adversaire || '—'} · {m.domicile_exterieur === 'domicile' ? '🏠 Dom.' : '✈️ Ext.'}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-label-lg text-on-surface capitalize">{formatDate(date)}</p>
-                            <p className="text-body-sm text-on-surface-variant">{count}/2 arbitre{count > 1 ? 's' : ''}</p>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {Array.from({ length: 2 }).map((_, i) => (
+                              <div key={i} className={`w-3 h-3 rounded-full ${i < count ? 'bg-primary' : 'bg-surface-container'}`} />
+                            ))}
+                            <span className="ml-1 text-body-sm text-on-surface-variant">{count}/2</span>
+                            {inscrit && <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-label-sm">Inscrit</span>}
+                            {complet && <span className="ml-2 px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full text-label-sm">Complet</span>}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {Array.from({ length: 2 }).map((_, i) => (
-                            <div key={i} className={`w-3 h-3 rounded-full ${i < count ? 'bg-primary' : 'bg-surface-container'}`} />
-                          ))}
-                          {inscrit && (
-                            <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-label-sm">Inscrit</span>
-                          )}
-                          {complet && (
-                            <span className="ml-2 px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-full text-label-sm">Complet</span>
-                          )}
-                          {!inscrit && !complet && selectedDate === date && (
-                            <span className="material-symbols-outlined text-primary text-[20px]">chevron_right</span>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Formulaire inscription */}
-              {selectedDate && !isInscrit(selectedDate) && (
+              {selectedMatch && !isInscritMatch(selectedMatch.id) && (
                 <div className="bg-white border-2 border-primary/30 rounded-xl p-5 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -241,7 +293,7 @@ export default function ArbitragePage() {
                     </div>
                     <div>
                       <p className="text-label-lg text-on-surface">Confirmer l'inscription</p>
-                      <p className="text-body-sm text-on-surface-variant capitalize">{formatDate(selectedDate)}</p>
+                      <p className="text-body-sm text-on-surface-variant capitalize">{formatDate(selectedMatch.date.slice(0, 10))} — {selectedMatch.equipe?.nom} vs {selectedMatch.adversaire || '—'}</p>
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -256,7 +308,7 @@ export default function ArbitragePage() {
                     </div>
                   )}
                   <div className="flex justify-end gap-3">
-                    <button onClick={() => setSelectedDate('')}
+                    <button onClick={() => setSelectedMatch(null)}
                       className="px-4 py-2.5 border border-outline-variant rounded-lg text-label-md hover:bg-surface-container-low transition-colors">
                       Annuler
                     </button>
@@ -280,10 +332,10 @@ export default function ArbitragePage() {
               {isAdmin && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { label: 'Samedis couverts', value: Object.values(presences).filter(l => l.length >= 2).length, icon: 'check_circle', color: 'text-green-600' },
-                    { label: 'Samedis incomplets', value: Object.values(presences).filter(l => l.length === 1).length, icon: 'warning', color: 'text-yellow-600' },
-                    { label: 'Samedis sans arbitre', value: saturdays.filter(d => (presences[d] || []).length === 0).length, icon: 'cancel', color: 'text-error' },
-                    { label: 'Total inscriptions', value: Object.values(presences).flat().length, icon: 'groups', color: 'text-primary' },
+                    { label: 'Matchs couverts',    value: matchs.filter(m => (m.arbitrage_presences?.length ?? 0) >= 2).length, icon: 'check_circle', color: 'text-green-600' },
+                    { label: 'Matchs incomplets',  value: matchs.filter(m => (m.arbitrage_presences?.length ?? 0) === 1).length, icon: 'warning',      color: 'text-yellow-600' },
+                    { label: 'Sans arbitre',       value: matchs.filter(m => (m.arbitrage_presences?.length ?? 0) === 0).length, icon: 'cancel',       color: 'text-error' },
+                    { label: 'Total inscriptions', value: matchs.reduce((s, m) => s + (m.arbitrage_presences?.length ?? 0), 0), icon: 'groups',       color: 'text-primary' },
                   ].map(s => (
                     <div key={s.label} className="bg-white border border-[#e8e8f0] rounded-xl p-4">
                       <div className="flex items-center gap-2 mb-2">
@@ -296,61 +348,73 @@ export default function ArbitragePage() {
                 </div>
               )}
 
-              {saturdays.map(date => {
-                const list = presences[date] || []
-                return (
-                  <div key={date} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
-                    <div className={`px-5 py-3 border-b border-[#e8e8f0] flex items-center justify-between ${
-                      list.length >= 2 ? 'bg-green-50/60' : list.length === 1 ? 'bg-yellow-50/60' : ''
-                    }`}>
-                      <p className="text-label-lg text-on-surface capitalize">{formatDate(date)}</p>
-                      <span className={`px-2.5 py-1 rounded-full text-label-sm font-medium ${
-                        list.length >= 2 ? 'bg-green-100 text-green-700'
-                        : list.length === 1 ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-50 text-error'
+              {matchs.length === 0 ? (
+                <div className="bg-white border border-[#e8e8f0] rounded-xl py-16 text-center text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">sports</span>
+                  <p className="text-body-md">
+                    {isCoach ? 'Aucun de vos matchs ne nécessite d\'arbitre pour le moment' : 'Aucun match ne nécessite d\'arbitre pour le moment'}
+                  </p>
+                </div>
+              ) : (
+                matchs.map(m => {
+                  const list = m.arbitrage_presences || []
+                  return (
+                    <div key={m.id} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+                      <div className={`px-5 py-3 border-b border-[#e8e8f0] flex items-center justify-between ${
+                        list.length >= 2 ? 'bg-green-50/60' : list.length === 1 ? 'bg-yellow-50/60' : ''
                       }`}>
-                        {list.length >= 2 ? 'Complet' : list.length === 1 ? '1 arbitre' : 'Aucun arbitre'} ({list.length}/2)
-                      </span>
-                    </div>
-                    {list.length === 0 ? (
-                      <div className="px-5 py-4 text-body-sm text-on-surface-variant flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[16px] opacity-40">person_off</span>
-                        Aucun arbitre inscrit
+                        <div>
+                          <p className="text-label-lg text-on-surface capitalize">{formatDate(m.date.slice(0, 10))}</p>
+                          <p className="text-body-sm text-on-surface-variant">{m.equipe?.nom} vs {m.adversaire || '—'} · {m.domicile_exterieur === 'domicile' ? '🏠 Domicile' : '✈️ Extérieur'}</p>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-label-sm font-medium ${
+                          list.length >= 2 ? 'bg-green-100 text-green-700'
+                          : list.length === 1 ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-red-50 text-error'
+                        }`}>
+                          {list.length >= 2 ? 'Complet' : list.length === 1 ? '1 arbitre' : 'Aucun arbitre'} ({list.length}/2)
+                        </span>
                       </div>
-                    ) : (
-                      <div className="divide-y divide-[#e8e8f0]">
-                        {list.map(p => (
-                          <div key={p.id} className="flex items-center gap-3 px-5 py-3">
-                            {p.user?.avatar
-                              ? <img src={p.user.avatar} className="w-9 h-9 rounded-full object-cover shrink-0" alt="" />
-                              : <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 font-bold text-primary text-sm">
-                                  {p.user?.prenom?.[0]}{p.user?.nom?.[0]}
-                                </div>
-                            }
-                            <div className="flex-1 min-w-0">
-                              <p className="text-label-md text-on-surface">{p.user?.prenom} {p.user?.nom}</p>
-                              {p.commentaire && <p className="text-body-sm text-on-surface-variant truncate">{p.commentaire}</p>}
+                      {list.length === 0 ? (
+                        <div className="px-5 py-4 text-body-sm text-on-surface-variant flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[16px] opacity-40">person_off</span>
+                          Aucun arbitre inscrit
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-[#e8e8f0]">
+                          {list.map(p => (
+                            <div key={p.id} className="flex items-center gap-3 px-5 py-3">
+                              {p.user?.avatar
+                                ? <img src={p.user.avatar} className="w-9 h-9 rounded-full object-cover shrink-0" alt="" />
+                                : <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 font-bold text-primary text-sm">
+                                    {p.user?.prenom?.[0]}{p.user?.nom?.[0]}
+                                  </div>
+                              }
+                              <div className="flex-1 min-w-0">
+                                <p className="text-label-md text-on-surface">{p.user?.prenom} {p.user?.nom}</p>
+                                {p.commentaire && <p className="text-body-sm text-on-surface-variant truncate">{p.commentaire}</p>}
+                              </div>
+                              {p.user?.telephone && (
+                                <a href={`tel:${p.user.telephone}`}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low text-on-surface-variant rounded-lg text-label-sm hover:bg-surface-container transition-colors">
+                                  <span className="material-symbols-outlined text-[14px]">call</span>
+                                  Appeler
+                                </a>
+                              )}
+                              {(isAdmin || p.user_id === user?.id) && (
+                                <button onClick={() => seDesinscrire(p.id)}
+                                  className="p-1.5 rounded-lg hover:bg-red-50 text-on-surface-variant hover:text-error transition-colors">
+                                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                              )}
                             </div>
-                            {p.user?.telephone && (
-                              <a href={`tel:${p.user.telephone}`}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low text-on-surface-variant rounded-lg text-label-sm hover:bg-surface-container transition-colors">
-                                <span className="material-symbols-outlined text-[14px]">call</span>
-                                Appeler
-                              </a>
-                            )}
-                            {(isAdmin || p.user_id === user?.id) && (
-                              <button onClick={() => seDesinscrire(p.id)}
-                                className="p-1.5 rounded-lg hover:bg-red-50 text-on-surface-variant hover:text-error transition-colors">
-                                <span className="material-symbols-outlined text-[18px]">delete</span>
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+              )}
             </div>
           )}
 
@@ -364,7 +428,7 @@ export default function ArbitragePage() {
                 </div>
                 {stats.length === 0 ? (
                   <div className="py-16 text-center text-on-surface-variant">
-                    <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">sports_handball</span>
+                    <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">sports</span>
                     <p className="text-body-md">Aucune statistique disponible</p>
                   </div>
                 ) : (

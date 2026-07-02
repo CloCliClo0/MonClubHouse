@@ -6,6 +6,8 @@ type AuthUser = {
   nom: string
   email: string
   role: string
+  date_naissance?: string | null
+  avatar?: string | null
 }
 
 type AuthContextType = {
@@ -22,11 +24,13 @@ function getUserFromStorage(): AuthUser | null {
   const token = localStorage.getItem('token')
   if (!token) return null
   return {
-    id:     parseInt(localStorage.getItem('userId') || '0'),
-    prenom: localStorage.getItem('prenom') || '',
-    nom:    localStorage.getItem('nom') || '',
-    email:  localStorage.getItem('email') || '',
-    role:   localStorage.getItem('role') || 'visiteur',
+    id:             parseInt(localStorage.getItem('userId') || '0'),
+    prenom:         localStorage.getItem('prenom') || '',
+    nom:            localStorage.getItem('nom') || '',
+    email:          localStorage.getItem('email') || '',
+    role:           localStorage.getItem('role') || 'visiteur',
+    date_naissance: localStorage.getItem('date_naissance') || null,
+    avatar:         localStorage.getItem('avatar') || null,
   }
 }
 

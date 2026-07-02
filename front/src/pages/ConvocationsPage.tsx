@@ -266,6 +266,56 @@ export default function ConvocationsPage() {
     navigator.clipboard.writeText(text).catch(() => {})
   }
 
+  const handlePrint = () => {
+    if (!selectedMatch) return
+    const matchDate = new Date(selectedMatch.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    const title = `${selectedMatch.equipe?.nom}${selectedMatch.adversaire ? ` vs ${selectedMatch.adversaire}` : ''}`
+    const rows = players.map((p, i) => `
+      <tr>
+        <td style="text-align:center">${i + 1}</td>
+        <td><strong>${p.prenom} ${p.nom}</strong></td>
+        <td>${p.licencie?.poste || '—'}</td>
+        <td style="background:${
+          p.statut === 'present' ? '#dcfce7' :
+          p.statut === 'absent' ? '#fee2e2' :
+          p.statut === 'incertain' ? '#fef3c7' : '#ffedd5'
+        }">${BADGE[p.statut].label}</td>
+      </tr>`).join('')
+    const statsHtml = `<div style="display:flex;gap:16px;margin:12px 0;font-size:13px">
+      <span style="color:#16a34a"><strong>${stats.present}</strong> présent(s)</span>
+      <span style="color:#dc2626"><strong>${stats.absent}</strong> absent(s)</span>
+      <span style="color:#ca8a04"><strong>${stats.incertain}</strong> incertain(s)</span>
+      <span style="color:#ea580c"><strong>${stats.sans_reponse}</strong> en attente</span>
+    </div>`
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+      <title>Convocations — ${title}</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:24px;color:#111;max-width:800px;margin:0 auto}
+        h1{font-size:20px;margin:0 0 4px}
+        p{margin:2px 0;font-size:13px;color:#555}
+        table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
+        th{background:#f0f0f0;padding:8px 10px;text-align:left;border:1px solid #ddd}
+        td{padding:8px 10px;border:1px solid #ddd}
+        @media print{body{padding:0}}
+      </style>
+    </head><body>
+      <h1>${title}</h1>
+      <p>${matchDate}${selectedMatch.heure_rdv ? ' · Rdv ' + new Date(selectedMatch.heure_rdv).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : ''}</p>
+      ${selectedMatch.terrain ? `<p>📍 ${selectedMatch.terrain.nom}</p>` : ''}
+      ${statsHtml}
+      <table>
+        <thead><tr><th>#</th><th>Joueur</th><th>Poste</th><th>Statut</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="margin-top:24px;font-size:11px;color:#999">Généré le ${new Date().toLocaleDateString('fr-FR')} via MonClubHouse</p>
+    </body></html>`)
+    win.document.close()
+    win.focus()
+    win.print()
+  }
+
   const handleSend = async () => {
     if (!selectedMatch) return
     setSendStep('sending')
@@ -317,7 +367,7 @@ export default function ConvocationsPage() {
                     </p>
                     <p className="text-body-sm text-on-surface-variant mt-1">
                       {new Date(m.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                      {m.heure_rdv && ` · ${m.heure_rdv}`}
+                      {m.heure_rdv && ` · Rdv ${new Date(m.heure_rdv).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
                     </p>
                     {m.terrain && <p className="text-body-sm text-on-surface-variant">{m.terrain.nom}</p>}
                   </div>
@@ -349,6 +399,14 @@ export default function ConvocationsPage() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={handlePrint}
+            disabled={players.length === 0}
+            className="flex items-center gap-2 bg-white border border-[#e8e8f0] text-on-surface px-4 py-2.5 rounded-lg text-label-lg hover:bg-surface-container-low transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[20px]">print</span>
+            PDF
+          </button>
           <button
             onClick={loadSmsLinks}
             disabled={players.length === 0 || loadingSms}
@@ -423,7 +481,7 @@ export default function ConvocationsPage() {
               {selectedMatch.heure_rdv && (
                 <span className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">schedule</span>
-                  {selectedMatch.heure_rdv}
+                  Rdv {new Date(selectedMatch.heure_rdv).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
               {selectedMatch.terrain && (

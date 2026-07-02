@@ -3,8 +3,9 @@ const sequelize = require('../config/db');
 
 const ArbitragePresence = sequelize.define('ArbitragePresence', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  club_id: { type: DataTypes.INTEGER, allowNull: false },
-  user_id: { type: DataTypes.INTEGER, allowNull: false },
+  club_id:  { type: DataTypes.INTEGER, allowNull: false },
+  user_id:  { type: DataTypes.INTEGER, allowNull: false },
+  match_id: { type: DataTypes.INTEGER, allowNull: true },
   date: { type: DataTypes.DATEONLY, allowNull: false },
   commentaire: { type: DataTypes.STRING(500), allowNull: true }
 }, {

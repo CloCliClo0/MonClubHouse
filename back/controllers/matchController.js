@@ -22,6 +22,9 @@ const getAll = async (req, res) => {
       const debut = new Date(req.query.annee, req.query.mois - 1, 1);
       const fin = new Date(req.query.annee, req.query.mois, 0, 23, 59, 59);
       where.date = { [Op.between]: [debut, fin] };
+    } else if (req.query.limit) {
+      // Pas de mois précisé + limit demandé = liste "prochains événements" (dashboard)
+      where.date = { [Op.gte]: new Date() };
     }
 
     const matchs = await Match.findAll({
@@ -31,7 +34,8 @@ const getAll = async (req, res) => {
           include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] },
         { model: Terrain, as: 'terrain', attributes: ['id', 'nom', 'adresse'], required: false }
       ],
-      order: [['date', 'ASC']]
+      order: [['date', 'ASC']],
+      limit: req.query.limit ? parseInt(req.query.limit, 10) : undefined,
     });
     return res.json({ success: true, data: matchs });
   } catch (err) {
@@ -71,6 +75,7 @@ const create = async (req, res) => {
       ...req.body,
       type: TYPE_MAP[rawType] ?? rawType,
       club_id: req.body.club_id ?? req.user.club_id,
+      besoin_arbitre: req.body.besoin_arbitre ?? false,
     };
     const match = await Match.create(payload);
     return res.status(201).json({ success: true, data: match });
@@ -92,13 +97,14 @@ const update = async (req, res) => {
 
 const saisirScore = async (req, res) => {
   try {
-    const { score_equipe, score_adversaire } = req.body;
+    const { score_equipe, score_adversaire, statut } = req.body;
     const match = await Match.findByPk(req.params.id);
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
+    const allowedStatuts = ['programme', 'en_cours', 'termine'];
     await match.update({
       score_equipe,
       score_adversaire,
-      statut: 'termine'
+      statut: allowedStatuts.includes(statut) ? statut : 'termine',
     });
     return res.json({ success: true, data: match });
   } catch (err) {

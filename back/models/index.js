@@ -121,6 +121,12 @@ PlayerVote.belongsTo(User, { foreignKey: 'voted_for_id', as: 'voted_for' });
 // ArbitragePresence associations
 User.hasMany(ArbitragePresence, { foreignKey: 'user_id', as: 'arbitrage_presences' });
 ArbitragePresence.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+Match.hasMany(ArbitragePresence, { foreignKey: 'match_id', as: 'arbitrage_presences' });
+ArbitragePresence.belongsTo(Match, { foreignKey: 'match_id', as: 'match' });
+
+// MatchEvent passeur association
+User.hasMany(MatchEvent, { foreignKey: 'passeur_id', as: 'match_events_passes' });
+MatchEvent.belongsTo(User, { foreignKey: 'passeur_id', as: 'passeur' });
 
 module.exports = {
   sequelize,

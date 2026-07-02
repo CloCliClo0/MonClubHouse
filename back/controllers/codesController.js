@@ -82,7 +82,7 @@ const createCode = async (req, res) => {
 const deleteCode = async (req, res) => {
   try {
     const where = { id: req.params.id };
-    if (req.user.role !== 'superadmin') where.club_id = req.user.club_id;
+    if (req.user.role !== 'superadmin' && req.user.club_id) where.club_id = req.user.club_id;
     const code = await InviteCode.findOne({ where });
     if (!code) return res.status(404).json({ success: false, message: 'Code introuvable' });
     await code.update({ actif: false });
@@ -96,7 +96,7 @@ const deleteCode = async (req, res) => {
 const hardDeleteCode = async (req, res) => {
   try {
     const where = { id: req.params.id };
-    if (req.user.role !== 'superadmin') where.club_id = req.user.club_id;
+    if (req.user.role !== 'superadmin' && req.user.club_id) where.club_id = req.user.club_id;
     const code = await InviteCode.findOne({ where });
     if (!code) return res.status(404).json({ success: false, message: 'Code introuvable' });
     await code.destroy();

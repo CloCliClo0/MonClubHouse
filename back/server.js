@@ -201,7 +201,43 @@ const applyStartupMigrations = async () => {
       console.log('[DB] Colonne users.taille ajoutée');
     }
   } catch (e) {
-    console.warn('[DB] Migration startup échouée :', e.message);
+    console.warn('[DB] Migration startup échouée (users) :', e.message);
+  }
+
+  // Migrations matchs
+  try {
+    const [mRows] = await sequelize.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='matchs' AND TABLE_SCHEMA=DATABASE()");
+    const mCols = mRows.map(r => r.COLUMN_NAME);
+    if (!mCols.includes('besoin_arbitre')) {
+      await sequelize.query("ALTER TABLE matchs ADD COLUMN besoin_arbitre TINYINT(1) NOT NULL DEFAULT 0");
+      console.log('[DB] Colonne matchs.besoin_arbitre ajoutée');
+    }
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée (matchs) :', e.message);
+  }
+
+  // Migrations match_events
+  try {
+    const [eRows] = await sequelize.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='match_events' AND TABLE_SCHEMA=DATABASE()");
+    const eCols = eRows.map(r => r.COLUMN_NAME);
+    if (!eCols.includes('passeur_id')) {
+      await sequelize.query("ALTER TABLE match_events ADD COLUMN passeur_id INT NULL");
+      console.log('[DB] Colonne match_events.passeur_id ajoutée');
+    }
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée (match_events) :', e.message);
+  }
+
+  // Migrations arbitrage_presences
+  try {
+    const [aRows] = await sequelize.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='arbitrage_presences' AND TABLE_SCHEMA=DATABASE()");
+    const aCols = aRows.map(r => r.COLUMN_NAME);
+    if (!aCols.includes('match_id')) {
+      await sequelize.query("ALTER TABLE arbitrage_presences ADD COLUMN match_id INT NULL");
+      console.log('[DB] Colonne arbitrage_presences.match_id ajoutée');
+    }
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée (arbitrage_presences) :', e.message);
   }
 };
 

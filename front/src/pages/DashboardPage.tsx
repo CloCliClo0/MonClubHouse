@@ -4,7 +4,7 @@ import api from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 
 type Stats = { membres: number; equipes: number; matchs_weekend: number; notifications: number }
-type Event = { id: number; titre: string; date: string; heure: string; lieu: string; type: string }
+type Event = { id: number; date: string; heure: string; lieu: string; type: string; adversaire?: string; equipe?: { nom: string } }
 type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; created_at: string; lien?: string }
 type PersonalStats = {
   taux_presence_matchs: number | null
@@ -220,6 +220,9 @@ export default function DashboardPage() {
             ) : (
               events.map((ev) => {
                 const t = typeLabel[ev.type] || typeLabel.default
+                const titre = ev.type === 'entrainement'
+                  ? `Entraînement${ev.equipe?.nom ? ' — ' + ev.equipe.nom : ''}`
+                  : `${ev.equipe?.nom ? ev.equipe.nom + ' ' : ''}vs ${ev.adversaire || '?'}`
                 return (
                   <div key={ev.id} className="p-4 hover:bg-surface-container-low transition-colors flex items-center gap-4">
                     <div className="w-12 h-12 rounded-lg bg-orange-100 flex flex-col items-center justify-center text-orange-700 shrink-0">
@@ -229,8 +232,8 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-label-lg text-on-surface truncate">{ev.titre}</p>
-                      <p className="text-body-sm text-on-surface-variant">{ev.lieu} • {ev.heure}</p>
+                      <p className="text-label-lg text-on-surface truncate">{titre}</p>
+                      <p className="text-body-sm text-on-surface-variant">{ev.lieu || 'Lieu à confirmer'} • {ev.heure || '—'}</p>
                     </div>
                     <span className={`px-2 py-1 ${t.bg} ${t.text} rounded text-label-md text-[11px]`}>{t.label}</span>
                   </div>

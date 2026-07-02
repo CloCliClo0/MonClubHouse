@@ -140,14 +140,22 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
   }
 
   const disableCode = async (id: number) => {
-    await api.patch(`/codes/${id}/disable`).catch(() => {})
-    setCodes(prev => prev.map(c => c.id === id ? { ...c, actif: false } : c))
+    try {
+      await api.patch(`/codes/${id}/disable`)
+      setCodes(prev => prev.map(c => c.id === id ? { ...c, actif: false } : c))
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erreur lors de la désactivation du code')
+    }
   }
 
   const hardDeleteCode = async (id: number) => {
     if (!confirm('Supprimer définitivement ce code ?')) return
-    await api.delete(`/codes/${id}`).catch(() => {})
-    setCodes(prev => prev.filter(c => c.id !== id))
+    try {
+      await api.delete(`/codes/${id}`)
+      setCodes(prev => prev.filter(c => c.id !== id))
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erreur lors de la suppression du code')
+    }
   }
 
   const filteredMembres = membres.filter(u => {
@@ -550,14 +558,22 @@ export default function AdminPage() {
   }
 
   const deleteCode = async (id: number) => {
-    await api.patch(`/codes/${id}/disable`).catch(() => {})
-    loadCodes()
+    try {
+      await api.patch(`/codes/${id}/disable`)
+      loadCodes()
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erreur lors de la désactivation du code')
+    }
   }
 
   const hardDeleteCode = async (id: number) => {
     if (!confirm('Supprimer définitivement ce code ?')) return
-    await api.delete(`/codes/${id}`).catch(() => {})
-    loadCodes()
+    try {
+      await api.delete(`/codes/${id}`)
+      loadCodes()
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erreur lors de la suppression du code')
+    }
   }
 
   const copyCode = (code: InviteCode) => {
@@ -651,8 +667,9 @@ export default function AdminPage() {
     if (modal.type !== 'delete') return
     setSaving(true)
     try {
-      await api.patch(`/admin/users/${modal.user.id}/actif`, { actif: false })
-      load()
+      const actif = !modal.user.actif
+      await api.patch(`/admin/users/${modal.user.id}/actif`, { actif })
+      setUsers(prev => prev.map(u => u.id === modal.user.id ? { ...u, actif } : u))
       setModal({ type: 'none' })
     } catch (e: any) {
       setError(e.response?.data?.message || 'Erreur')
@@ -977,14 +994,17 @@ export default function AdminPage() {
             </thead>
             <tbody className="divide-y divide-[#e8e8f0]">
               {filtered.map(u => (
-                <tr key={u.id} className="hover:bg-surface-container-low transition-colors">
+                <tr key={u.id} className={`hover:bg-surface-container-low transition-colors ${!u.actif ? 'opacity-50' : ''}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-white font-bold text-sm shrink-0">
                         {u.prenom?.[0]}{u.nom?.[0]}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-label-lg text-on-surface truncate">{u.prenom} {u.nom}</p>
+                        <p className="text-label-lg text-on-surface truncate flex items-center gap-2">
+                          {u.prenom} {u.nom}
+                          {!u.actif && <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 shrink-0">Inactif</span>}
+                        </p>
                         {isSuperAdmin && u.club_id && (
                           <p className="text-[11px] text-primary truncate xl:hidden">
                             {clubs.find(c => c.id === u.club_id)?.nom ?? `Club #${u.club_id}`}
@@ -1036,8 +1056,8 @@ export default function AdminPage() {
                         <span className="material-symbols-outlined text-[18px]">edit</span>
                       </button>
                       <button onClick={() => openDelete(u)}
-                        className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-on-surface-variant hover:text-error transition-colors" title="Désactiver">
-                        <span className="material-symbols-outlined text-[18px]">block</span>
+                        className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-on-surface-variant hover:text-error transition-colors" title={u.actif ? 'Désactiver' : 'Réactiver'}>
+                        <span className="material-symbols-outlined text-[18px]">{u.actif ? 'block' : 'check_circle'}</span>
                       </button>
                     </div>
                   </td>
@@ -1221,20 +1241,22 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl p-6 text-center">
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="material-symbols-outlined text-error text-[28px]">delete</span>
+              <span className="material-symbols-outlined text-error text-[28px]">{modal.user.actif ? 'block' : 'check_circle'}</span>
             </div>
-            <h3 className="text-headline-md mb-2">Supprimer cet utilisateur ?</h3>
+            <h3 className="text-headline-md mb-2">{modal.user.actif ? 'Désactiver cet utilisateur ?' : 'Réactiver cet utilisateur ?'}</h3>
             <p className="text-body-md text-on-surface-variant mb-1">
               <strong>{modal.user.prenom} {modal.user.nom}</strong>
             </p>
-            <p className="text-body-sm text-on-surface-variant mb-6">Cette action est irréversible.</p>
+            <p className="text-body-sm text-on-surface-variant mb-6">
+              {modal.user.actif ? 'L\'utilisateur ne pourra plus se connecter. Vous pourrez le réactiver à tout moment.' : 'L\'utilisateur pourra de nouveau se connecter.'}
+            </p>
             {error && <p className="text-error text-body-sm mb-3">{error}</p>}
             <div className="flex gap-3">
               <button onClick={() => { setModal({ type: 'none' }); setError('') }}
                 className="flex-1 py-2.5 border border-outline-variant rounded-xl text-label-lg hover:bg-surface-container-low">Annuler</button>
               <button onClick={handleDelete} disabled={saving}
                 className="flex-1 py-2.5 bg-error text-white rounded-xl text-label-lg hover:opacity-90 disabled:opacity-50">
-                {saving ? 'Suppression…' : 'Supprimer'}
+                {saving ? 'Enregistrement…' : (modal.user.actif ? 'Désactiver' : 'Réactiver')}
               </button>
             </div>
           </div>

@@ -29,6 +29,7 @@ type Standing = {
 }
 
 const MATCH_TYPES = ['match', 'amical', 'coupe', 'tournoi']
+type Period = 'tous' | 'avenir' | 'passes'
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
@@ -49,6 +50,8 @@ export default function ResultsPage() {
   const [standings, setStandings] = useState<Standing[]>([])
   const [loading, setLoading]     = useState(true)
   const [cat, setCat]             = useState('Tous')
+  const [period, setPeriod]       = useState<Period>('tous')
+  const [displayCount, setDisplayCount] = useState(20)
   const [tab, setTab]             = useState<'resultats' | 'classement'>('resultats')
 
   useEffect(() => {
@@ -61,11 +64,23 @@ export default function ResultsPage() {
   // Catégories dynamiques depuis les matchs réels
   const categories = ['Tous', ...Array.from(new Set(matches.map(m => m.equipe?.categorie?.nom).filter(Boolean)))] as string[]
 
-  const filtered = matches.filter(m =>
-    cat === 'Tous' || m.equipe?.categorie?.nom === cat
-  )
+  const now = new Date()
+  const filtered = matches.filter(m => {
+    const matchCat = cat === 'Tous' || m.equipe?.categorie?.nom === cat
+    const d = new Date((m.date || '').replace(' ', 'T'))
+    const matchPeriod = period === 'tous' ? true : period === 'avenir' ? d >= now : d < now
+    return matchCat && matchPeriod
+  }).sort((a, b) => {
+    const da = new Date((a.date || '').replace(' ', 'T')).getTime()
+    const db = new Date((b.date || '').replace(' ', 'T')).getTime()
+    return period === 'avenir' ? da - db : db - da
+  })
 
   const played   = filtered.filter(m => m.statut === 'termine')
+  const displayed = filtered.slice(0, displayCount)
+
+  // Reset pagination when filters change
+  useEffect(() => setDisplayCount(20), [cat, period])
   const getResult = (m: Match) => {
     if (m.score_equipe === null) return null
     if (m.score_equipe > m.score_adversaire!) return 'Victoire'
@@ -95,16 +110,28 @@ export default function ResultsPage() {
         </button>
       </div>
 
-      {/* Catégories */}
-      <div className="flex gap-2 flex-wrap mb-5">
-        {categories.map(c => (
-          <button key={c} onClick={() => setCat(c)}
-            className={`px-4 py-2 rounded-full text-label-md font-semibold transition-all ${
-              cat === c ? 'bg-primary text-white shadow-sm' : 'bg-white border border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
-            }`}>
-            {c}
-          </button>
-        ))}
+      {/* Filtres */}
+      <div className="flex flex-wrap gap-3 mb-5 items-start">
+        <div className="flex gap-2 flex-wrap flex-1">
+          {categories.map(c => (
+            <button key={c} onClick={() => setCat(c)}
+              className={`px-4 py-2 rounded-full text-label-md font-semibold transition-all ${
+                cat === c ? 'bg-primary text-white shadow-sm' : 'bg-white border border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+              }`}>
+              {c}
+            </button>
+          ))}
+        </div>
+        <div className="flex bg-white border border-[#e8e8f0] rounded-full overflow-hidden shadow-sm">
+          {([['tous', 'Tous'], ['avenir', 'À venir'], ['passes', 'Passés']] as [Period, string][]).map(([val, label]) => (
+            <button key={val} onClick={() => setPeriod(val)}
+              className={`px-4 py-2 text-label-md font-semibold transition-all ${
+                period === val ? 'bg-primary text-white' : 'text-on-surface-variant hover:bg-surface-container-low'
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Stats rapides */}
@@ -148,7 +175,7 @@ export default function ResultsPage() {
             {!loading && filtered.length === 0 && <EmptyState onAdd={() => navigate('/evenements/creer')} />}
             {!loading && filtered.length > 0 && (
               <div className="divide-y divide-[#e8e8f0]">
-                {filtered.map(m => {
+                {displayed.map(m => {
                   const result = m.statut === 'termine' ? getResult(m) : null
                   const isFuture = m.statut === 'programme'
                   return (
@@ -207,6 +234,15 @@ export default function ResultsPage() {
                     </div>
                   )
                 })}
+                {displayCount < filtered.length && (
+                  <button
+                    onClick={() => setDisplayCount(c => c + 20)}
+                    className="w-full py-4 text-label-lg text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                    Voir {Math.min(20, filtered.length - displayCount)} match(s) de plus
+                    <span className="text-on-surface-variant/60 text-body-sm">({displayCount}/{filtered.length})</span>
+                  </button>
+                )}
               </div>
             )}
           </>

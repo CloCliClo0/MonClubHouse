@@ -81,7 +81,7 @@ const getStats = async (req, res) => {
     const [membres, equipes, matchs_weekend, notifications] = await Promise.all([
       User.count({ where: { ...whereClub, actif: true } }),
       Equipe.count({ where: { ...whereClub, actif: true } }),
-      Match.count({ where: { date: { [Op.between]: [new Date(), new Date(Date.now() + 7 * 86400000)] }, statut: 'programme' } }),
+      Match.count({ where: { ...whereClub, date: { [Op.between]: [new Date(), new Date(Date.now() + 7 * 86400000)] }, statut: 'programme' } }),
       Notification.count({ where: { user_id: req.user.id, lu: false } }),
     ]);
     return res.json({ success: true, data: { membres, equipes, matchs_weekend, notifications } });

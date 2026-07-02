@@ -10,7 +10,7 @@ const getMes = async (req, res) => {
     const notifications = await Notification.findAll({
       where: { user_id: req.user.id },
       order: [['created_at', 'DESC']],
-      limit: 50
+      limit: req.query.limit ? parseInt(req.query.limit, 10) : 50
     });
     const nonLues = notifications.filter(n => !n.lu).length;
     return res.json({ success: true, data: { notifications, non_lues: nonLues } });
@@ -71,7 +71,8 @@ const createReminders = async () => {
         });
         if (!alreadyExists) {
           const typeLabel = match.type === 'entrainement' ? 'entraînement' : 'match';
-          const heureStr = match.heure ? match.heure.substring(0, 5) : '?';
+          const dt = match.date ? new Date(match.date) : null;
+          const heureStr = dt && !isNaN(dt.getTime()) ? dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : (match.heure ? match.heure.substring(0, 5) : '?');
           await Notification.create({
             user_id: conv.joueur_id,
             type: 'rappel_veille',
