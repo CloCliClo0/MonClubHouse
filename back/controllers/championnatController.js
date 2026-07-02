@@ -33,8 +33,15 @@ function computeStandings(chEquipes, chMatchs) {
 const getChampionnats = async (req, res) => {
   try {
     const { equipe_ref_id, saison } = req.query;
-    const club_id = req.user.club_id;
     if (!equipe_ref_id || !saison) return res.json({ success: true, data: [] });
+
+    let club_id = req.user.club_id;
+    if (!club_id && equipe_ref_id) {
+      const { Equipe } = require('../models');
+      const eq = await Equipe.findByPk(equipe_ref_id, { attributes: ['club_id'] });
+      club_id = eq?.club_id || null;
+    }
+    if (!club_id) return res.json({ success: true, data: [] });
 
     const rows = await ChEquipe.findAll({
       where: { club_id, equipe_ref_id, saison },
@@ -53,10 +60,17 @@ const getChampionnats = async (req, res) => {
 const getClassement = async (req, res) => {
   try {
     const { equipe_ref_id, saison, championnat } = req.query;
-    const club_id = req.user.club_id;
     if (!equipe_ref_id || !saison) {
       return res.json({ success: true, data: { equipes: [], matchs: [] } });
     }
+
+    let club_id = req.user.club_id;
+    if (!club_id && equipe_ref_id) {
+      const { Equipe } = require('../models');
+      const eq = await Equipe.findByPk(equipe_ref_id, { attributes: ['club_id'] });
+      club_id = eq?.club_id || null;
+    }
+    if (!club_id) return res.json({ success: true, data: { equipes: [], matchs: [] } });
 
     const where = { club_id, equipe_ref_id, saison };
     if (championnat) where.championnat = championnat;

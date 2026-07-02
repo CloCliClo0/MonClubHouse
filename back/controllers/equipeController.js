@@ -8,6 +8,7 @@ const getAll = async (req, res) => {
   try {
     const where = { actif: true };
     if (req.query.club_id) where.club_id = req.query.club_id;
+    else if (req.user?.club_id) where.club_id = req.user.club_id; // filtre auto par club (superadmin = null → pas de filtre)
     if (req.query.sport_id) where.sport_id = req.query.sport_id;
     if (req.query.categorie_id) where.categorie_id = req.query.categorie_id;
 

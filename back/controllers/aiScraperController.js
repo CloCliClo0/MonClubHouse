@@ -128,10 +128,20 @@ const analyseWithAI = async (req, res) => {
 const importMatches = async (req, res) => {
   try {
     const { equipe_ref_id, saison, championnat, matches } = req.body;
-    const club_id = req.user.club_id;
 
     if (!equipe_ref_id || !saison || !Array.isArray(matches) || matches.length === 0) {
       return res.status(400).json({ success: false, message: 'Paramètres invalides' });
+    }
+
+    // Superadmin peut avoir club_id null → le résoudre depuis l'équipe sélectionnée
+    let club_id = req.user.club_id;
+    if (!club_id) {
+      const { Equipe } = require('../models');
+      const eq = await Equipe.findByPk(equipe_ref_id, { attributes: ['club_id'] });
+      club_id = eq?.club_id || null;
+    }
+    if (!club_id) {
+      return res.status(400).json({ success: false, message: 'Impossible de déterminer le club de cette équipe.' });
     }
 
     const teamCache = {};
