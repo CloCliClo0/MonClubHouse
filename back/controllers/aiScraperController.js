@@ -72,55 +72,88 @@ const analyseWithAI = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Clé API Gemini non configurée sur le serveur.' });
   }
 
-  try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  // Ordre de préférence des modèles (fallback automatique)
+  // gemini-2.0-flash a quota=0 sur ce projet → on utilise 2.5-flash en priorité
+  const MODELS = ['gemini-2.5-flash', 'gemini-flash-latest'];
 
-    let parts;
+  for (const modelName of MODELS) {
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: modelName });
 
-    if (file) {
-      const base64 = file.buffer.toString('base64');
-      parts = [
-        { inlineData: { data: base64, mimeType: file.mimetype } },
-        { text: SYSTEM_PROMPT + '\n\nExtrais tous les matchs de ce document.' },
-      ];
-    } else {
-      const truncated = html.slice(0, 80000);
-      parts = [{ text: SYSTEM_PROMPT + `\n\nExtrais tous les matchs du contenu suivant :\n\n${truncated}` }];
+      let parts;
+      if (file) {
+        const base64 = file.buffer.toString('base64');
+        parts = [
+          { inlineData: { data: base64, mimeType: file.mimetype } },
+          { text: SYSTEM_PROMPT + '\n\nExtrais tous les matchs de ce document.' },
+        ];
+      } else {
+        const truncated = html.slice(0, 80000);
+        parts = [{ text: SYSTEM_PROMPT + `\n\nExtrais tous les matchs du contenu suivant :\n\n${truncated}` }];
+      }
+
+      const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
+      const text = result.response.text();
+
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Pas de JSON dans la réponse IA');
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!Array.isArray(parsed.matches)) throw new Error('Format de réponse IA invalide');
+
+      quota.count++;
+      console.log(`[AI Scraper] Succès avec le modèle ${modelName}`);
+
+      return res.json({
+        success: true,
+        data: {
+          matches: parsed.matches,
+          championnat: parsed.championnat || null,
+          saison: parsed.saison || null,
+          quota: buildQuotaInfo(userId, role),
+        },
+      });
+    } catch (err) {
+      const isQuota = err.status === 429
+        || String(err.message).includes('RESOURCE_EXHAUSTED')
+        || String(err.message).includes('quota');
+      const isAuth = err.status === 401 || err.status === 403
+        || String(err.message).includes('API_KEY')
+        || String(err.message).includes('API key')
+        || String(err.message).includes('PERMISSION_DENIED')
+        || String(err.message).includes('UNAUTHENTICATED');
+      const isNotFound = err.status === 404
+        || String(err.message).includes('not found')
+        || String(err.message).includes('NOT_FOUND');
+
+      console.error(`[AI Scraper] Modèle ${modelName} — status=${err.status} message=${err.message}`);
+
+      // Erreur d'auth : inutile d'essayer les autres modèles
+      if (isAuth) {
+        return res.status(502).json({
+          success: false,
+          message: 'Clé API Gemini invalide ou accès refusé. Vérifiez la clé dans le fichier .env (GEMINI_API_KEY).',
+        });
+      }
+
+      // Modèle introuvable → essayer le suivant
+      if (isNotFound) continue;
+
+      // Quota Google épuisé → essayer le modèle suivant (quota indépendant par modèle)
+      if (isQuota) {
+        if (modelName === MODELS[MODELS.length - 1]) {
+          return res.status(502).json({
+            success: false,
+            message: 'Quota de l\'API Gemini épuisé sur tous les modèles disponibles. Vérifiez votre projet Google AI Studio ou réessayez demain.',
+          });
+        }
+        continue;
+      }
+
+      // Autre erreur (JSON invalide, réseau…) : on arrête
+      return res.status(500).json({ success: false, message: `Erreur IA (${modelName}) : ${err.message}` });
     }
-
-    const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
-    const text = result.response.text();
-
-    // Extraire le JSON de la réponse
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Pas de JSON dans la réponse IA');
-
-    const parsed = JSON.parse(jsonMatch[0]);
-    if (!Array.isArray(parsed.matches)) throw new Error('Format de réponse IA invalide');
-
-    quota.count++;
-
-    return res.json({
-      success: true,
-      data: {
-        matches: parsed.matches,
-        championnat: parsed.championnat || null,
-        saison: parsed.saison || null,
-        quota: buildQuotaInfo(userId, role),
-      },
-    });
-  } catch (err) {
-    console.error('[AI Scraper Gemini]', err.message);
-
-    if (err.message?.includes('API_KEY') || err.message?.includes('API key') || err.status === 401) {
-      return res.status(502).json({ success: false, message: 'Clé API Gemini invalide ou non reconnue. Vérifiez la configuration.' });
-    }
-    if (err.status === 429 || err.message?.includes('quota') || err.message?.includes('RESOURCE_EXHAUSTED')) {
-      // 502 et non 429 pour ne pas être confondu avec le quota journalier interne de l'application
-      return res.status(502).json({ success: false, message: 'Limite de l\'API Gemini atteinte. Réessayez dans quelques minutes.' });
-    }
-    return res.status(500).json({ success: false, message: `Erreur IA : ${err.message}` });
   }
 };
 
