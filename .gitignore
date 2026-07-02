@@ -1,29 +1,39 @@
+# ── Environnement ────────────────────────────────────────────────────────────
 back/.env
 *.env.local
-.DS_Store
-*.log
-npm-debug.log*
+.env.*.local
 
+# ── Dépendances ───────────────────────────────────────────────────────────────
 node_modules/
-.claude/
+
+# ── Build ─────────────────────────────────────────────────────────────────────
 dist/
-coverage/
 .cache/
+coverage/
 
-structure.sql
-fix_db.sql
-donnees.sql
+# ── Base de données ───────────────────────────────────────────────────────────
+database.sql
 
-*.sqlite
-*.sqlite3
-*.db
-*.bak
-*.backup
-*.log
-*.tmp
+# ── Système / OS ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
 *.swp
 *.swo
 
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Fichiers temporaires ──────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.backup
+*.sqlite
+*.sqlite3
+*.db
+
+# ── Claude / IA (mémoire de discussion, non versionné) ───────────────────────
+.claude/
 memory/
 context/
 changelog/
