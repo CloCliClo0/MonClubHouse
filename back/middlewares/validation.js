@@ -60,6 +60,42 @@ const validateComposition = [
   body('remplacants').optional().isArray({ max: 7 }).withMessage('Maximum 7 remplaçants')
 ];
 
+const validateUpdateProfil = [
+  body('nom').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Nom invalide'),
+  body('prenom').optional().trim().isLength({ max: 100 }),
+  body('telephone').optional({ nullable: true }).trim()
+    .matches(/^[0-9+\s\-().]{0,20}$/).withMessage('Numéro de téléphone invalide'),
+  body('date_naissance').optional({ nullable: true })
+    .isISO8601().withMessage('Date de naissance invalide'),
+  body('poste').optional({ nullable: true }).trim().isLength({ max: 50 }),
+  body('pied_fort').optional({ nullable: true })
+    .isIn(['droit', 'gauche', 'ambidextre', '']).withMessage('Pied fort invalide'),
+  body('taille').optional({ nullable: true })
+    .isInt({ min: 100, max: 230 }).withMessage('Taille invalide (100-230 cm)'),
+  body('notif_email').optional().isBoolean(),
+  body('notif_push').optional().isBoolean(),
+];
+
+const validateUpdateUser = [
+  body('nom').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Nom invalide'),
+  body('prenom').optional().trim().isLength({ max: 100 }),
+  body('role').optional()
+    .isIn(['superadmin', 'admin', 'dirigeant', 'coach', 'joueur', 'parent', 'visiteur'])
+    .withMessage('Rôle invalide'),
+  body('club_id').optional({ nullable: true }).isInt({ min: 1 }).withMessage('club_id invalide'),
+];
+
+const validateAdversaire = [
+  body('nom').trim().notEmpty().isLength({ max: 200 }).withMessage('Nom requis'),
+  body('categorie').optional({ nullable: true }).trim().isLength({ max: 50 }),
+  body('ville').optional({ nullable: true }).trim().isLength({ max: 200 }),
+  body('contact').optional({ nullable: true }).trim().isLength({ max: 200 }),
+  body('telephone').optional({ nullable: true }).trim()
+    .matches(/^[0-9+\s\-().]{0,20}$/).withMessage('Téléphone invalide'),
+  body('couleur').optional({ nullable: true })
+    .matches(/^#[0-9a-fA-F]{6}$/).withMessage('Couleur invalide (format #RRGGBB)'),
+];
+
 module.exports = {
   validateRegister,
   validateLogin,
@@ -69,5 +105,8 @@ module.exports = {
   validateMessage,
   validateLicencie,
   validateConvocationReponse,
-  validateComposition
+  validateComposition,
+  validateUpdateProfil,
+  validateUpdateUser,
+  validateAdversaire,
 };

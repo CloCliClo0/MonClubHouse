@@ -44,7 +44,16 @@ const update = async (req, res) => {
   try {
     const adv = await Adversaire.findOne({ where: { id: req.params.id, club_id: req.user.club_id } });
     if (!adv) return res.status(404).json({ success: false, message: 'Adversaire introuvable' });
-    await adv.update(req.body);
+    // Whitelist explicite — empêche la modification de club_id ou d'autres champs sensibles
+    const { nom, categorie, ville, contact, telephone, couleur } = req.body;
+    const updates = {};
+    if (nom       !== undefined) updates.nom       = String(nom).trim().slice(0, 200);
+    if (categorie !== undefined) updates.categorie = categorie || null;
+    if (ville     !== undefined) updates.ville     = ville ? String(ville).slice(0, 200) : null;
+    if (contact   !== undefined) updates.contact   = contact ? String(contact).slice(0, 200) : null;
+    if (telephone !== undefined) updates.telephone = telephone ? String(telephone).slice(0, 30) : null;
+    if (couleur   !== undefined) updates.couleur   = /^#[0-9a-fA-F]{6}$/.test(couleur) ? couleur : adv.couleur;
+    await adv.update(updates);
     return res.json({ success: true, data: adv });
   } catch {
     return res.status(500).json({ success: false, message: 'Erreur serveur' });

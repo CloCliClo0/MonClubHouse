@@ -11,9 +11,9 @@ const getDashboard = async (req, res) => {
       Equipe.count({ where: { ...whereClub, actif: true } }),
       Match.count({
         where: {
-          ...(clubId ? {} : {}),
+          ...whereClub,
           date: { [Op.gte]: new Date() },
-          statut: 'programme'
+          statut: 'programme',
         }
       }),
       Notification.count({ where: { user_id: req.user.id, lu: false } })
