@@ -15,6 +15,7 @@ const getMes = async (req, res) => {
     const nonLues = notifications.filter(n => !n.lu).length;
     return res.json({ success: true, data: { notifications, non_lues: nonLues } });
   } catch (err) {
+    console.error('[notificationController]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
@@ -28,6 +29,7 @@ const marquerLue = async (req, res) => {
     await notif.update({ lu: true, lu_at: new Date() });
     return res.json({ success: true });
   } catch (err) {
+    console.error('[notificationController]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
@@ -40,6 +42,7 @@ const marquerToutesLues = async (req, res) => {
     );
     return res.json({ success: true, message: 'Toutes les notifications sont marquées comme lues' });
   } catch (err) {
+    console.error('[notificationController]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
