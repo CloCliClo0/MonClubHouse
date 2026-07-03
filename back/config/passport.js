@@ -33,11 +33,14 @@ passport.use(new GoogleStrategy(
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
+      const email = profile.emails?.[0]?.value;
+      if (!email) return done(null, false);
+
       let isNew = false;
       let user = await User.findOne({ where: { google_id: profile.id } });
 
       if (!user) {
-        user = await User.findOne({ where: { email: profile.emails[0].value } });
+        user = await User.findOne({ where: { email } });
         if (user) {
           // Compte existant via email — on lie le Google ID
           await user.update({ google_id: profile.id });
@@ -46,9 +49,9 @@ passport.use(new GoogleStrategy(
           user = await User.create({
             nom: profile.displayName || profile.name?.familyName || '',
             prenom: profile.name?.givenName || '',
-            email: profile.emails[0].value,
+            email,
             google_id: profile.id,
-            avatar: profile.photos[0]?.value || null,
+            avatar: profile.photos?.[0]?.value || null,
             role: 'visiteur',
             actif: true
           });
