@@ -223,4 +223,4 @@ const importMatches = async (req, res) => {
   }
 };
 
-module.exports = { getQuota, analyseWithAI, importMatches };
+module.exports = { getQuota, analyseWithAI, importMatches, buildQuotaInfo };

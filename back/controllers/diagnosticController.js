@@ -144,10 +144,13 @@ function formatUptime(s) {
 }
 
 const testGemini = async (req, res) => {
+  const { buildQuotaInfo } = require('./aiScraperController');
+  const quota = buildQuotaInfo(req.user.id, req.user.role);
+
   if (!process.env.GEMINI_API_KEY) {
     return res.status(200).json({
       success: false,
-      data: { ok: false, error: 'GEMINI_API_KEY non configurée dans .env', model: null, ms: null, response: null },
+      data: { ok: false, error: 'GEMINI_API_KEY non configurée dans .env', model: null, ms: null, response: null, tokens: null, quota },
     });
   }
 
@@ -162,16 +165,22 @@ const testGemini = async (req, res) => {
       const result = await model.generateContent('Réponds uniquement par le mot : OK');
       const text = result.response.text().trim().slice(0, 100);
       const ms = Date.now() - t0;
-      return res.json({ success: true, data: { ok: true, model: modelName, ms, response: text, error: null } });
+      const usage = result.response.usageMetadata || null;
+      const tokens = usage ? {
+        prompt: usage.promptTokenCount ?? null,
+        response: usage.candidatesTokenCount ?? null,
+        total: usage.totalTokenCount ?? null,
+      } : null;
+      return res.json({ success: true, data: { ok: true, model: modelName, ms, response: text, error: null, tokens, quota } });
     } catch (err) {
       const ms = Date.now() - t0;
       const isNotFound = err.status === 404 || String(err.message).includes('not found') || String(err.message).includes('NOT_FOUND');
       if (isNotFound) continue;
-      return res.json({ success: true, data: { ok: false, model: modelName, ms, response: null, error: err.message } });
+      return res.json({ success: true, data: { ok: false, model: modelName, ms, response: null, error: err.message, tokens: null, quota } });
     }
   }
 
-  return res.json({ success: true, data: { ok: false, model: null, ms: null, response: null, error: 'Aucun modèle Gemini disponible' } });
+  return res.json({ success: true, data: { ok: false, model: null, ms: null, response: null, error: 'Aucun modèle Gemini disponible', tokens: null, quota } });
 };
 
 module.exports = { getServerDiagnostic, testGemini };

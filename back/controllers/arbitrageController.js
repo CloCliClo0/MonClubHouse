@@ -1,4 +1,4 @@
-const { ArbitragePresence, User, Match, Licencie, EquipeCoach } = require('../models');
+const { ArbitragePresence, User, Match, Licencie, EquipeCoach, Equipe } = require('../models');
 const { Op } = require('sequelize');
 
 function calcAge(dateNaissance) {

@@ -53,7 +53,7 @@ const ENDPOINTS: Omit<EndpointResult, 'status' | 'ok' | 'ms' | 'msg' | 'body'>[]
   // Adversaires
   { section: 'Adversaires',    method: 'GET', path: '/api/adversaires',            label: 'Adversaires' },
   // Championnat
-  { section: 'Championnat',    method: 'GET', path: '/api/championnat/equipes',    label: 'Équipes champ.' },
+  { section: 'Championnat',    method: 'GET', path: '/api/championnat/list',       label: 'Championnats list' },
   // Votes & Arbitrage
   { section: 'Arbitrage',      method: 'GET', path: '/api/arbitrage/matchs-besoin-arbitre', label: 'Matchs besoin arbitre' },
   { section: 'Arbitrage',      method: 'GET', path: '/api/arbitrage/presences',    label: 'Présences arbitrage' },
@@ -118,7 +118,9 @@ export default function DiagnosticPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
   const abortRef = useRef(false)
 
-  type GeminiResult = { ok: boolean; model: string | null; ms: number | null; response: string | null; error: string | null }
+  type GeminiTokens = { prompt: number | null; response: number | null; total: number | null }
+  type GeminiQuota  = { used: number; limit: number; remaining: number }
+  type GeminiResult = { ok: boolean; model: string | null; ms: number | null; response: string | null; error: string | null; tokens: GeminiTokens | null; quota: GeminiQuota | null }
   const [geminiResult, setGeminiResult] = useState<GeminiResult | null>(null)
   const [geminiLoading, setGeminiLoading] = useState(false)
 
@@ -129,7 +131,7 @@ export default function DiagnosticPage() {
       const r = await api.get('/diagnostic/gemini')
       setGeminiResult(r.data.data)
     } catch (err: any) {
-      setGeminiResult({ ok: false, model: null, ms: null, response: null, error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
+      setGeminiResult({ ok: false, model: null, ms: null, response: null, error: err?.response?.data?.message || err?.message || 'Erreur réseau', tokens: null, quota: null })
     } finally {
       setGeminiLoading(false)
     }
@@ -403,29 +405,71 @@ export default function DiagnosticPage() {
             <p className="text-body-sm text-on-surface-variant animate-pulse">Envoi d'une requête de test à l'API Gemini…</p>
           )}
           {geminiResult && (
-            <div className="flex flex-wrap gap-3">
-              <div className={`rounded-lg px-4 py-3 border flex items-center gap-2 ${geminiResult.ok ? 'bg-green-900/20 border-green-800/40' : 'bg-red-900/20 border-red-800/40'}`}>
-                <span className={`material-symbols-outlined text-[20px] ${geminiResult.ok ? 'text-green-400' : 'text-red-400'}`}>
-                  {geminiResult.ok ? 'check_circle' : 'error'}
-                </span>
-                <div>
-                  <p className={`text-label-lg font-bold ${geminiResult.ok ? 'text-green-300' : 'text-red-300'}`}>
-                    {geminiResult.ok ? 'Opérationnel' : 'Échec'}
-                  </p>
-                  <p className="text-[10px] text-on-surface-variant">Statut</p>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-3">
+                <div className={`rounded-lg px-4 py-3 border flex items-center gap-2 ${geminiResult.ok ? 'bg-green-900/20 border-green-800/40' : 'bg-red-900/20 border-red-800/40'}`}>
+                  <span className={`material-symbols-outlined text-[20px] ${geminiResult.ok ? 'text-green-400' : 'text-red-400'}`}>
+                    {geminiResult.ok ? 'check_circle' : 'error'}
+                  </span>
+                  <div>
+                    <p className={`text-label-lg font-bold ${geminiResult.ok ? 'text-green-300' : 'text-red-300'}`}>
+                      {geminiResult.ok ? 'Opérationnel' : 'Échec'}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant">Statut</p>
+                  </div>
                 </div>
+                {geminiResult.model && (
+                  <InfoTile icon="model_training" label="Modèle" value={geminiResult.model} />
+                )}
+                {geminiResult.ms !== null && (
+                  <InfoTile icon="speed" label="Latence" value={`${geminiResult.ms}ms`} warn={geminiResult.ms > 3000} />
+                )}
+                {geminiResult.response && (
+                  <InfoTile icon="chat" label="Réponse IA" value={geminiResult.response} />
+                )}
               </div>
-              {geminiResult.model && (
-                <InfoTile icon="model_training" label="Modèle" value={geminiResult.model} />
+
+              {/* Tokens */}
+              {geminiResult.tokens && (
+                <div className="flex flex-wrap gap-3">
+                  <InfoTile icon="token" label="Tokens prompt" value={geminiResult.tokens.prompt !== null ? String(geminiResult.tokens.prompt) : '—'} />
+                  <InfoTile icon="output" label="Tokens réponse" value={geminiResult.tokens.response !== null ? String(geminiResult.tokens.response) : '—'} />
+                  <InfoTile icon="functions" label="Tokens total" value={geminiResult.tokens.total !== null ? String(geminiResult.tokens.total) : '—'} />
+                </div>
               )}
-              {geminiResult.ms !== null && (
-                <InfoTile icon="speed" label="Latence" value={`${geminiResult.ms}ms`} warn={geminiResult.ms > 3000} />
+
+              {/* Quota journalier */}
+              {geminiResult.quota && (
+                <div className="flex flex-wrap gap-3 items-center">
+                  <InfoTile
+                    icon="bar_chart"
+                    label="Requêtes utilisées (auj.)"
+                    value={`${geminiResult.quota.used} / ${geminiResult.quota.limit}`}
+                    warn={geminiResult.quota.remaining === 0}
+                  />
+                  <InfoTile
+                    icon="event_available"
+                    label="Requêtes restantes"
+                    value={String(geminiResult.quota.remaining)}
+                    warn={geminiResult.quota.remaining === 0}
+                  />
+                  <div className="flex-1 min-w-[160px]">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant mb-1">Progression quota</p>
+                    <div className="h-2 bg-surface-container rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${geminiResult.quota.remaining === 0 ? 'bg-red-500' : geminiResult.quota.used / geminiResult.quota.limit > 0.8 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                        style={{ width: `${geminiResult.quota.limit > 0 ? Math.min(100, Math.round((geminiResult.quota.used / geminiResult.quota.limit) * 100)) : 0}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-on-surface-variant mt-0.5">
+                      {geminiResult.quota.limit > 0 ? Math.round((geminiResult.quota.used / geminiResult.quota.limit) * 100) : 0}% utilisé — reset à minuit
+                    </p>
+                  </div>
+                </div>
               )}
-              {geminiResult.response && (
-                <InfoTile icon="chat" label="Réponse" value={geminiResult.response} />
-              )}
+
               {geminiResult.error && (
-                <div className="flex-1 rounded-lg px-4 py-3 border bg-red-900/20 border-red-800/40">
+                <div className="rounded-lg px-4 py-3 border bg-red-900/20 border-red-800/40">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant mb-1">Erreur</p>
                   <p className="text-label-md text-red-300 font-mono break-all">{geminiResult.error}</p>
                 </div>
