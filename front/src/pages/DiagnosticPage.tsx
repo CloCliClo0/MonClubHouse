@@ -118,6 +118,23 @@ export default function DiagnosticPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
   const abortRef = useRef(false)
 
+  type GeminiResult = { ok: boolean; model: string | null; ms: number | null; response: string | null; error: string | null }
+  const [geminiResult, setGeminiResult] = useState<GeminiResult | null>(null)
+  const [geminiLoading, setGeminiLoading] = useState(false)
+
+  const testGeminiApi = async () => {
+    setGeminiLoading(true)
+    setGeminiResult(null)
+    try {
+      const r = await api.get('/diagnostic/gemini')
+      setGeminiResult(r.data.data)
+    } catch (err: any) {
+      setGeminiResult({ ok: false, model: null, ms: null, response: null, error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
+    } finally {
+      setGeminiLoading(false)
+    }
+  }
+
   const loadServerDiag = async () => {
     setDiagLoading(true)
     try {
@@ -358,6 +375,65 @@ export default function DiagnosticPage() {
           </div>
         </div>
       )}
+
+      {/* Gemini API test */}
+      <div className="bg-surface-container-low border border-[#e8e8f0] rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+          <span className="text-label-lg font-semibold flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-primary">smart_toy</span>
+            Test API Gemini
+          </span>
+          <button
+            onClick={testGeminiApi}
+            disabled={geminiLoading}
+            className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+          >
+            {geminiLoading
+              ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              : <span className="material-symbols-outlined text-[16px]">send</span>
+            }
+            {geminiLoading ? 'Test en cours…' : 'Tester Gemini'}
+          </button>
+        </div>
+        <div className="p-5">
+          {!geminiResult && !geminiLoading && (
+            <p className="text-body-sm text-on-surface-variant">Cliquez sur "Tester Gemini" pour vérifier la clé API et la connectivité.</p>
+          )}
+          {geminiLoading && (
+            <p className="text-body-sm text-on-surface-variant animate-pulse">Envoi d'une requête de test à l'API Gemini…</p>
+          )}
+          {geminiResult && (
+            <div className="flex flex-wrap gap-3">
+              <div className={`rounded-lg px-4 py-3 border flex items-center gap-2 ${geminiResult.ok ? 'bg-green-900/20 border-green-800/40' : 'bg-red-900/20 border-red-800/40'}`}>
+                <span className={`material-symbols-outlined text-[20px] ${geminiResult.ok ? 'text-green-400' : 'text-red-400'}`}>
+                  {geminiResult.ok ? 'check_circle' : 'error'}
+                </span>
+                <div>
+                  <p className={`text-label-lg font-bold ${geminiResult.ok ? 'text-green-300' : 'text-red-300'}`}>
+                    {geminiResult.ok ? 'Opérationnel' : 'Échec'}
+                  </p>
+                  <p className="text-[10px] text-on-surface-variant">Statut</p>
+                </div>
+              </div>
+              {geminiResult.model && (
+                <InfoTile icon="model_training" label="Modèle" value={geminiResult.model} />
+              )}
+              {geminiResult.ms !== null && (
+                <InfoTile icon="speed" label="Latence" value={`${geminiResult.ms}ms`} warn={geminiResult.ms > 3000} />
+              )}
+              {geminiResult.response && (
+                <InfoTile icon="chat" label="Réponse" value={geminiResult.response} />
+              )}
+              {geminiResult.error && (
+                <div className="flex-1 rounded-lg px-4 py-3 border bg-red-900/20 border-red-800/40">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant mb-1">Erreur</p>
+                  <p className="text-label-md text-red-300 font-mono break-all">{geminiResult.error}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Filtre */}
       <div className="flex gap-2 flex-wrap items-center">

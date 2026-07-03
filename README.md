@@ -52,10 +52,6 @@ npm install
 npm run dev           # port 5173 → http://localhost:5173
 ```
 
-> La base de données est sur Hostinger. Pour un dev 100 % local, activer
-> l'accès distant MySQL dans le panel Hostinger ou lancer un container Docker :
-> `docker run -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=mch_db --name mch mysql:8`
-
 ## Base de données
 
 Importer `database.sql` dans phpMyAdmin (Hostinger) pour créer toutes les tables.
