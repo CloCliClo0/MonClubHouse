@@ -69,7 +69,7 @@ function buildConvocationEmail({ joueur, match, club, appUrl }) {
                     <span style="color:#ffffff;font-weight:900;font-size:22px;letter-spacing:-1px;">MCH</span>
                   </div>
                   <p style="margin:0;color:rgba(255,255,255,.7);font-size:13px;letter-spacing:2px;text-transform:uppercase;font-weight:600;">
-                    ${club?.nom || 'MonClubHouse FC'}
+                    ${club?.nom || 'MonClubHouse'}
                   </p>
                 </td>
               </tr>
@@ -203,7 +203,7 @@ function buildConvocationEmail({ joueur, match, club, appUrl }) {
         <tr>
           <td style="background:#f4f4f6;padding:24px 40px;text-align:center;border-top:1px solid #e8e8f0;">
             <p style="margin:0;font-size:12px;color:#707973;">
-              Ce message a été envoyé par <strong>${club?.nom || 'MonClubHouse FC'}</strong> via la plateforme MonClubHouse.<br/>
+              Ce message a été envoyé par <strong>${club?.nom || 'MonClubHouse'}</strong> via la plateforme MonClubHouse.<br/>
               Pour ne plus recevoir ces emails, modifiez vos <a href="${appUrl}/profil" style="color:#0f5238;">préférences de notification</a>.
             </p>
           </td>
@@ -245,7 +245,7 @@ async function sendConvocationEmail({ joueur, match, club }) {
 
   try {
     await transporter.sendMail({
-      from: `"${club?.nom || 'MonClubHouse FC'}" <${process.env.SMTP_USER_CONV}>`,
+      from: `"${club?.nom || 'MonClubHouse'}" <${process.env.SMTP_USER_CONV}>`,
       to: `"${joueur.prenom} ${joueur.nom}" <${joueur.email}>`,
       subject,
       html,
@@ -423,7 +423,7 @@ async function sendTestConvocEmail({ user }) {
     instructions: 'Ceci est un email de convocation de TEST envoyé depuis le panel de diagnostic. Aucune action n\'est requise.',
   };
 
-  const fakeClub = { nom: 'MonClubHouse FC' };
+  const fakeClub = { nom: 'MonClubHouse' };
 
   const matchDate = new Date(fakeMatch.date);
   const dateStr = matchDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -434,7 +434,7 @@ async function sendTestConvocEmail({ user }) {
   const t0 = Date.now();
   try {
     await transporter.sendMail({
-      from: `"MonClubHouse FC" <${process.env.SMTP_USER_CONV}>`,
+      from: `"MonClubHouse" <${process.env.SMTP_USER_CONV}>`,
       to: `"${user.prenom} ${user.nom}" <${user.email}>`,
       subject,
       html,
