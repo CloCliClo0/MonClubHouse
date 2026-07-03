@@ -13,23 +13,34 @@ function sendEmailVerification(user) {
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
   user.update({ email_verify_token: token, email_verify_expires: expires })
     .then(() => sendVerifyEmail({ user, token }))
-    .catch(() => {});
+    .catch(err => console.warn('[Email] Vérification non envoyée :', err.message));
 }
 
 // Stockage en mémoire des tokens de réinitialisation (TTL 30 min)
-// Suffisant pour un serveur mono-process comme Hostinger Node.js
 const resetTokens = new Map(); // token → { email, expires }
+// Codes one-time OAuth (TTL 60s) — évite d'exposer les JWTs en query string
+const oauthCodes = new Map(); // code → { accessToken, refreshToken, isNew, expires }
 
+// Purge périodique des Maps (évite la fuite mémoire sur long-running server)
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of resetTokens) { if (now > v.expires) resetTokens.delete(k); }
+  for (const [k, v] of oauthCodes)  { if (now > v.expires) oauthCodes.delete(k); }
+}, 5 * 60 * 1000);
+
+let _noReplyTransporter = null;
 function getNoReplyTransporter() {
-  return nodemailer.createTransport({
+  if (_noReplyTransporter) return _noReplyTransporter;
+  _noReplyTransporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.hostinger.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false,
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: process.env.SMTP_SECURE !== 'false',
     auth: {
       user: process.env.SMTP_USER_NO_REPLY,
       pass: process.env.SMTP_PASS_NO_REPLY,
     },
   });
+  return _noReplyTransporter;
 }
 
 const register = async (req, res) => {
@@ -63,6 +74,7 @@ const register = async (req, res) => {
       if (!invite) {
         return res.status(400).json({ success: false, message: 'Code d\'invitation invalide ou expiré.' });
       }
+      // Vérification rapide (non-bloquante) — le verrou réel est l'UPDATE atomique plus bas
       if (invite.uses_count >= invite.max_uses) {
         return res.status(400).json({ success: false, message: 'Ce code a atteint sa limite d\'utilisation.' });
       }
@@ -96,7 +108,16 @@ const register = async (req, res) => {
         await Equipe.update({ coach_id: user.id }, { where: { id: invite.equipe_id } });
       }
 
-      await invite.increment('uses_count');
+      // Incrément atomique (optimistic locking) — évite la race condition entre requêtes concurrentes
+      const [nbUpdated] = await InviteCode.update(
+        { uses_count: invite.uses_count + 1 },
+        { where: { id: invite.id, uses_count: invite.uses_count } }
+      );
+      if (nbUpdated === 0) {
+        // Annuler la création du compte (code quota atteint entre-temps)
+        await user.destroy();
+        return res.status(400).json({ success: false, message: 'Ce code a atteint sa limite d\'utilisation.' });
+      }
 
       const payload = { id: user.id, role: user.role, club_id: user.club_id };
       const accessToken  = generateAccessToken(payload);
@@ -177,7 +198,7 @@ const login = async (req, res) => {
 
     // ── 2FA : si activée, envoyer un code et retourner un temp token ──
     if (user.two_fa_enabled) {
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const code = String(crypto.randomInt(100000, 1000000));
       const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
       await user.update({ two_fa_code: code, two_fa_expires: expires });
       send2faEmail({ user, code }).catch(() => {});
@@ -208,13 +229,7 @@ const login = async (req, res) => {
     });
   } catch (err) {
     console.error('Login error:', err);
-    // Message temporairement verbose pour diagnostiquer
-    return res.status(500).json({
-      success: false,
-      message: 'Erreur serveur',
-      debug: err.message,
-      code:  err.code || err.name
-    });
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -269,17 +284,31 @@ const googleCallback = async (req, res) => {
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
-    await user.update({
-      refresh_token: refreshToken,
-      derniere_connexion: new Date()
-    });
+    await user.update({ refresh_token: refreshToken, derniere_connexion: new Date() });
 
-    const base = `${process.env.APP_URL}/auth/callback?token=${accessToken}&refresh=${refreshToken}`;
-    const redirectUrl = isNew ? `${base}&new=1` : base;
+    // Code one-time (60 s) — les tokens ne transitent plus en query string
+    const code = crypto.randomBytes(32).toString('hex');
+    oauthCodes.set(code, { accessToken, refreshToken, isNew, expires: Date.now() + 60_000 });
+
+    const redirectUrl = `${process.env.APP_URL}/auth/callback?code=${code}${isNew ? '&new=1' : ''}`;
     return res.redirect(redirectUrl);
   } catch (err) {
     return res.redirect(`${process.env.APP_URL}/login?error=oauth_failed`);
   }
+};
+
+// POST /api/auth/oauth-exchange — échange le code one-time contre les JWTs
+const oauthExchange = async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ success: false, message: 'Code manquant' });
+
+  const entry = oauthCodes.get(code);
+  if (!entry || Date.now() > entry.expires) {
+    oauthCodes.delete(code);
+    return res.status(400).json({ success: false, message: 'Code invalide ou expiré' });
+  }
+  oauthCodes.delete(code); // usage unique
+  return res.json({ success: true, data: { access_token: entry.accessToken, refresh_token: entry.refreshToken, isNew: entry.isNew } });
 };
 
 const me = async (req, res) => {
@@ -344,7 +373,7 @@ const forgotPassword = async (req, res) => {
     return res.json({ success: true, message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' });
   } catch (err) {
     console.error('[forgotPassword]', err);
-    return res.status(500).json({ success: false, message: 'Erreur lors de l\'envoi', debug: err.message });
+    return res.status(500).json({ success: false, message: 'Erreur lors de l\'envoi' });
   }
 };
 
@@ -377,7 +406,7 @@ const resetPassword = async (req, res) => {
     return res.json({ success: true, message: 'Mot de passe mis à jour. Vous pouvez vous connecter.' });
   } catch (err) {
     console.error('[resetPassword]', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur', debug: err.message });
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -448,4 +477,4 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-module.exports = { register, login, refresh, logout, googleCallback, me, forgotPassword, resetPassword, cancelGooglePending, verify2fa, verifyEmail };
+module.exports = { register, login, refresh, logout, googleCallback, oauthExchange, me, forgotPassword, resetPassword, cancelGooglePending, verify2fa, verifyEmail };

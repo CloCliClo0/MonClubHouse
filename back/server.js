@@ -129,9 +129,8 @@ const allowedOrigins = [
 ];
 app.use(cors({
   origin: (origin, callback) => {
-    // Autorise les requêtes sans origin (mobile, curl, Postman) et les origins connues
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    callback(null, true); // En prod Hostinger on accepte tout (nginx filtre déjà)
+    callback(new Error('CORS non autorisé'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -195,8 +194,18 @@ app.use('/api/categories',   categoriesRoutes);
 app.use('/api/diagnostic',   require('./routes/diagnostic'));
 app.use('/api/support',      require('./routes/support'));
 
-// Auth Google (hors /api pour le redirect OAuth)
-app.use('/auth', authRoutes);
+// Auth Google — uniquement les routes OAuth (hors /api pour le redirect Google)
+// On n'y attache PAS authLimiter pour éviter de rater le callback OAuth, mais
+// les endpoints sensibles (login, register) ne sont exposés qu'à /api/auth/ (avec rate limiting)
+const oauthRouter = require('express').Router();
+const passport = require('./config/passport');
+const { googleCallback } = require('./controllers/authController');
+oauthRouter.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+oauthRouter.get('/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: '/login?error=oauth_failed' }),
+  googleCallback
+);
+app.use('/auth', oauthRouter);
 
 // Health check
 app.get('/health', (req, res) => {

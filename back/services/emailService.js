@@ -34,7 +34,7 @@ function buildConvocationEmail({ joueur, match, club, appUrl }) {
   const dateStr = matchDate.toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
-  const heureStr = matchDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const heureStr = match.heure ? match.heure.substring(0, 5) : matchDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   const typeLabel  = match.type === 'entrainement' ? 'Entraînement' : 'Match';
   const titleLine  = match.type === 'entrainement'

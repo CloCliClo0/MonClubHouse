@@ -79,7 +79,7 @@ export default function Topbar({ onMenuToggle }: Props) {
   }, [])
 
   const markAllRead = async () => {
-    await api.patch('/profil/notifications/read-all').catch(() => {})
+    await api.patch('/profil/notifications/toutes-lues').catch(() => {})
     setNotifs([])
   }
 
@@ -161,7 +161,7 @@ export default function Topbar({ onMenuToggle }: Props) {
                     notifs.map(n => (
                       <div key={n.id}
                         onClick={async () => {
-                          await api.patch(`/profil/notifications/${n.id}/read`).catch(() => {})
+                          await api.patch(`/profil/notifications/${n.id}/lue`).catch(() => {})
                           setShowNotifs(false)
                           if (n.lien) navigate(n.lien)
                         }}

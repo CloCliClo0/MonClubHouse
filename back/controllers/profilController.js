@@ -168,7 +168,7 @@ const send2faCode = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
-    const code    = String(Math.floor(100000 + Math.random() * 900000));
+    const code    = String(crypto.randomInt(100000, 1000000));
     const expires = new Date(Date.now() + 10 * 60 * 1000);
     await user.update({ two_fa_code: code, two_fa_expires: expires });
     const result = await send2faEmail({ user, code });

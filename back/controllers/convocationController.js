@@ -1,4 +1,5 @@
 const { Convocation, Match, User, Equipe, Terrain, Notification, Licencie } = require('../models');
+const { Op } = require('sequelize');
 const { createNotification } = require('./notificationController');
 const { sendBulkConvocationEmails } = require('../services/emailService');
 
@@ -40,46 +41,48 @@ const creerConvocations = async (req, res) => {
     });
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
 
-    const joueurs = [];
-    const convocations = [];
+    // 1. Requête unique : trouver les convocations déjà existantes
+    const existing = await Convocation.findAll({
+      where: { match_id, joueur_id: { [Op.in]: joueur_ids } },
+      attributes: ['joueur_id'],
+    });
+    const existingIds = new Set(existing.map(c => c.joueur_id));
+    const newJoueurIds = joueur_ids.filter(id => !existingIds.has(id));
 
-    for (const joueurId of joueur_ids) {
-      const [conv, created] = await Convocation.findOrCreate({
-        where: { match_id, joueur_id: joueurId },
-        defaults: { statut: 'convoque' },
-      });
+    // 2. Bulk create des nouvelles convocations (1 requête au lieu de N)
+    let newConvocations = [];
+    if (newJoueurIds.length > 0) {
+      newConvocations = await Convocation.bulkCreate(
+        newJoueurIds.map(joueur_id => ({ match_id, joueur_id, statut: 'convoque' })),
+        { ignoreDuplicates: true }
+      );
 
-      if (created) {
-        convocations.push(conv);
-
-        const typeLabel = match.type === 'entrainement' ? 'Entraînement' : 'Match';
-        await createNotification({
-          user_id: joueurId,
-          type: 'convocation',
-          titre: `Convocation — ${typeLabel}`,
-          contenu: `Vous êtes convoqué(e) pour le ${new Date(match.date).toLocaleDateString('fr-FR')}${match.adversaire ? ' contre ' + match.adversaire : ''}`,
-          lien: `/convocations`,
-          donnees: { match_id },
-        });
-      }
-
-      if (envoyer_email) {
-        const joueur = await User.findByPk(joueurId, {
-          attributes: ['id', 'nom', 'prenom', 'email', 'notif_email'],
-        });
-        if (joueur) joueurs.push(joueur);
-      }
+      // 3. Notifications en parallèle (au lieu de séquentielles)
+      const typeLabel = match.type === 'entrainement' ? 'Entraînement' : 'Match';
+      const dateStr = new Date(match.date).toLocaleDateString('fr-FR');
+      await Promise.all(newJoueurIds.map(joueurId => createNotification({
+        user_id: joueurId,
+        type: 'convocation',
+        titre: `Convocation — ${typeLabel}`,
+        contenu: `Vous êtes convoqué(e) pour le ${dateStr}${match.adversaire ? ' contre ' + match.adversaire : ''}`,
+        lien: `/convocations`,
+        donnees: { match_id },
+      })));
     }
 
-    // Marquer comme notifiés
+    // 4. Marquer comme notifiés
     await Convocation.update(
       { notifie: true, notifie_at: new Date() },
       { where: { match_id, joueur_id: joueur_ids } }
     );
 
-    // Envoi emails en arrière-plan (ne bloque pas la réponse)
+    // 5. Emails si demandé — 1 seule requête User.findAll
     let emailReport = null;
-    if (envoyer_email && joueurs.length > 0) {
+    if (envoyer_email && newJoueurIds.length > 0) {
+      const joueurs = await User.findAll({
+        where: { id: { [Op.in]: newJoueurIds } },
+        attributes: ['id', 'nom', 'prenom', 'email', 'notif_email'],
+      });
       emailReport = await sendBulkConvocationEmails({
         joueurs,
         match,
@@ -89,8 +92,8 @@ const creerConvocations = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: `${convocations.length} convocation(s) créée(s)`,
-      data: convocations,
+      message: `${newConvocations.length} convocation(s) créée(s)`,
+      data: newConvocations,
       email: emailReport,
     });
   } catch (err) {
@@ -141,6 +144,11 @@ const repondre = async (req, res) => {
 const repondreParent = async (req, res) => {
   try {
     const { statut, joueur_id, motif_absence } = req.body;
+
+    const validStatuts = ['present', 'absent', 'incertain'];
+    if (!validStatuts.includes(statut)) {
+      return res.status(400).json({ success: false, message: 'Statut invalide' });
+    }
 
     const enfant = await User.findOne({ where: { id: joueur_id, parent_id: req.user.id } });
     if (!enfant) return res.status(403).json({ success: false, message: 'Enfant introuvable' });

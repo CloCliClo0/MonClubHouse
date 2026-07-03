@@ -14,8 +14,19 @@ const handleValidation = (req, res, next) => {
   next();
 };
 
+const AVATAR_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
 // memoryStorage : le buffer est passé au driveService, qui gère le stockage
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (AVATAR_MIMES.has(file.mimetype)) return cb(null, true);
+    const err = new Error('Type de fichier non autorisé. JPEG, PNG, WebP ou GIF uniquement.');
+    err.status = 400;
+    cb(err);
+  },
+});
 
 router.get('/', authenticate, getProfil);
 router.put('/', authenticate, validateUpdateProfil, handleValidation, updateProfil);

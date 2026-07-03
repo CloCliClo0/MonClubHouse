@@ -65,18 +65,26 @@ const getById = async (req, res) => {
 
 const TYPE_MAP = { plateau: 'autre', reunion: 'autre' };
 
+const ALLOWED_CREATE_FIELDS = ['equipe_id', 'date', 'heure', 'heure_rdv', 'type', 'adversaire', 'adversaire_id', 'lieu', 'terrain_id', 'domicile_exterieur', 'description', 'championnat', 'journee', 'besoin_arbitre'];
+const ALLOWED_UPDATE_FIELDS = ['date', 'heure', 'heure_rdv', 'type', 'adversaire', 'adversaire_id', 'lieu', 'terrain_id', 'domicile_exterieur', 'statut', 'description', 'championnat', 'journee', 'besoin_arbitre', 'rapport'];
+
 const create = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
   try {
     const rawType = req.body.type;
-    const payload = {
-      ...req.body,
-      type: TYPE_MAP[rawType] ?? rawType,
-      club_id: req.body.club_id ?? req.user.club_id,
-      besoin_arbitre: req.body.besoin_arbitre ?? false,
-    };
+    const payload = {};
+    for (const key of ALLOWED_CREATE_FIELDS) {
+      if (req.body[key] !== undefined) payload[key] = req.body[key];
+    }
+    payload.type = TYPE_MAP[rawType] ?? rawType;
+    payload.besoin_arbitre = payload.besoin_arbitre ?? false;
+    // Seul le superadmin peut spécifier un club_id différent du sien
+    payload.club_id = req.user.role === 'superadmin'
+      ? (req.body.club_id ?? req.user.club_id)
+      : req.user.club_id;
+
     const match = await Match.create(payload);
     return res.status(201).json({ success: true, data: match });
   } catch (err) {
@@ -88,7 +96,19 @@ const update = async (req, res) => {
   try {
     const match = await Match.findByPk(req.params.id);
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
-    await match.update(req.body);
+
+    // Vérification appartenance au club
+    if (req.user.role !== 'superadmin' && match.club_id !== req.user.club_id) {
+      return res.status(403).json({ success: false, message: 'Accès interdit' });
+    }
+
+    const updates = {};
+    for (const key of ALLOWED_UPDATE_FIELDS) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (updates.type) updates.type = TYPE_MAP[updates.type] ?? updates.type;
+
+    await match.update(updates);
     return res.json({ success: true, data: match });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -143,15 +163,15 @@ const createRecurring = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Dates invalides' });
     }
 
-    const created = [];
+    const matchesToCreate = [];
     const current = new Date(start);
     // Avancer au premier jour correspondant
     while (current.getDay() !== Number(day_of_week)) {
       current.setDate(current.getDate() + 1);
     }
 
-    while (current <= end) {
-      const match = await Match.create({
+    while (current <= end && matchesToCreate.length < 104) {
+      matchesToCreate.push({
         equipe_id, type: 'entrainement', statut: 'programme',
         date: current.toISOString().slice(0, 10),
         heure, heure_rdv: heure_rdv || null,
@@ -159,11 +179,12 @@ const createRecurring = async (req, res) => {
         description: description || null,
         club_id: equipe.club_id,
       });
-      created.push(match);
       current.setDate(current.getDate() + 7);
     }
 
-    return res.status(201).json({ success: true, data: created, count: created.length });
+    const createdMatches = await Match.bulkCreate(matchesToCreate);
+
+    return res.status(201).json({ success: true, data: createdMatches, count: createdMatches.length });
   } catch (err) {
     console.error('[match.createRecurring]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });

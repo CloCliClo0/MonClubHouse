@@ -10,7 +10,7 @@ const getMes = async (req, res) => {
     const notifications = await Notification.findAll({
       where: { user_id: req.user.id },
       order: [['created_at', 'DESC']],
-      limit: req.query.limit ? parseInt(req.query.limit, 10) : 50
+      limit: Math.min(parseInt(req.query.limit, 10) || 50, 100)
     });
     const nonLues = notifications.filter(n => !n.lu).length;
     return res.json({ success: true, data: { notifications, non_lues: nonLues } });

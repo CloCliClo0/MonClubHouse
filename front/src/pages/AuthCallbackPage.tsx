@@ -7,38 +7,40 @@ export default function AuthCallbackPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const token   = params.get('token')
-    const refresh = params.get('refresh')
-    const isNew   = params.get('new') === '1'
-    if (token) {
-      localStorage.setItem('token', token)
-      if (refresh) localStorage.setItem('refresh_token', refresh)
-      // Décoder le JWT pour stocker rôle + userId sans appel API
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-        if (payload.id)   localStorage.setItem('userId', String(payload.id))
-        if (payload.role) localStorage.setItem('role',   payload.role)
-      } catch {}
-
-      const finish = () => navigate(isNew ? '/google-complete' : '/dashboard', { replace: true })
-
-      // Le JWT ne contient pas le prénom/nom : on les récupère via /auth/me
-      // pour que le dashboard et la topbar affichent le bon nom dès l'arrivée.
-      api.get('/auth/me')
-        .then((res) => {
-          const u = res.data?.data
-          if (u) {
-            localStorage.setItem('prenom', u.prenom || u.nom || '')
-            localStorage.setItem('nom',    u.nom || '')
-            localStorage.setItem('email',  u.email || '')
-            if (u.role) localStorage.setItem('role', u.role)
-          }
-        })
-        .catch(() => {})
-        .finally(finish)
-    } else {
+    const code = params.get('code')
+    if (!code) {
       navigate('/login?error=oauth_failed', { replace: true })
+      return
     }
+
+    // Échange le code one-time contre les JWTs (les tokens ne transitent plus en URL)
+    api.post('/auth/oauth-exchange', { code })
+      .then((res) => {
+        const { access_token, refresh_token, isNew } = res.data.data
+        localStorage.setItem('token', access_token)
+        if (refresh_token) localStorage.setItem('refresh_token', refresh_token)
+        try {
+          const payload = JSON.parse(atob(access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          if (payload.id)   localStorage.setItem('userId', String(payload.id))
+          if (payload.role) localStorage.setItem('role',   payload.role)
+        } catch {}
+
+        const finish = () => navigate(isNew ? '/google-complete' : '/dashboard', { replace: true })
+
+        api.get('/auth/me')
+          .then((r) => {
+            const u = r.data?.data
+            if (u) {
+              localStorage.setItem('prenom', u.prenom || u.nom || '')
+              localStorage.setItem('nom',    u.nom || '')
+              localStorage.setItem('email',  u.email || '')
+              if (u.role) localStorage.setItem('role', u.role)
+            }
+          })
+          .catch(() => {})
+          .finally(finish)
+      })
+      .catch(() => navigate('/login?error=oauth_failed', { replace: true }))
   }, [])
 
   return (

@@ -31,8 +31,12 @@ const getDashboard = async (req, res) => {
 const getUsers = async (req, res) => {
   try {
     const where = {};
-    if (req.query.club_id) where.club_id = req.query.club_id;
-    else if (req.user.club_id && req.user.role !== 'superadmin') where.club_id = req.user.club_id;
+    // Seul le superadmin peut cibler un club spécifique via ?club_id
+    if (req.user.role === 'superadmin' && req.query.club_id) {
+      where.club_id = req.query.club_id;
+    } else if (req.user.club_id) {
+      where.club_id = req.user.club_id;
+    }
     if (req.query.role) where.role = req.query.role;
     if (req.query.actif !== undefined) where.actif = req.query.actif === 'true';
 
@@ -52,6 +56,10 @@ const updateUserRole = async (req, res) => {
     const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
 
+    if (req.user.role !== 'superadmin' && user.club_id !== req.user.club_id) {
+      return res.status(403).json({ success: false, message: 'Accès interdit' });
+    }
+
     const { role } = req.body;
     const rolesValides = ['admin', 'dirigeant', 'coach', 'joueur', 'parent', 'visiteur'];
     if (req.user.role !== 'superadmin') rolesValides.splice(0, 1);
@@ -70,6 +78,9 @@ const toggleUserActif = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+    if (req.user.role !== 'superadmin' && user.club_id !== req.user.club_id) {
+      return res.status(403).json({ success: false, message: 'Accès interdit' });
+    }
     const actif = req.body.actif !== undefined ? Boolean(req.body.actif) : !user.actif;
     await user.update({ actif });
     return res.json({ success: true, data: { actif: user.actif } });
