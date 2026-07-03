@@ -195,10 +195,8 @@ app.use('/api/diagnostic',   require('./routes/diagnostic'));
 app.use('/api/support',      require('./routes/support'));
 
 // Auth Google — uniquement les routes OAuth (hors /api pour le redirect Google)
-// On n'y attache PAS authLimiter pour éviter de rater le callback OAuth, mais
-// les endpoints sensibles (login, register) ne sont exposés qu'à /api/auth/ (avec rate limiting)
+// Les endpoints sensibles (login, register) ne sont exposés qu'à /api/auth/ (avec rate limiting)
 const oauthRouter = require('express').Router();
-const passport = require('./config/passport');
 const { googleCallback } = require('./controllers/authController');
 oauthRouter.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 oauthRouter.get('/google/callback',
