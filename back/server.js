@@ -193,6 +193,7 @@ app.use('/api/votes',        voteRoutes);
 app.use('/api/arbitrage',    arbitrageRoutes);
 app.use('/api/categories',   categoriesRoutes);
 app.use('/api/diagnostic',   require('./routes/diagnostic'));
+app.use('/api/support',      require('./routes/support'));
 
 // Auth Google (hors /api pour le redirect OAuth)
 app.use('/auth', authRoutes);

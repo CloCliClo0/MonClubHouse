@@ -30,6 +30,7 @@ export default function Sidebar({ open, onClose }: Props) {
     ADMIN:       { path: '/admin',        icon: 'admin_panel_settings', label: t.nav.administration},
     SUPER_ADMIN: { path: '/super-admin',  icon: 'shield_person',        label: 'Gestion clubs'     },
     DIAGNOSTIC:  { path: '/diagnostic',  icon: 'bug_report',           label: 'Diagnostic'        },
+    SUPPORT_ADM: { path: '/support-admin', icon: 'support_agent',       label: 'Support'           },
     SCRAPER:     { path: '/scraper',      icon: 'code_blocks',          label: 'Import FFF'        },
     ARBITRAGE:   { path: '/arbitrage',   icon: 'sports_handball',       label: 'Arbitrage'         },
   }
@@ -40,6 +41,7 @@ export default function Sidebar({ open, onClose }: Props) {
     superadmin: [
       { label: t.nav.administration, items: [NAV.ADMIN, NAV.SUPER_ADMIN] },
       { label: 'Outils',            items: [NAV.SCRAPER, NAV.DIAGNOSTIC] },
+      { label: 'Support',           items: [NAV.SUPPORT_ADM] },
     ],
     admin: [
       { label: t.nav.administration, items: [NAV.ADMIN] },

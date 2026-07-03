@@ -51,6 +51,7 @@ const VotePage         = lazy(() => import('./pages/VotePage'))
 const ArbitragePage    = lazy(() => import('./pages/ArbitragePage'))
 const SuperAdminPage   = lazy(() => import('./pages/SuperAdminPage'))
 const DiagnosticPage   = lazy(() => import('./pages/DiagnosticPage'))
+const SupportAdminPage = lazy(() => import('./pages/SupportAdminPage'))
 const HelpPage         = lazy(() => import('./pages/HelpPage'))
 const DocumentationPage = lazy(() => import('./pages/DocumentationPage'))
 const SupportPage      = lazy(() => import('./pages/SupportPage'))
@@ -100,6 +101,7 @@ export default function App() {
               <Route path="/arbitrage"              element={<ArbitragePage />} />
               <Route path="/super-admin"            element={<SuperAdminPage />} />
               <Route path="/diagnostic"             element={<DiagnosticPage />} />
+              <Route path="/support-admin"          element={<SupportAdminPage />} />
               <Route path="/aide"                   element={<HelpPage />} />
               <Route path="/aide/documentation"     element={<DocumentationPage />} />
               <Route path="/aide/support"           element={<SupportPage />} />

@@ -20,6 +20,7 @@ const MatchEvent = require('./MatchEvent');
 const PlayerVote = require('./PlayerVote');
 const ArbitragePresence = require('./ArbitragePresence');
 const Category = require('./Category');
+const SupportTicket = require('./SupportTicket');
 
 // Associations Club
 Club.hasMany(Terrain, { foreignKey: 'club_id', as: 'terrains' });
@@ -128,6 +129,12 @@ ArbitragePresence.belongsTo(Match, { foreignKey: 'match_id', as: 'match' });
 User.hasMany(MatchEvent, { foreignKey: 'passeur_id', as: 'match_events_passes' });
 MatchEvent.belongsTo(User, { foreignKey: 'passeur_id', as: 'passeur' });
 
+// SupportTicket associations
+User.hasMany(SupportTicket, { foreignKey: 'user_id', as: 'support_tickets' });
+SupportTicket.belongsTo(User, { foreignKey: 'user_id', as: 'auteur' });
+SupportTicket.belongsTo(User, { foreignKey: 'repondu_par', as: 'repondant' });
+SupportTicket.belongsTo(Club, { foreignKey: 'club_id', as: 'club' });
+
 module.exports = {
   sequelize,
   User,
@@ -151,4 +158,5 @@ module.exports = {
   PlayerVote,
   ArbitragePresence,
   Category,
+  SupportTicket,
 };
