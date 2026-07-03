@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mch-v2';
+const CACHE_NAME = 'mch-v3';
 
 const APP_SHELL = ['/', '/index.html', '/logo.svg', '/manifest.json'];
 
@@ -38,7 +38,8 @@ self.addEventListener('fetch', (e) => {
         if (cached) return cached;
         return fetch(e.request).then((res) => {
           if (res.ok) {
-            caches.open(CACHE_NAME).then((c) => c.put(e.request, res.clone()));
+            const toCache = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(e.request, toCache));
           }
           return res;
         });
@@ -80,7 +81,8 @@ self.addEventListener('fetch', (e) => {
       return fetch(e.request).then((res) => {
         if (res.ok) {
           try {
-            caches.open(CACHE_NAME).then((c) => c.put(e.request, res.clone()));
+            const toCache = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(e.request, toCache));
           } catch (_) {}
         }
         return res;

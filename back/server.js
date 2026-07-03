@@ -328,6 +328,31 @@ const applyStartupMigrations = async () => {
   } catch (e) {
     console.warn('[DB] Migration startup échouée (arbitrage_presences) :', e.message);
   }
+
+  // Création table support_tickets si absente
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id           INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        user_id      INT NOT NULL,
+        club_id      INT NULL,
+        sujet        VARCHAR(200) NOT NULL,
+        message      TEXT NOT NULL,
+        priorite     ENUM('normal','haute','urgent') NOT NULL DEFAULT 'normal',
+        statut       ENUM('ouvert','en_cours','resolu','ferme') NOT NULL DEFAULT 'ouvert',
+        reponse      TEXT NULL,
+        repondu_par  INT NULL,
+        createdAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_support_user (user_id),
+        INDEX idx_support_club (club_id),
+        INDEX idx_support_statut (statut)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('[DB] Table support_tickets OK');
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée (support_tickets) :', e.message);
+  }
 };
 
 const connectDB = async (retries = 10, delay = 5000) => {

@@ -319,7 +319,7 @@ const testConvocSms = async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
 
     if (!isSmsConfigured()) {
-      return res.json({ success: true, data: { ok: false, ms: null, to: user.telephone || null, error: 'MAILTOSMS_API_KEY non configurée dans .env' } });
+      return res.json({ success: true, data: { ok: false, ms: null, to: user.telephone || null, error: 'CLICKSEND_API_TOKEN non configurée dans .env' } });
     }
 
     const result = await sendTestConvocSms({ user });

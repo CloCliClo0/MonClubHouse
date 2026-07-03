@@ -1,17 +1,17 @@
 const https = require('https');
 
 function isSmsConfigured() {
-  return !!(process.env.MAILTOSMS_API_KEY);
+  return !!(process.env.CLICKSEND_API_TOKEN);
 }
 
 /**
- * Envoie un SMS via l'API smsmode.com.
+ * Envoie un SMS via l'API ClickSend.
  * @param {string} to   - Numéro de téléphone du destinataire (format E.164 ou local FR)
  * @param {string} message - Texte du SMS (≤ 160 chars pour un segment)
  */
 async function sendSms({ to, message }) {
   if (!isSmsConfigured()) {
-    return { sent: false, reason: 'MAILTOSMS_API_KEY non configurée dans .env' };
+    return { sent: false, reason: 'CLICKSEND_API_TOKEN non configurée dans .env' };
   }
 
   // Normalise le numéro : retire espaces, tirets, parenthèses, points
@@ -23,22 +23,21 @@ async function sendSms({ to, message }) {
     return { sent: false, reason: `Numéro invalide ou non supporté : ${phone}` };
   }
 
-  const payload = JSON.stringify({
-    recipient: { to: phone },
-    body: { text: message },
-  });
+  const msg = { to: phone, body: message, source: 'monclubhouse' };
+  if (process.env.CLICKSEND_FROM) msg.from = process.env.CLICKSEND_FROM;
+
+  const payload = JSON.stringify({ messages: [msg] });
 
   const t0 = Date.now();
   return new Promise((resolve) => {
     const req = https.request(
       {
-        hostname: 'rest.smsmode.com',
-        path: '/sms/v1/messages',
+        hostname: 'rest.clicksend.com',
+        path: '/v3/sms/send',
         method: 'POST',
         headers: {
-          'X-Api-Key': process.env.MAILTOSMS_API_KEY,
+          'Authorization': `Bearer ${process.env.CLICKSEND_API_TOKEN}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
           'Content-Length': Buffer.byteLength(payload),
         },
       },
@@ -47,14 +46,16 @@ async function sendSms({ to, message }) {
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
           const ms = Date.now() - t0;
-          if (res.statusCode >= 200 && res.statusCode < 300) {
+          let parsed = {};
+          try { parsed = JSON.parse(data); } catch {}
+          const msgResult = parsed?.data?.messages?.[0];
+          const ok = res.statusCode >= 200 && res.statusCode < 300 && msgResult?.status === 'SUCCESS';
+          if (ok) {
             resolve({ sent: true, ms, to: phone, status: res.statusCode });
           } else {
-            let parsed = {};
-            try { parsed = JSON.parse(data); } catch {}
             resolve({
               sent: false, ms, to: phone,
-              reason: parsed?.message || parsed?.error || `HTTP ${res.statusCode}`,
+              reason: msgResult?.status || parsed?.response_msg || `HTTP ${res.statusCode}`,
               status: res.statusCode,
             });
           }

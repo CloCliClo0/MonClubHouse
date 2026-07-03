@@ -14,13 +14,11 @@ const Notification = sequelize.define('Notification', {
     allowNull: false
   },
   titre:   { type: DataTypes.STRING(255), allowNull: false },
-  // DB column is `message` — aliased as `contenu` for app consistency
-  contenu: { type: DataTypes.TEXT, allowNull: true, field: 'message' },
+  contenu: { type: DataTypes.TEXT, allowNull: true },
   lien:    { type: DataTypes.STRING(500), allowNull: true },
   lu:      { type: DataTypes.BOOLEAN, defaultValue: false },
   lu_at:   { type: DataTypes.DATE, allowNull: true },
-  // DB column is `data` — aliased as `donnees` for app consistency
-  donnees: { type: DataTypes.JSON, allowNull: true, field: 'data' },
+  donnees: { type: DataTypes.JSON, allowNull: true },
   send_at: { type: DataTypes.DATE, allowNull: true },
 }, {
   tableName: 'notifications'

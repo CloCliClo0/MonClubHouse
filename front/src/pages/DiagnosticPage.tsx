@@ -737,7 +737,7 @@ export default function DiagnosticPage() {
                 <span className="material-symbols-outlined text-[18px] text-on-surface-variant">sms</span>
                 <div>
                   <span className="text-label-lg font-semibold">Test convocation par SMS</span>
-                  <span className="ml-2 text-[10px] font-semibold text-white bg-amber-600 px-2 py-0.5 rounded-full">smsmode.com</span>
+                  <span className="ml-2 text-[10px] font-semibold text-white bg-amber-600 px-2 py-0.5 rounded-full">ClickSend</span>
                 </div>
               </div>
               <button
