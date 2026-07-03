@@ -1,17 +1,18 @@
 const https = require('https');
 
 function isSmsConfigured() {
-  return !!(process.env.CLICKSEND_API_TOKEN);
+  return !!(process.env.CLICKSEND_API_TOKEN && process.env.CLICKSEND_USERNAME);
 }
 
 /**
  * Envoie un SMS via l'API ClickSend.
+ * Auth HTTP Basic : CLICKSEND_USERNAME (identifiant du compte) + CLICKSEND_API_TOKEN (API key).
  * @param {string} to   - Numéro de téléphone du destinataire (format E.164 ou local FR)
  * @param {string} message - Texte du SMS (≤ 160 chars pour un segment)
  */
 async function sendSms({ to, message }) {
   if (!isSmsConfigured()) {
-    return { sent: false, reason: 'CLICKSEND_API_TOKEN non configurée dans .env' };
+    return { sent: false, reason: 'CLICKSEND_API_TOKEN / CLICKSEND_USERNAME non configurés dans .env' };
   }
 
   // Normalise le numéro : retire espaces, tirets, parenthèses, points
@@ -24,9 +25,10 @@ async function sendSms({ to, message }) {
   }
 
   const msg = { to: phone, body: message, source: 'monclubhouse' };
-  if (process.env.CLICKSEND_FROM) msg.from = process.env.CLICKSEND_FROM;
+  if (process.env.CLICKSEND_SENDER) msg.from = process.env.CLICKSEND_SENDER;
 
   const payload = JSON.stringify({ messages: [msg] });
+  const basicAuth = Buffer.from(`${process.env.CLICKSEND_USERNAME}:${process.env.CLICKSEND_API_TOKEN}`).toString('base64');
 
   const t0 = Date.now();
   return new Promise((resolve) => {
@@ -36,7 +38,7 @@ async function sendSms({ to, message }) {
         path: '/v3/sms/send',
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.CLICKSEND_API_TOKEN}`,
+          'Authorization': `Basic ${basicAuth}`,
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payload),
         },
