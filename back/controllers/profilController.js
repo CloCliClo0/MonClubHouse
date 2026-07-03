@@ -3,15 +3,22 @@ const { validationResult } = require('express-validator');
 
 const getProfil = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id, {
-      attributes: { exclude: ['password_hash', 'refresh_token', 'google_id'] },
-      include: [{
-        model: Licencie, as: 'licence',
-        include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
-          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] }]
-      }]
+    const [user, meta] = await Promise.all([
+      User.findByPk(req.user.id, {
+        attributes: { exclude: ['password_hash', 'refresh_token', 'google_id'] },
+        include: [{
+          model: Licencie, as: 'licence',
+          include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
+            include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] }]
+        }]
+      }),
+      User.findByPk(req.user.id, { attributes: ['google_id', 'password_hash'] }),
+    ]);
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+    return res.json({
+      success: true,
+      data: { ...user.toJSON(), has_google: !!meta?.google_id, has_password: !!meta?.password_hash },
     });
-    return res.json({ success: true, data: user });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
@@ -95,4 +102,39 @@ const getEnfants = async (req, res) => {
   }
 };
 
-module.exports = { getProfil, updateProfil, updatePassword, uploadAvatar, getHistorique, getEnfants };
+// DELETE /profil/google-unlink
+const unlinkGoogle = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, { attributes: ['id', 'google_id', 'password_hash'] });
+    if (!user?.google_id) {
+      return res.status(400).json({ success: false, message: 'Aucun compte Google lié.' });
+    }
+    if (!user.password_hash) {
+      return res.status(400).json({ success: false, message: 'Définissez d\'abord un mot de passe avant de délier votre compte Google.' });
+    }
+    await User.update({ google_id: null }, { where: { id: req.user.id } });
+    return res.json({ success: true, message: 'Compte Google délié.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// POST /profil/set-initial-password — uniquement pour comptes sans mot de passe (ex: Google)
+const setInitialPassword = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, { attributes: ['id', 'password_hash'] });
+    if (user?.password_hash) {
+      return res.status(400).json({ success: false, message: 'Utilisez "Changer le mot de passe" car vous en avez déjà un.' });
+    }
+    const { password } = req.body;
+    if (!password || password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Mot de passe trop court (8 caractères min.)' });
+    }
+    await User.update({ password_hash: password }, { where: { id: req.user.id } });
+    return res.json({ success: true, message: 'Mot de passe défini.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { getProfil, updateProfil, updatePassword, uploadAvatar, getHistorique, getEnfants, unlinkGoogle, setInitialPassword };

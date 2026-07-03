@@ -9,6 +9,7 @@ type UserData = {
   telephone: string | null; date_naissance: string | null
   role: string; avatar: string | null
   notif_email: boolean; notif_push: boolean
+  has_google?: boolean; has_password?: boolean
 }
 type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; created_at: string }
 
@@ -41,6 +42,11 @@ export default function ProfilePage() {
   const [newPwd, setNewPwd] = useState('')
   const [confPwd, setConf]  = useState('')
   const [pwdSaving, setPwdSaving] = useState(false)
+
+  // Google linking
+  const [unlinkingGoogle, setUnlinkingGoogle] = useState(false)
+  const [initPwd, setInitPwd]       = useState('')
+  const [initPwdSaving, setInitPwdSaving] = useState(false)
 
   // Notifications réelles
   const [notifs, setNotifs]     = useState<Notif[]>([])
@@ -125,6 +131,32 @@ export default function ProfilePage() {
     } catch (err: any) {
       flash(err.response?.data?.message || 'Ancien mot de passe incorrect.', true)
     } finally { setPwdSaving(false) }
+  }
+
+  const handleUnlinkGoogle = async () => {
+    if (!confirm('Délier votre compte Google ? Vous pourrez toujours vous connecter par email/mot de passe.')) return
+    setUnlinkingGoogle(true)
+    try {
+      await api.delete('/profil/google-unlink')
+      flash('Compte Google délié.')
+      loadUser()
+    } catch (err: any) {
+      flash(err.response?.data?.message || 'Erreur', true)
+    } finally { setUnlinkingGoogle(false) }
+  }
+
+  const handleSetInitialPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (initPwd.length < 8) { flash('Mot de passe trop court (8 caractères min.).', true); return }
+    setInitPwdSaving(true)
+    try {
+      await api.post('/profil/set-initial-password', { password: initPwd })
+      setInitPwd('')
+      flash('Mot de passe défini. Vous pouvez maintenant aussi délier Google si vous le souhaitez.')
+      loadUser()
+    } catch (err: any) {
+      flash(err.response?.data?.message || 'Erreur', true)
+    } finally { setInitPwdSaving(false) }
   }
 
   const linkChild = async () => {
@@ -374,6 +406,61 @@ export default function ProfilePage() {
       {/* ── Sécurité ────────────────────────────────────────────────────── */}
       {tab === 'securite' && (
         <div className="space-y-6">
+          {/* ── Connexion Google ───────────────────────────────────────── */}
+          <section className="bg-white border border-[#e8e8f0] rounded-lg p-6 max-w-2xl">
+            <div className="mb-5">
+              <h5 className="text-headline-md mb-1">Compte Google</h5>
+              <p className="text-on-surface-variant text-body-md">Liez votre compte Google pour vous connecter en un clic.</p>
+            </div>
+            {user?.has_google ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <span className="material-symbols-outlined text-green-600">check_circle</span>
+                  <span className="text-body-md text-green-800">Compte Google lié</span>
+                </div>
+                {!user.has_password && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-body-sm text-amber-800">
+                      Pour délier Google, définissez d'abord un mot de passe ci-dessous.
+                    </div>
+                    <form onSubmit={handleSetInitialPassword} className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-label-md text-on-surface-variant">Définir un mot de passe</label>
+                        <input type="password" value={initPwd} onChange={e => setInitPwd(e.target.value)} placeholder="••••••••" required
+                          className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+                      </div>
+                      <button type="submit" disabled={initPwdSaving || initPwd.length < 8}
+                        className="px-6 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:brightness-110 disabled:opacity-50 flex items-center gap-2">
+                        {initPwdSaving && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
+                        Définir le mot de passe
+                      </button>
+                    </form>
+                  </div>
+                )}
+                {user.has_password && (
+                  <button onClick={handleUnlinkGoogle} disabled={unlinkingGoogle}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-error/40 text-error rounded-lg text-label-md hover:bg-error/5 transition-colors disabled:opacity-50">
+                    {unlinkingGoogle ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                      : <span className="material-symbols-outlined text-[18px]">link_off</span>}
+                    Délier le compte Google
+                  </button>
+                )}
+              </div>
+            ) : (
+              <a href="/api/auth/google"
+                className="inline-flex items-center gap-3 px-5 py-3 border border-[#e8e8f0] rounded-lg hover:bg-surface-container-low transition-colors text-label-lg">
+                <svg viewBox="0 0 48 48" className="w-5 h-5" fill="none">
+                  <path fill="#4285F4" d="M46.145 24.5c0-1.557-.14-3.057-.4-4.5H24v8.513h12.44C35.972 31.97 33.3 34.5 29.5 35.8v4.7h7.2c4.213-3.88 6.645-9.6 6.645-16z"/>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.92-2.147 15.9-5.814l-7.2-4.686C30.6 39.09 27.5 40 24 40c-6.271 0-11.583-4.237-13.48-9.94h-7.44v4.84C7.115 42.743 15 48 24 48z"/>
+                  <path fill="#FBBC05" d="M10.52 30.06C10.02 28.56 9.74 26.96 9.74 25.3s.28-3.26.78-4.76v-4.84h-7.44A23.83 23.83 0 0 0 .01 25.3c0 3.87.927 7.53 2.57 10.76l7.94-6z"/>
+                  <path fill="#EA4335" d="M24 9.6c3.54 0 6.716 1.217 9.213 3.6l6.91-6.91C35.913 2.4 30.473 0 24 0 15 0 7.115 5.257 3.073 13.04l7.44 4.84C12.417 13.837 17.73 9.6 24 9.6z"/>
+                </svg>
+                Connecter avec Google
+              </a>
+            )}
+          </section>
+
+          {user?.has_password !== false && (
           <section className="bg-white border border-[#e8e8f0] rounded-lg p-6 max-w-2xl">
             <div className="mb-6">
               <h5 className="text-headline-md mb-1">Changer le mot de passe</h5>
@@ -407,6 +494,7 @@ export default function ProfilePage() {
               </div>
             </form>
           </section>
+          )}
         </div>
       )}
 

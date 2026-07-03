@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 
@@ -24,15 +24,26 @@ export default function GoogleCompletePage() {
   const [error, setError]         = useState('')
   const [joinInfo, setJoinInfo]   = useState<{ equipe: { nom: string }; role: string } | null>(null)
 
+  // Editable profile fields
+  const [editPrenom, setEditPrenom] = useState('')
+  const [editNom, setEditNom]       = useState('')
+  const [editTel, setEditTel]       = useState('')
+  const [editPassword, setEditPassword] = useState('')
+
   const [players, setPlayers]         = useState<Player[]>([])
   const [selectedChild, setSelectedChild] = useState<number | null>(null)
   const [loadingPlayers, setLoadingPlayers] = useState(false)
+
+  // Track whether the user completed the flow — used for cleanup on quit
+  const completedRef = useRef(false)
 
   useEffect(() => {
     api.get('/auth/me')
       .then(r => {
         const u = r.data.data
         setUser(u)
+        setEditPrenom(u.prenom || '')
+        setEditNom(u.nom || '')
         localStorage.setItem('userId', String(u.id))
         localStorage.setItem('prenom', u.prenom || u.nom || '')
         localStorage.setItem('role', u.role || 'visiteur')
@@ -41,9 +52,33 @@ export default function GoogleCompletePage() {
       .finally(() => setLoadingUser(false))
   }, [])
 
+  // Cleanup: delete pending account on SPA navigation away (if not completed)
+  useEffect(() => {
+    return () => {
+      if (!completedRef.current) {
+        api.delete('/auth/cancel-google-pending').catch(() => {})
+      }
+    }
+  }, [])
+
+  // Cleanup: delete pending account on tab close / page reload (keepalive fetch)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (completedRef.current) return
+      const token = localStorage.getItem('access_token')
+      fetch('/api/auth/cancel-google-pending', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        keepalive: true,
+      }).catch(() => {})
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [])
+
   useEffect(() => {
     if (step === 'done') {
-      // Mettre à jour le rôle en localStorage après join réussi
+      completedRef.current = true
       setTimeout(() => navigate('/dashboard', { replace: true }), 1500)
     }
   }, [step])
@@ -53,10 +88,29 @@ export default function GoogleCompletePage() {
     setError('')
     setLoading(true)
     try {
+      // 1. Update profile info (name, phone)
+      await api.put('/profil', {
+        prenom: editPrenom.trim() || undefined,
+        nom:    editNom.trim()    || undefined,
+        telephone: editTel.trim() || undefined,
+      })
+
+      // 2. Set password if provided
+      if (editPassword.trim()) {
+        if (editPassword.length < 8) {
+          setError('Le mot de passe doit faire au moins 8 caractères.')
+          setLoading(false)
+          return
+        }
+        await api.post('/profil/set-initial-password', { password: editPassword })
+      }
+
+      // 3. Join club with invite code
       const res = await api.post('/clubs/join', { code: code.trim().toUpperCase() })
       const data = res.data.data
       setJoinInfo(data)
       localStorage.setItem('role', data.role)
+      localStorage.setItem('prenom', editPrenom.trim() || user?.prenom || '')
 
       if (data.role === 'parent') {
         setStep('child')
@@ -107,7 +161,7 @@ export default function GoogleCompletePage() {
       className="min-h-screen flex items-center justify-center p-6"
       style={{ background: 'linear-gradient(135deg, #2b2d42 0%, #1b4332 100%)' }}
     >
-      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-[480px] bg-white rounded-2xl shadow-2xl overflow-hidden">
 
         {/* Header */}
         <div className="px-8 pt-8 pb-6 text-center border-b border-[#e8e8f0]">
@@ -162,13 +216,35 @@ export default function GoogleCompletePage() {
           {step === 'form' && (
             <form onSubmit={handleSubmit} className="space-y-5">
 
-              {/* Infos Google (lecture seule) */}
-              <div className="bg-surface-container-low rounded-xl p-4 flex items-center gap-3">
-                <span className="material-symbols-outlined text-on-surface-variant text-[20px]">mail</span>
-                <div>
-                  <p className="text-label-md text-on-surface-variant">Compte Google</p>
-                  <p className="text-body-md text-on-surface font-medium">{user?.prenom} {user?.nom}</p>
-                  <p className="text-body-sm text-on-surface-variant">{user?.email}</p>
+              {/* Infos modifiables */}
+              <div className="space-y-3">
+                <p className="text-label-md text-on-surface-variant">Vos informations</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-label-sm text-on-surface-variant">Prénom</label>
+                    <input value={editPrenom} onChange={e => setEditPrenom(e.target.value)}
+                      placeholder="Jean"
+                      className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-label-sm text-on-surface-variant">Nom</label>
+                    <input value={editNom} onChange={e => setEditNom(e.target.value)}
+                      placeholder="Dupont"
+                      className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-label-sm text-on-surface-variant">Téléphone (optionnel)</label>
+                  <input value={editTel} onChange={e => setEditTel(e.target.value)}
+                    type="tel" placeholder="06 12 34 56 78"
+                    className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-label-sm text-on-surface-variant">Mot de passe (optionnel)</label>
+                  <input value={editPassword} onChange={e => setEditPassword(e.target.value)}
+                    type="password" placeholder="Pour se connecter sans Google…"
+                    className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
+                  <p className="text-body-sm text-on-surface-variant/70">Laissez vide pour utiliser uniquement Google.</p>
                 </div>
               </div>
 

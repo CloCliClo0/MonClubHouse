@@ -4,6 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const path = require('path');
@@ -15,7 +16,7 @@ if (!fs.existsSync(UPLOADS_PATH)) fs.mkdirSync(UPLOADS_PATH, { recursive: true }
 
 const passport = require('./config/passport');
 const { sequelize } = require('./models');
-const { apiLimiter, authLimiter } = require('./middlewares/rateLimiter');
+const { apiLimiter, authLimiter, aiLimiter, resetPasswordLimiter } = require('./middlewares/rateLimiter');
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -64,19 +65,57 @@ app.set('io', io);
 // Hostinger utilise un reverse proxy — nécessaire pour rate-limit et IP réelle
 app.set('trust proxy', 1);
 
+// ── Compression gzip/brotli (avant tout) ──────────────────────────────────
+app.use(compression({ level: 6, threshold: 1024 }));
+
 // Middlewares globaux
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.socket.io'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-      connectSrc: ["'self'", 'wss://monclubhouse.fr', 'https://monclubhouse.fr', 'ws://monclubhouse.fr', 'http://monclubhouse.fr']
+      defaultSrc:      ["'self'"],
+      scriptSrc:       ["'self'", "'unsafe-inline'", 'https://cdn.socket.io'],
+      styleSrc:        ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc:         ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc:          ["'self'", 'data:', 'blob:', 'https:'],
+      connectSrc:      ["'self'", 'wss://monclubhouse.fr', 'https://monclubhouse.fr', 'ws://monclubhouse.fr', 'http://monclubhouse.fr'],
+      frameAncestors:  ["'none'"],
+      baseUri:         ["'self'"],
+      formAction:      ["'self'"],
+      objectSrc:       ["'none'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
     }
-  }
+  },
+  crossOriginEmbedderPolicy: false,
+  hsts: process.env.NODE_ENV === 'production'
+    ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+    : false,
 }));
+
+// Permissions-Policy — désactive les APIs non utilisées
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// Sanitisation globale — supprime les null bytes et limite les clés excessivement longues
+app.use((req, res, next) => {
+  const sanitize = (obj) => {
+    if (!obj || typeof obj !== 'object') return;
+    for (const key of Object.keys(obj)) {
+      if (key.length > 200) { delete obj[key]; continue; }
+      if (typeof obj[key] === 'string') {
+        obj[key] = obj[key].replace(/\0/g, '').trimStart();
+      } else if (typeof obj[key] === 'object') {
+        sanitize(obj[key]);
+      }
+    }
+  };
+  sanitize(req.body);
+  sanitize(req.query);
+  next();
+});
 
 // Accepte HTTP et HTTPS, et les deux sous-domaines courants
 const allowedOrigins = [
@@ -107,14 +146,32 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(passport.initialize());
 
-// Fichiers statiques (build Vite)
+// Fichiers statiques (build Vite) — cache long terme sur les assets hachés
 const CLIENT_PATH = path.join(__dirname, '..', 'front', 'dist');
-app.use(express.static(CLIENT_PATH));
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use(express.static(CLIENT_PATH, {
+  maxAge: '1y',
+  immutable: true,
+  // index.html jamais mis en cache (requis pour SPA routing)
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('index.html') || filePath.endsWith('manifest.json')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
+  maxAge: '7d',
+  // Empêche d'afficher les fichiers HTML uploadés comme pages
+  setHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', 'inline');
+  },
+}));
 
 // Rate limiting
 app.use('/api/', apiLimiter);
 app.use('/api/auth/', authLimiter);
+app.use('/api/auth/forgot-password', resetPasswordLimiter);
+app.use('/api/ai-scraper/analyse', aiLimiter);
 
 // Routes API
 app.use('/api/auth', authRoutes);

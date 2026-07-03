@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('../config/passport');
-const { register, login, refresh, logout, googleCallback, me, forgotPassword, resetPassword } = require('../controllers/authController');
+const { register, login, refresh, logout, googleCallback, me, forgotPassword, resetPassword, cancelGooglePending } = require('../controllers/authController');
 const { authenticate, optionalAuth } = require('../middlewares/auth');
 const { validateRegister, validateLogin } = require('../middlewares/validation');
 
@@ -10,8 +10,9 @@ router.post('/login',           validateLogin, login);
 router.post('/refresh',         refresh);
 router.post('/logout',          authenticate, logout);
 router.get('/me',               authenticate, me);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password',  resetPassword);
+router.post('/forgot-password',          forgotPassword);
+router.post('/reset-password',           resetPassword);
+router.delete('/cancel-google-pending',  authenticate, cancelGooglePending);
 
 // Google OAuth
 router.get('/google',

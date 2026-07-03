@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { getProfil, updateProfil, updatePassword, uploadAvatar, getHistorique, getEnfants } = require('../controllers/profilController');
+const { getProfil, updateProfil, updatePassword, uploadAvatar, getHistorique, getEnfants, unlinkGoogle, setInitialPassword } = require('../controllers/profilController');
 const { getMes, marquerLue, marquerToutesLues } = require('../controllers/notificationController');
 const { authenticate } = require('../middlewares/auth');
 
@@ -21,6 +21,8 @@ router.put('/password', authenticate, updatePassword);
 router.post('/avatar', authenticate, upload.single('avatar'), uploadAvatar);
 router.get('/historique', authenticate, getHistorique);
 router.get('/enfants', authenticate, getEnfants);
+router.delete('/google-unlink', authenticate, unlinkGoogle);
+router.post('/set-initial-password', authenticate, setInitialPassword);
 
 // Notifications
 router.get('/notifications', authenticate, getMes);

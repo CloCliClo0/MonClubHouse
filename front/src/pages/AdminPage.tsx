@@ -36,7 +36,7 @@ type ModalState =
   | { type: 'delete'; user: User }
   | { type: 'assign'; user: User }
 
-const BLANK = { nom: '', prenom: '', email: '', role: 'joueur' as Role, password: '' }
+const BLANK = { nom: '', prenom: '', email: '', role: 'joueur' as Role, password: '', club_id: '' }
 
 type Club = { id: number; nom: string; logo?: string; ville?: string; email?: string; telephone?: string; description?: string; couleur_primaire?: string; actif: boolean }
 type EquipeDetail = { id: number; nom: string; categorie?: CategoryRef | null; niveau?: string; couleur?: string; actif: boolean }
@@ -616,7 +616,7 @@ export default function AdminPage() {
   })
 
   const openCreate = () => { setForm(BLANK); setError(''); setModal({ type: 'create' }) }
-  const openEdit   = (u: User) => { setForm({ nom: u.nom, prenom: u.prenom, email: u.email, role: u.role, password: '' }); setError(''); setModal({ type: 'edit', user: u }) }
+  const openEdit   = (u: User) => { setForm({ nom: u.nom, prenom: u.prenom, email: u.email, role: u.role, password: '', club_id: String(u.club_id || '') }); setError(''); setModal({ type: 'edit', user: u }) }
   const openDelete = (u: User) => setModal({ type: 'delete', user: u })
   const openAssign = (u: User) => {
     setAssignForm({ club_id: String(u.club_id || ''), role: u.role, equipe_id: '' })
@@ -632,7 +632,7 @@ export default function AdminPage() {
     setSaving(true)
     try {
       if (modal.type === 'create') {
-        await api.post('/auth/register', { ...form, password_hash: form.password })
+        await api.post('/auth/register', { ...form, password_hash: form.password, club_id: form.club_id ? parseInt(form.club_id) : undefined })
         load()
         setModal({ type: 'none' })
       } else if (modal.type === 'edit') {
@@ -1120,6 +1120,19 @@ export default function AdminPage() {
                   <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
                 </div>
               </div>
+              {isSuperAdmin && modal.type === 'create' && (
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Club</label>
+                  <div className="relative">
+                    <select value={form.club_id} onChange={e => setForm(f => ({ ...f, club_id: e.target.value }))}
+                      className="w-full appearance-none px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all pr-8 bg-white">
+                      <option value="">— Aucun club —</option>
+                      {clubs.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                    </select>
+                    <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="p-5 border-t border-[#e8e8f0] flex justify-end gap-3">
               <button onClick={() => setModal({ type: 'none' })}

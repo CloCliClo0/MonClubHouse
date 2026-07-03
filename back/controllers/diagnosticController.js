@@ -68,9 +68,16 @@ const getServerDiagnostic = async (req, res) => {
       { table: 'notifications', column: 'lu_at' },
       { table: 'sports',        column: 'nb_joueurs_equipe' },
     ];
+    // Whitelist validation — table et colonne sont des constantes statiques,
+    // mais on valide le format pour garantir qu'aucune valeur externe n'est interpolée
+    const SAFE_IDENT = /^[a-z_][a-z0-9_]{0,63}$/;
     for (const { table, column } of criticalColumns) {
+      if (!SAFE_IDENT.test(table) || !SAFE_IDENT.test(column)) continue;
       try {
-        const [cols] = await sequelize.query(`SHOW COLUMNS FROM \`${table}\` LIKE '${column}'`);
+        const [cols] = await sequelize.query(
+          'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = ? AND TABLE_SCHEMA = DATABASE()',
+          { replacements: [table, column] }
+        );
         schemaChecks.push({ table: `${table}.${column}`, exists: cols.length > 0, isColumn: true });
       } catch { schemaChecks.push({ table: `${table}.${column}`, exists: false, isColumn: true }); }
     }

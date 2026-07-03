@@ -105,17 +105,23 @@ const register = async (req, res) => {
     }
 
     // ── Création admin : sans code, rôle libre ──────────────────────
-    const { role } = req.body;
+    const { role, club_id } = req.body;
     const existing = await User.findOne({ where: { email } });
     if (existing) {
       return res.status(409).json({ success: false, message: 'Email déjà utilisé.' });
     }
 
     const safeRole = ['joueur', 'parent', 'coach', 'dirigeant', 'admin', 'visiteur'].includes(role) ? role : 'joueur';
+    // Superadmin peut définir un club_id, les autres admins utilisent le leur
+    const userClubId = req.user.role === 'superadmin'
+      ? (club_id ? parseInt(club_id) : null)
+      : (req.user.club_id || null);
+
     const user = await User.create({
       nom, prenom: prenom || '', email,
       password_hash: password,
       role: safeRole,
+      club_id: userClubId,
       actif: true,
     });
 
@@ -346,4 +352,19 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, refresh, logout, googleCallback, me, forgotPassword, resetPassword };
+// DELETE /api/auth/cancel-google-pending — supprime un compte visiteur Google incomplet
+const cancelGooglePending = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.json({ success: true });
+    if (user.role === 'visiteur' && user.google_id && !user.club_id) {
+      await user.destroy();
+      return res.json({ success: true, deleted: true });
+    }
+    return res.json({ success: false });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+module.exports = { register, login, refresh, logout, googleCallback, me, forgotPassword, resetPassword, cancelGooglePending };
