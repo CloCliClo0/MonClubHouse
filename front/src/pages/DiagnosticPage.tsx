@@ -130,12 +130,23 @@ export default function DiagnosticPage() {
 
   type DiagUser = { id: number; nom: string; prenom: string; email: string }
   type TestFnResult = { ok: boolean; ms: number | null; to: string; error: string | null } | null
+  type DriveResult  = { ok: boolean; ms: number | null; fileId?: string; url?: string; name?: string; error: string | null } | null
   const [diagUsers, setDiagUsers]         = useState<DiagUser[]>([])
   const [testUserId, setTestUserId]       = useState<string>('')
   const [emailResult, setEmailResult]     = useState<TestFnResult>(null)
   const [emailLoading, setEmailLoading]   = useState(false)
   const [notifResult, setNotifResult]     = useState<TestFnResult>(null)
   const [notifLoading, setNotifLoading]   = useState(false)
+  const [driveResult, setDriveResult]     = useState<DriveResult>(null)
+  const [driveLoading, setDriveLoading]   = useState(false)
+  const [twoFaResult, setTwoFaResult]     = useState<TestFnResult>(null)
+  const [twoFaLoading, setTwoFaLoading]   = useState(false)
+  const [verifyResult, setVerifyResult]   = useState<TestFnResult>(null)
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const [convocEmailResult, setConvocEmailResult] = useState<TestFnResult>(null)
+  const [convocEmailLoading, setConvocEmailLoading] = useState(false)
+  const [convocSmsResult, setConvocSmsResult]   = useState<(TestFnResult & { to?: string }) | null>(null)
+  const [convocSmsLoading, setConvocSmsLoading] = useState(false)
 
   useEffect(() => {
     api.get('/admin/users').then(r => {
@@ -169,6 +180,60 @@ export default function DiagnosticPage() {
     } catch (err: any) {
       setNotifResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
     } finally { setNotifLoading(false) }
+  }
+
+  const runTestDrive = async () => {
+    setDriveLoading(true); setDriveResult(null)
+    try {
+      const r = await api.get('/diagnostic/drive')
+      setDriveResult(r.data.data)
+    } catch (err: any) {
+      setDriveResult({ ok: false, ms: null, error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
+    } finally { setDriveLoading(false) }
+  }
+
+  const runTest2fa = async () => {
+    if (!testUserId) return
+    setTwoFaLoading(true); setTwoFaResult(null)
+    try {
+      const r = await api.post('/diagnostic/test-2fa', { user_id: Number(testUserId) })
+      setTwoFaResult(r.data.data)
+    } catch (err: any) {
+      setTwoFaResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
+    } finally { setTwoFaLoading(false) }
+  }
+
+  const runTestConvocEmail = async () => {
+    if (!testUserId) return
+    setConvocEmailLoading(true); setConvocEmailResult(null)
+    try {
+      const r = await api.post('/diagnostic/test-convoc-email', { user_id: Number(testUserId) })
+      setConvocEmailResult(r.data.data)
+    } catch (err: any) {
+      setConvocEmailResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
+    } finally { setConvocEmailLoading(false) }
+  }
+
+  const runTestConvocSms = async () => {
+    if (!testUserId) return
+    setConvocSmsLoading(true); setConvocSmsResult(null)
+    try {
+      const r = await api.post('/diagnostic/test-convoc-sms', { user_id: Number(testUserId) })
+      setConvocSmsResult(r.data.data)
+    } catch (err: any) {
+      setConvocSmsResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
+    } finally { setConvocSmsLoading(false) }
+  }
+
+  const runTestVerifyEmail = async () => {
+    if (!testUserId) return
+    setVerifyLoading(true); setVerifyResult(null)
+    try {
+      const r = await api.post('/diagnostic/test-email-verify', { user_id: Number(testUserId) })
+      setVerifyResult(r.data.data)
+    } catch (err: any) {
+      setVerifyResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
+    } finally { setVerifyLoading(false) }
   }
 
   const testGeminiApi = async () => {
@@ -623,6 +688,201 @@ export default function DiagnosticPage() {
               </div>
             ) : (
               <p className="px-4 py-3 text-body-sm text-on-surface-variant">Crée une notification in-app visible dans la cloche de l'utilisateur sélectionné.</p>
+            )}
+          </div>
+
+          {/* ── Convocation email ── */}
+          <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">mark_email_unread</span>
+                <div>
+                  <span className="text-label-lg font-semibold">Test convocation par email</span>
+                  <span className="ml-2 text-[10px] font-semibold text-white bg-primary px-2 py-0.5 rounded-full">convocations@monclubhouse.fr</span>
+                </div>
+              </div>
+              <button
+                onClick={runTestConvocEmail}
+                disabled={convocEmailLoading || !testUserId}
+                className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+              >
+                {convocEmailLoading
+                  ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  : <span className="material-symbols-outlined text-[16px]">send</span>
+                }
+                {convocEmailLoading ? 'Envoi…' : 'Envoyer convocation'}
+              </button>
+            </div>
+            {convocEmailResult ? (
+              <div className={`px-4 py-3 flex flex-wrap gap-3 items-center ${convocEmailResult.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                <span className={`material-symbols-outlined text-[20px] ${convocEmailResult.ok ? 'text-green-500' : 'text-red-500'}`}>
+                  {convocEmailResult.ok ? 'check_circle' : 'error'}
+                </span>
+                <span className={`text-label-md font-bold ${convocEmailResult.ok ? 'text-green-700' : 'text-red-700'}`}>
+                  {convocEmailResult.ok ? 'Email de convocation envoyé' : 'Échec'}
+                </span>
+                {convocEmailResult.to && <span className="text-body-sm font-mono text-on-surface-variant">→ {convocEmailResult.to}</span>}
+                {convocEmailResult.ms !== null && <span className="text-body-sm text-on-surface-variant">{convocEmailResult.ms}ms</span>}
+                {convocEmailResult.error && <span className="text-body-sm text-red-600 font-mono">{convocEmailResult.error}</span>}
+              </div>
+            ) : (
+              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Envoie un email de convocation test (match fictif) à l'utilisateur sélectionné depuis <strong>convocations@monclubhouse.fr</strong>.</p>
+            )}
+          </div>
+
+          {/* ── Convocation SMS ── */}
+          <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">sms</span>
+                <div>
+                  <span className="text-label-lg font-semibold">Test convocation par SMS</span>
+                  <span className="ml-2 text-[10px] font-semibold text-white bg-amber-600 px-2 py-0.5 rounded-full">smsmode.com</span>
+                </div>
+              </div>
+              <button
+                onClick={runTestConvocSms}
+                disabled={convocSmsLoading || !testUserId}
+                className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+              >
+                {convocSmsLoading
+                  ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  : <span className="material-symbols-outlined text-[16px]">send</span>
+                }
+                {convocSmsLoading ? 'Envoi…' : 'Envoyer SMS'}
+              </button>
+            </div>
+            {convocSmsResult ? (
+              <div className={`px-4 py-3 flex flex-wrap gap-3 items-center ${convocSmsResult.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                <span className={`material-symbols-outlined text-[20px] ${convocSmsResult.ok ? 'text-green-500' : 'text-red-500'}`}>
+                  {convocSmsResult.ok ? 'check_circle' : 'error'}
+                </span>
+                <span className={`text-label-md font-bold ${convocSmsResult.ok ? 'text-green-700' : 'text-red-700'}`}>
+                  {convocSmsResult.ok ? 'SMS envoyé' : 'Échec'}
+                </span>
+                {convocSmsResult.to && <span className="text-body-sm font-mono text-on-surface-variant">→ {convocSmsResult.to}</span>}
+                {convocSmsResult.ms !== null && <span className="text-body-sm text-on-surface-variant">{convocSmsResult.ms}ms</span>}
+                {convocSmsResult.error && <span className="text-body-sm text-red-600 font-mono">{convocSmsResult.error}</span>}
+              </div>
+            ) : (
+              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Envoie un SMS de convocation test au numéro de téléphone de l'utilisateur sélectionné (champ téléphone requis dans son profil).</p>
+            )}
+          </div>
+
+          {/* Test Google Drive */}
+          <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">cloud_upload</span>
+                <span className="text-label-lg font-semibold">Test connexion Google Drive</span>
+              </div>
+              <button
+                onClick={runTestDrive}
+                disabled={driveLoading}
+                className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+              >
+                {driveLoading
+                  ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  : <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
+                }
+                {driveLoading ? 'Upload…' : 'Tester Drive'}
+              </button>
+            </div>
+            {driveResult ? (
+              <div className={`px-4 py-3 space-y-1 ${driveResult.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                <div className="flex flex-wrap gap-3 items-center">
+                  <span className={`material-symbols-outlined text-[20px] ${driveResult.ok ? 'text-green-500' : 'text-red-500'}`}>
+                    {driveResult.ok ? 'check_circle' : 'error'}
+                  </span>
+                  <span className={`text-label-md font-bold ${driveResult.ok ? 'text-green-700' : 'text-red-700'}`}>
+                    {driveResult.ok ? 'Fichier uploadé sur Drive' : 'Échec'}
+                  </span>
+                  {driveResult.ms !== null && <span className="text-body-sm text-on-surface-variant">{driveResult.ms}ms</span>}
+                  {driveResult.name && <span className="text-body-sm font-mono text-on-surface-variant">{driveResult.name}</span>}
+                </div>
+                {driveResult.url && (
+                  <a href={driveResult.url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary text-body-sm hover:underline">
+                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                    Voir le fichier sur Drive
+                  </a>
+                )}
+                {driveResult.error && <p className="text-body-sm text-red-600 font-mono">{driveResult.error}</p>}
+              </div>
+            ) : (
+              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Upload un fichier texte de test dans le dossier _diagnostic de Google Drive via le refresh_token.</p>
+            )}
+          </div>
+
+          {/* Test 2FA email */}
+          <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">security</span>
+                <span className="text-label-lg font-semibold">Test envoi code 2FA</span>
+              </div>
+              <button
+                onClick={runTest2fa}
+                disabled={twoFaLoading || !testUserId}
+                className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+              >
+                {twoFaLoading
+                  ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  : <span className="material-symbols-outlined text-[16px]">send</span>
+                }
+                {twoFaLoading ? 'Envoi…' : 'Envoyer code 2FA'}
+              </button>
+            </div>
+            {twoFaResult ? (
+              <div className={`px-4 py-3 flex flex-wrap gap-3 items-center ${twoFaResult.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                <span className={`material-symbols-outlined text-[20px] ${twoFaResult.ok ? 'text-green-500' : 'text-red-500'}`}>
+                  {twoFaResult.ok ? 'check_circle' : 'error'}
+                </span>
+                <span className={`text-label-md font-bold ${twoFaResult.ok ? 'text-green-700' : 'text-red-700'}`}>
+                  {twoFaResult.ok ? 'Code 2FA envoyé' : 'Échec'}
+                </span>
+                {twoFaResult.to && <span className="text-body-sm font-mono text-on-surface-variant">→ {twoFaResult.to}</span>}
+                {twoFaResult.ms !== null && <span className="text-body-sm text-on-surface-variant">{twoFaResult.ms}ms</span>}
+                {twoFaResult.error && <span className="text-body-sm text-red-600 font-mono">{twoFaResult.error}</span>}
+              </div>
+            ) : (
+              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Envoie un vrai email de code 2FA à 6 chiffres à l'utilisateur sélectionné.</p>
+            )}
+          </div>
+
+          {/* Test vérification email */}
+          <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">verified</span>
+                <span className="text-label-lg font-semibold">Test email de vérification</span>
+              </div>
+              <button
+                onClick={runTestVerifyEmail}
+                disabled={verifyLoading || !testUserId}
+                className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+              >
+                {verifyLoading
+                  ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  : <span className="material-symbols-outlined text-[16px]">send</span>
+                }
+                {verifyLoading ? 'Envoi…' : 'Envoyer lien vérif'}
+              </button>
+            </div>
+            {verifyResult ? (
+              <div className={`px-4 py-3 flex flex-wrap gap-3 items-center ${verifyResult.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                <span className={`material-symbols-outlined text-[20px] ${verifyResult.ok ? 'text-green-500' : 'text-red-500'}`}>
+                  {verifyResult.ok ? 'check_circle' : 'error'}
+                </span>
+                <span className={`text-label-md font-bold ${verifyResult.ok ? 'text-green-700' : 'text-red-700'}`}>
+                  {verifyResult.ok ? 'Email de vérification envoyé' : 'Échec'}
+                </span>
+                {verifyResult.to && <span className="text-body-sm font-mono text-on-surface-variant">→ {verifyResult.to}</span>}
+                {verifyResult.ms !== null && <span className="text-body-sm text-on-surface-variant">{verifyResult.ms}ms</span>}
+                {verifyResult.error && <span className="text-body-sm text-red-600 font-mono">{verifyResult.error}</span>}
+              </div>
+            ) : (
+              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Envoie un lien de vérification d'email à l'utilisateur sélectionné (lien valable 24h).</p>
             )}
           </div>
         </div>

@@ -25,7 +25,15 @@ const User = sequelize.define('User', {
   notif_push: { type: DataTypes.BOOLEAN, defaultValue: true },
   pied_fort: { type: DataTypes.ENUM('droit', 'gauche', 'ambidextre'), allowNull: true },
   poste: { type: DataTypes.STRING(50), allowNull: true },
-  taille: { type: DataTypes.INTEGER, allowNull: true }
+  taille: { type: DataTypes.INTEGER, allowNull: true },
+  // Email verification
+  email_verified:      { type: DataTypes.BOOLEAN, defaultValue: false },
+  email_verify_token:  { type: DataTypes.STRING(64), allowNull: true },
+  email_verify_expires: { type: DataTypes.DATE, allowNull: true },
+  // Two-factor authentication
+  two_fa_enabled:  { type: DataTypes.BOOLEAN, defaultValue: false },
+  two_fa_code:     { type: DataTypes.STRING(6), allowNull: true },
+  two_fa_expires:  { type: DataTypes.DATE, allowNull: true }
 }, {
   tableName: 'users',
   hooks: {

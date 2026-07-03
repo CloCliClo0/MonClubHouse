@@ -56,7 +56,8 @@ const HelpPage         = lazy(() => import('./pages/HelpPage'))
 const DocumentationPage = lazy(() => import('./pages/DocumentationPage'))
 const SupportPage      = lazy(() => import('./pages/SupportPage'))
 const TutorielsPage    = lazy(() => import('./pages/TutorielsPage'))
-const RaccourcisPage   = lazy(() => import('./pages/RaccourcisPage'))
+const RaccourcisPage     = lazy(() => import('./pages/RaccourcisPage'))
+const InstallationPage   = lazy(() => import('./pages/InstallationPage'))
 
 export default function App() {
   return (
@@ -107,6 +108,7 @@ export default function App() {
               <Route path="/aide/support"           element={<SupportPage />} />
               <Route path="/aide/tutoriels"         element={<TutorielsPage />} />
               <Route path="/aide/raccourcis"        element={<RaccourcisPage />} />
+              <Route path="/aide/installation"     element={<InstallationPage />} />
             </Route>
 
             <Route path="/"  element={<Navigate to="/dashboard" replace />} />

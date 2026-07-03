@@ -1,11 +1,15 @@
 const { User, Licencie, Convocation, Match, Equipe, Category } = require('../models');
 const { validationResult } = require('express-validator');
+const crypto = require('crypto');
+const path  = require('path');
+const fs    = require('fs');
+const { send2faEmail, sendVerifyEmail } = require('../services/emailService');
 
 const getProfil = async (req, res) => {
   try {
     const [user, meta] = await Promise.all([
       User.findByPk(req.user.id, {
-        attributes: { exclude: ['password_hash', 'refresh_token', 'google_id'] },
+        attributes: { exclude: ['password_hash', 'refresh_token', 'google_id', 'email_verify_token', 'email_verify_expires', 'two_fa_code', 'two_fa_expires'] },
         include: [{
           model: Licencie, as: 'licence',
           include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
@@ -58,7 +62,26 @@ const updatePassword = async (req, res) => {
 const uploadAvatar = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'Fichier requis' });
-    const avatarUrl = `/uploads/${req.file.filename}`.replace(/\\/g, '/');
+
+    let avatarUrl;
+    try {
+      const { uploadToDrive } = require('../services/driveService');
+      const result = await uploadToDrive({
+        buffer: req.file.buffer,
+        filename: `avatar-${req.user.id}-${Date.now()}${path.extname(req.file.originalname)}`,
+        mimetype: req.file.mimetype,
+        subfolder: 'avatars',
+      });
+      avatarUrl = result.url;
+    } catch (driveErr) {
+      console.warn('[Drive] Fallback local pour avatar:', driveErr.message);
+      const filename = `avatar-${req.user.id}-${Date.now()}${path.extname(req.file.originalname)}`;
+      const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
+      await fs.promises.mkdir(UPLOAD_DIR, { recursive: true });
+      await fs.promises.writeFile(path.join(UPLOAD_DIR, filename), req.file.buffer);
+      avatarUrl = `/uploads/${filename}`;
+    }
+
     await req.user.update({ avatar: avatarUrl });
     return res.json({ success: true, data: { avatar: avatarUrl } });
   } catch (err) {
@@ -119,6 +142,77 @@ const unlinkGoogle = async (req, res) => {
   }
 };
 
+// POST /profil/resend-verify-email — renvoie l'email de vérification
+const resendVerifyEmail = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+    if (user.email_verified) {
+      return res.status(400).json({ success: false, message: 'Email déjà vérifié' });
+    }
+    const token   = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await user.update({ email_verify_token: token, email_verify_expires: expires });
+    const result = await sendVerifyEmail({ user, token });
+    if (!result.sent) {
+      return res.status(503).json({ success: false, message: `Email non envoyé : ${result.reason}` });
+    }
+    return res.json({ success: true, message: 'Email de vérification envoyé' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// POST /profil/2fa/send-code — génère et envoie un code pour activer ou tester la 2FA
+const send2faCode = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+    const code    = String(Math.floor(100000 + Math.random() * 900000));
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.update({ two_fa_code: code, two_fa_expires: expires });
+    const result = await send2faEmail({ user, code });
+    if (!result.sent) {
+      return res.status(503).json({ success: false, message: `Email non envoyé : ${result.reason}` });
+    }
+    return res.json({ success: true, message: 'Code envoyé par email' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// POST /profil/2fa/enable — vérifie le code et active la 2FA
+const enable2fa = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ success: false, message: 'Code requis' });
+    const user = await User.findByPk(req.user.id);
+    if (
+      !user || !user.two_fa_code ||
+      user.two_fa_code !== String(code).trim() ||
+      !user.two_fa_expires || user.two_fa_expires < new Date()
+    ) {
+      return res.status(401).json({ success: false, message: 'Code invalide ou expiré' });
+    }
+    await user.update({ two_fa_enabled: true, two_fa_code: null, two_fa_expires: null });
+    return res.json({ success: true, message: 'Double authentification activée' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// POST /profil/2fa/disable — désactive la 2FA
+const disable2fa = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+    await user.update({ two_fa_enabled: false, two_fa_code: null, two_fa_expires: null });
+    return res.json({ success: true, message: 'Double authentification désactivée' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 // POST /profil/set-initial-password — uniquement pour comptes sans mot de passe (ex: Google)
 const setInitialPassword = async (req, res) => {
   try {
@@ -137,4 +231,4 @@ const setInitialPassword = async (req, res) => {
   }
 };
 
-module.exports = { getProfil, updateProfil, updatePassword, uploadAvatar, getHistorique, getEnfants, unlinkGoogle, setInitialPassword };
+module.exports = { getProfil, updateProfil, updatePassword, uploadAvatar, getHistorique, getEnfants, unlinkGoogle, setInitialPassword, resendVerifyEmail, send2faCode, enable2fa, disable2fa };

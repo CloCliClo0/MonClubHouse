@@ -8,11 +8,11 @@ function getTransporter() {
 
   _transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.hostinger.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true', // false pour 587 (STARTTLS), true pour 465 (SSL)
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: process.env.SMTP_SECURE !== 'false', // true par défaut (port 465 SSL)
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: process.env.SMTP_USER_CONV,
+      pass: process.env.SMTP_PASS_CONV,
     },
     tls: {
       rejectUnauthorized: process.env.NODE_ENV === 'production',
@@ -24,7 +24,7 @@ function getTransporter() {
 
 // Vérifie que la config SMTP est bien renseignée
 function isEmailConfigured() {
-  return !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+  return !!(process.env.SMTP_USER_CONV && process.env.SMTP_PASS_CONV);
 }
 
 // ─── Template HTML ─────────────────────────────────────────────────────────
@@ -245,7 +245,7 @@ async function sendConvocationEmail({ joueur, match, club }) {
 
   try {
     await transporter.sendMail({
-      from: `"${club?.nom || 'MonClubHouse FC'}" <${process.env.SMTP_USER}>`,
+      from: `"${club?.nom || 'MonClubHouse FC'}" <${process.env.SMTP_USER_CONV}>`,
       to: `"${joueur.prenom} ${joueur.nom}" <${joueur.email}>`,
       subject,
       html,
@@ -293,7 +293,7 @@ async function sendTestEmail({ user }) {
   const t0 = Date.now();
   try {
     await transporter.sendMail({
-      from: `"MonClubHouse" <${process.env.SMTP_USER}>`,
+      from: `"MonClubHouse" <${process.env.SMTP_USER_CONV}>`,
       to: `"${user.prenom} ${user.nom}" <${user.email}>`,
       subject: '[TEST] MonClubHouse — Test de configuration email',
       html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:32px;">
@@ -327,4 +327,122 @@ async function verifyConnection() {
   }
 }
 
-module.exports = { sendConvocationEmail, sendBulkConvocationEmails, sendTestEmail, verifyConnection, isEmailConfigured };
+/**
+ * Envoie un code 2FA à l'utilisateur (lors de la connexion ou de l'activation).
+ */
+async function send2faEmail({ user, code }) {
+  if (!isEmailConfigured()) return { sent: false, reason: 'smtp_not_configured' };
+  const transporter = getTransporter();
+  const appUrl = process.env.APP_URL || 'https://monclubhouse.fr';
+  try {
+    await transporter.sendMail({
+      from: `"MonClubHouse" <${process.env.SMTP_USER_CONV}>`,
+      to: `"${user.prenom} ${user.nom}" <${user.email}>`,
+      subject: `[MCH] Code de vérification : ${code}`,
+      html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:32px;">
+        <div style="background:linear-gradient(135deg,#1b4332,#2d6a4f);padding:24px;border-radius:12px 12px 0 0;text-align:center;">
+          <span style="color:#fff;font-weight:900;font-size:22px;letter-spacing:-1px;">MCH</span>
+        </div>
+        <div style="background:#fff;padding:32px;border:1px solid #e8e8f0;border-radius:0 0 12px 12px;">
+          <h2 style="color:#1b4332;margin:0 0 16px;">Code de vérification</h2>
+          <p>Bonjour <strong>${user.prenom}</strong>,</p>
+          <p>Votre code de vérification à 6 chiffres est :</p>
+          <div style="background:#f4f4f6;border-radius:8px;padding:20px;text-align:center;margin:20px 0;">
+            <span style="font-size:36px;font-weight:900;letter-spacing:12px;color:#1b4332;font-family:monospace;">${code}</span>
+          </div>
+          <p style="color:#707973;font-size:13px;">Ce code est valable <strong>10 minutes</strong>. Ne le communiquez à personne.</p>
+          <hr style="border:none;border-top:1px solid #e8e8f0;margin:24px 0;"/>
+          <p style="font-size:12px;color:#707973;">MonClubHouse — <a href="${appUrl}" style="color:#1b4332;">monclubhouse.fr</a></p>
+        </div>
+      </div>`,
+      text: `Bonjour ${user.prenom},\n\nVotre code de vérification MonClubHouse : ${code}\n\nValable 10 minutes. Ne le communiquez à personne.`,
+    });
+    return { sent: true };
+  } catch (err) {
+    return { sent: false, reason: err.message };
+  }
+}
+
+/**
+ * Envoie un email de vérification d'adresse email (lien cliquable).
+ */
+async function sendVerifyEmail({ user, token }) {
+  if (!isEmailConfigured()) return { sent: false, reason: 'smtp_not_configured' };
+  const transporter = getTransporter();
+  const appUrl = process.env.APP_URL || 'https://monclubhouse.fr';
+  const verifyUrl = `${appUrl}/api/auth/verify-email?token=${token}`;
+  try {
+    await transporter.sendMail({
+      from: `"MonClubHouse" <${process.env.SMTP_USER_CONV}>`,
+      to: `"${user.prenom} ${user.nom}" <${user.email}>`,
+      subject: '[MCH] Vérifiez votre adresse email',
+      html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:32px;">
+        <div style="background:linear-gradient(135deg,#1b4332,#2d6a4f);padding:24px;border-radius:12px 12px 0 0;text-align:center;">
+          <span style="color:#fff;font-weight:900;font-size:22px;letter-spacing:-1px;">MCH</span>
+        </div>
+        <div style="background:#fff;padding:32px;border:1px solid #e8e8f0;border-radius:0 0 12px 12px;">
+          <h2 style="color:#1b4332;margin:0 0 16px;">Vérifiez votre adresse email</h2>
+          <p>Bonjour <strong>${user.prenom}</strong>,</p>
+          <p>Cliquez sur le bouton ci-dessous pour confirmer votre adresse email sur MonClubHouse.</p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${verifyUrl}" style="display:inline-block;background:#1b4332;color:#fff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 32px;border-radius:10px;">
+              ✅ Vérifier mon email
+            </a>
+          </div>
+          <p style="color:#707973;font-size:13px;">Ce lien est valable <strong>24 heures</strong>. Si vous n'avez pas créé de compte MonClubHouse, ignorez cet email.</p>
+          <hr style="border:none;border-top:1px solid #e8e8f0;margin:24px 0;"/>
+          <p style="font-size:12px;color:#707973;">Ou copiez ce lien : <a href="${verifyUrl}" style="color:#1b4332;">${verifyUrl}</a></p>
+        </div>
+      </div>`,
+      text: `Bonjour ${user.prenom},\n\nVérifiez votre email MonClubHouse :\n${verifyUrl}\n\nLien valable 24 heures.`,
+    });
+    return { sent: true };
+  } catch (err) {
+    return { sent: false, reason: err.message };
+  }
+}
+
+/**
+ * Envoie un email de convocation de test (pour le diagnostic superadmin).
+ * Utilise un match fictif pour ne pas nécessiter de vraie donnée DB.
+ */
+async function sendTestConvocEmail({ user }) {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'smtp_not_configured', ms: null };
+  }
+
+  const appUrl = process.env.APP_URL || 'https://monclubhouse.fr';
+  const transporter = getTransporter();
+
+  const fakeMatch = {
+    type: 'match',
+    date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    adversaire: 'Club Test FC',
+    equipe: { nom: 'U15 A (test)' },
+    terrain: { nom: 'Terrain Municipal', adresse: '1 Place du Stade, 75000 Paris' },
+    instructions: 'Ceci est un email de convocation de TEST envoyé depuis le panel de diagnostic. Aucune action n\'est requise.',
+  };
+
+  const fakeClub = { nom: 'MonClubHouse FC' };
+
+  const matchDate = new Date(fakeMatch.date);
+  const dateStr = matchDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const subject = `[TEST] Convocation — Match vs Club Test FC · ${dateStr}`;
+  const html = buildConvocationEmail({ joueur: user, match: fakeMatch, club: fakeClub, appUrl });
+
+  const t0 = Date.now();
+  try {
+    await transporter.sendMail({
+      from: `"MonClubHouse FC" <${process.env.SMTP_USER_CONV}>`,
+      to: `"${user.prenom} ${user.nom}" <${user.email}>`,
+      subject,
+      html,
+    });
+    return { sent: true, ms: Date.now() - t0 };
+  } catch (err) {
+    return { sent: false, reason: err.message, ms: Date.now() - t0 };
+  }
+}
+
+module.exports = { sendConvocationEmail, sendBulkConvocationEmails, sendTestEmail, sendTestConvocEmail, send2faEmail, sendVerifyEmail, verifyConnection, isEmailConfigured };

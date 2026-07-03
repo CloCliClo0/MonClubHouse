@@ -46,9 +46,17 @@ export default function Topbar({ onMenuToggle }: Props) {
   useEffect(() => {
     if (detectStandalone()) setInstalled(true)
     loadNotifs()
-    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e) }
+    const handler = (e: any) => {
+      e.preventDefault()
+      ;(window as any).__mchInstallPrompt = e
+      setInstallPrompt(e)
+    }
     window.addEventListener('beforeinstallprompt', handler)
-    window.addEventListener('appinstalled', () => { setInstalled(true); setInstallPrompt(null) })
+    window.addEventListener('appinstalled', () => {
+      setInstalled(true)
+      setInstallPrompt(null)
+      ;(window as any).__mchInstallPrompt = null
+    })
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
@@ -115,34 +123,7 @@ export default function Topbar({ onMenuToggle }: Props) {
           <span className="font-semibold">{lang === 'fr' ? 'EN' : 'FR'}</span>
         </button>
 
-        {/* Bouton installer l'app */}
-        {(installPrompt || iosDevice || installed) && (
-          <button
-            onClick={handleInstall}
-            disabled={installed}
-            title={
-              installed
-                ? (lang === 'fr' ? 'Application installée' : 'App installed')
-                : iosDevice
-                ? (lang === 'fr' ? "Installer sur iPhone/iPad" : 'Install on iPhone/iPad')
-                : (lang === 'fr' ? "Installer l'application" : 'Install app')
-            }
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-label-md transition-colors mr-1 ${
-              installed
-                ? 'bg-green-50 text-green-600 cursor-default'
-                : 'bg-primary/10 hover:bg-primary/20 text-primary cursor-pointer'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              {installed ? 'check_circle' : 'install_mobile'}
-            </span>
-            <span className="hidden md:inline">
-              {installed
-                ? (lang === 'fr' ? 'Installée' : 'Installed')
-                : (lang === 'fr' ? 'Installer' : 'Install')}
-            </span>
-          </button>
-        )}
+        {/* Bouton install retiré de la barre — disponible dans le menu Aide */}
 
         <div className="flex items-center gap-1 lg:gap-2 border-r border-outline-variant pr-3 lg:pr-6">
 
@@ -234,6 +215,42 @@ export default function Topbar({ onMenuToggle }: Props) {
                       <span className="text-body-md text-on-surface">{l.label}</span>
                     </button>
                   ))}
+
+                  {/* Séparateur + Installer l'app */}
+                  <div className="border-t border-[#e8e8f0] mt-1 pt-1">
+                    {installed ? (
+                      /* App installée — lien vers la page pour réinstaller */
+                      <button
+                        onClick={() => { navigate('/aide/installation'); setShowHelp(false) }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-left"
+                      >
+                        <span className="material-symbols-outlined text-green-600 text-[18px]">check_circle</span>
+                        <span className="text-body-md text-on-surface">Application installée</span>
+                      </button>
+                    ) : (installPrompt || iosDevice) ? (
+                      /* Prompt disponible ou iOS — action directe */
+                      <button
+                        onClick={() => {
+                          setShowHelp(false)
+                          if (iosDevice) { setShowIOSModal(true) }
+                          else { handleInstall() }
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-primary/5 text-primary transition-colors text-left"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">install_mobile</span>
+                        <span className="text-body-md font-medium">Installer l'application</span>
+                      </button>
+                    ) : (
+                      /* Pas de prompt — page d'instructions */
+                      <button
+                        onClick={() => { navigate('/aide/installation'); setShowHelp(false) }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-left"
+                      >
+                        <span className="material-symbols-outlined text-on-surface-variant text-[18px]">install_mobile</span>
+                        <span className="text-body-md text-on-surface">Installer l'application</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="px-4 py-2.5 border-t border-[#e8e8f0] text-center">
                   <p className="text-[11px] text-on-surface-variant">{t.help.version}</p>

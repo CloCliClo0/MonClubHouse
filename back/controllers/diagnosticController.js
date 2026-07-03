@@ -1,5 +1,6 @@
 const { sequelize, User, Club, Equipe, Match, Licencie, InviteCode, Notification, Convocation, Message, Channel, Category, ChEquipe, ChMatch } = require('../models');
-const { sendTestEmail, isEmailConfigured } = require('../services/emailService');
+const { sendTestEmail, sendTestConvocEmail, isEmailConfigured } = require('../services/emailService');
+const { sendTestConvocSms, isSmsConfigured } = require('../services/smsService');
 const os = require('os');
 
 const getServerDiagnostic = async (req, res) => {
@@ -191,6 +192,65 @@ const testGemini = async (req, res) => {
   return res.json({ success: true, data: { ok: false, model: null, ms: null, response: null, error: 'Aucun modèle Gemini disponible', tokens: null, quota } });
 };
 
+const testDrive = async (req, res) => {
+  const t0 = Date.now();
+  try {
+    const { uploadToDrive } = require('../services/driveService');
+    const testContent = Buffer.from(`Diagnostic Drive — MonClubHouse — ${new Date().toISOString()}`);
+    const result = await uploadToDrive({
+      buffer: testContent,
+      filename: `diagnostic-test-${Date.now()}.txt`,
+      mimetype: 'text/plain',
+      subfolder: '_diagnostic',
+    });
+    const ms = Date.now() - t0;
+    return res.json({ success: true, data: { ok: true, ms, fileId: result.id, url: result.url, name: result.name, error: null } });
+  } catch (err) {
+    const ms = Date.now() - t0;
+    return res.json({ success: true, data: { ok: false, ms, error: err.message } });
+  }
+};
+
+const testDiag2fa = async (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ success: false, message: 'user_id requis' });
+  try {
+    const user = await User.findByPk(user_id, { attributes: ['id', 'nom', 'prenom', 'email'] });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+    const { send2faEmail, isEmailConfigured } = require('../services/emailService');
+    if (!isEmailConfigured()) {
+      return res.json({ success: true, data: { ok: false, ms: null, to: user.email, error: 'SMTP non configuré' } });
+    }
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const t0 = Date.now();
+    const result = await send2faEmail({ user, code });
+    const ms = Date.now() - t0;
+    return res.json({ success: true, data: { ok: result.sent, ms, to: user.email, code_sent: result.sent, error: result.reason || null } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const testDiagEmailVerify = async (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ success: false, message: 'user_id requis' });
+  try {
+    const user = await User.findByPk(user_id, { attributes: ['id', 'nom', 'prenom', 'email'] });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+    const { sendVerifyEmail, isEmailConfigured } = require('../services/emailService');
+    if (!isEmailConfigured()) {
+      return res.json({ success: true, data: { ok: false, ms: null, to: user.email, error: 'SMTP non configuré' } });
+    }
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const t0 = Date.now();
+    const result = await sendVerifyEmail({ user, token });
+    const ms = Date.now() - t0;
+    return res.json({ success: true, data: { ok: result.sent, ms, to: user.email, error: result.reason || null } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const testEmail = async (req, res) => {
   const { user_id } = req.body;
   if (!user_id) return res.status(400).json({ success: false, message: 'user_id requis' });
@@ -233,4 +293,40 @@ const testNotification = async (req, res) => {
   }
 };
 
-module.exports = { getServerDiagnostic, testGemini, testEmail, testNotification };
+const testConvocEmail = async (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ success: false, message: 'user_id requis' });
+  try {
+    const user = await User.findByPk(user_id, { attributes: ['id', 'nom', 'prenom', 'email'] });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+
+    if (!isEmailConfigured()) {
+      return res.json({ success: true, data: { ok: false, ms: null, to: user.email, error: 'SMTP non configuré (SMTP_USER_CONV / SMTP_PASS_CONV manquants)' } });
+    }
+
+    const result = await sendTestConvocEmail({ user });
+    return res.json({ success: true, data: { ok: result.sent, ms: result.ms, to: user.email, error: result.reason || null } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const testConvocSms = async (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ success: false, message: 'user_id requis' });
+  try {
+    const user = await User.findByPk(user_id, { attributes: ['id', 'nom', 'prenom', 'email', 'telephone'] });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+
+    if (!isSmsConfigured()) {
+      return res.json({ success: true, data: { ok: false, ms: null, to: user.telephone || null, error: 'MAILTOSMS_API_KEY non configurée dans .env' } });
+    }
+
+    const result = await sendTestConvocSms({ user });
+    return res.json({ success: true, data: { ok: result.sent, ms: result.ms, to: result.to || user.telephone, error: result.reason || null } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getServerDiagnostic, testGemini, testDrive, testDiag2fa, testDiagEmailVerify, testEmail, testNotification, testConvocEmail, testConvocSms };

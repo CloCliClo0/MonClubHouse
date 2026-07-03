@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import PhotoUpload from '../components/PhotoUpload'
 import api from '../services/api'
 
@@ -10,6 +11,7 @@ type UserData = {
   role: string; avatar: string | null
   notif_email: boolean; notif_push: boolean
   has_google?: boolean; has_password?: boolean
+  email_verified?: boolean; two_fa_enabled?: boolean
 }
 type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; created_at: string }
 
@@ -20,7 +22,11 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 export default function ProfilePage() {
-  const [tab, setTab]   = useState<Tab>('mon-profil')
+  const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+  const verifiedParam = searchParams.get('verified') === '1'
+
+  const [tab, setTab]   = useState<Tab>(searchParams.get('tab') === 'securite' ? 'securite' : 'mon-profil')
   const role = localStorage.getItem('role') || 'joueur'
 
   // User data + form
@@ -47,6 +53,16 @@ export default function ProfilePage() {
   const [unlinkingGoogle, setUnlinkingGoogle] = useState(false)
   const [initPwd, setInitPwd]       = useState('')
   const [initPwdSaving, setInitPwdSaving] = useState(false)
+
+  // Email verification
+  const [resendingVerify, setResendingVerify] = useState(false)
+
+  // 2FA
+  const [twoFaCodeInput, setTwoFaCodeInput] = useState('')
+  const [twoFaSending, setTwoFaSending]     = useState(false)
+  const [twoFaCodeStep, setTwoFaCodeStep]   = useState(false)
+  const [twoFaEnabling, setTwoFaEnabling]   = useState(false)
+  const [twoFaDisabling, setTwoFaDisabling] = useState(false)
 
   // Notifications réelles
   const [notifs, setNotifs]     = useState<Notif[]>([])
@@ -157,6 +173,53 @@ export default function ProfilePage() {
     } catch (err: any) {
       flash(err.response?.data?.message || 'Erreur', true)
     } finally { setInitPwdSaving(false) }
+  }
+
+  const handleResendVerify = async () => {
+    setResendingVerify(true)
+    try {
+      await api.post('/profil/resend-verify-email')
+      flash('Email de vérification renvoyé. Vérifiez votre boîte mail.')
+    } catch (err: any) {
+      flash(err.response?.data?.message || 'Erreur lors de l\'envoi.', true)
+    } finally { setResendingVerify(false) }
+  }
+
+  const handleSend2faCode = async () => {
+    setTwoFaSending(true)
+    try {
+      await api.post('/profil/2fa/send-code')
+      setTwoFaCodeStep(true)
+      flash('Code envoyé par email.')
+    } catch (err: any) {
+      flash(err.response?.data?.message || 'Erreur lors de l\'envoi du code.', true)
+    } finally { setTwoFaSending(false) }
+  }
+
+  const handleEnable2fa = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setTwoFaEnabling(true)
+    try {
+      await api.post('/profil/2fa/enable', { code: twoFaCodeInput })
+      setTwoFaCodeStep(false)
+      setTwoFaCodeInput('')
+      await loadUser()
+      flash('Authentification à deux facteurs activée.')
+    } catch (err: any) {
+      flash(err.response?.data?.message || 'Code invalide ou expiré.', true)
+    } finally { setTwoFaEnabling(false) }
+  }
+
+  const handleDisable2fa = async () => {
+    if (!confirm('Désactiver la double authentification ? Votre compte sera moins sécurisé.')) return
+    setTwoFaDisabling(true)
+    try {
+      await api.post('/profil/2fa/disable')
+      await loadUser()
+      flash('Double authentification désactivée.')
+    } catch (err: any) {
+      flash(err.response?.data?.message || 'Erreur', true)
+    } finally { setTwoFaDisabling(false) }
   }
 
   const linkChild = async () => {
@@ -405,9 +468,110 @@ export default function ProfilePage() {
 
       {/* ── Sécurité ────────────────────────────────────────────────────── */}
       {tab === 'securite' && (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-2xl">
+          {/* Email vérifié banner */}
+          {verifiedParam && (
+            <div className="flex items-center gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-body-md">
+              <span className="material-symbols-outlined text-green-600">verified</span>
+              Votre adresse email a bien été vérifiée.
+            </div>
+          )}
+
+          {/* ── Vérification email ─────────────────────────────────────── */}
+          <section className="bg-white border border-[#e8e8f0] rounded-lg p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h5 className="text-headline-md mb-1">Adresse email</h5>
+                <p className="text-on-surface-variant text-body-sm">{user?.email}</p>
+              </div>
+              {user?.email_verified ? (
+                <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-label-md">
+                  <span className="material-symbols-outlined text-[16px]">verified</span>
+                  Vérifiée
+                </span>
+              ) : (
+                <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-label-md">
+                  <span className="material-symbols-outlined text-[16px]">warning</span>
+                  Non vérifiée
+                </span>
+              )}
+            </div>
+            {!user?.email_verified && (
+              <div className="mt-4 space-y-3">
+                <p className="text-body-sm text-on-surface-variant">Un email de vérification a été envoyé lors de votre inscription. Vous n'avez pas reçu le lien ?</p>
+                <button onClick={handleResendVerify} disabled={resendingVerify}
+                  className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg text-label-md hover:bg-surface-container-low transition-colors disabled:opacity-50">
+                  {resendingVerify
+                    ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    : <span className="material-symbols-outlined text-[18px]">send</span>
+                  }
+                  Renvoyer l'email de vérification
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* ── Double authentification ────────────────────────────────── */}
+          <section className="bg-white border border-[#e8e8f0] rounded-lg p-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h5 className="text-headline-md mb-1">Double authentification (2FA)</h5>
+                <p className="text-on-surface-variant text-body-sm">À chaque connexion, un code à 6 chiffres vous sera envoyé par email.</p>
+              </div>
+              <span className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-label-md ${
+                user?.two_fa_enabled ? 'bg-green-100 text-green-700' : 'bg-surface-container text-on-surface-variant'
+              }`}>
+                <span className="material-symbols-outlined text-[16px]">{user?.two_fa_enabled ? 'shield' : 'shield_with_house'}</span>
+                {user?.two_fa_enabled ? 'Activée' : 'Désactivée'}
+              </span>
+            </div>
+
+            {user?.two_fa_enabled ? (
+              <button onClick={handleDisable2fa} disabled={twoFaDisabling}
+                className="flex items-center gap-2 px-4 py-2.5 border border-error/40 text-error rounded-lg text-label-md hover:bg-error/5 transition-colors disabled:opacity-50">
+                {twoFaDisabling
+                  ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  : <span className="material-symbols-outlined text-[18px]">lock_open</span>
+                }
+                Désactiver la 2FA
+              </button>
+            ) : !twoFaCodeStep ? (
+              <button onClick={handleSend2faCode} disabled={twoFaSending}
+                className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-label-md hover:brightness-110 transition-all disabled:opacity-50">
+                {twoFaSending
+                  ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  : <span className="material-symbols-outlined text-[18px]">security</span>
+                }
+                Activer la double authentification
+              </button>
+            ) : (
+              <form onSubmit={handleEnable2fa} className="space-y-3">
+                <p className="text-body-sm text-on-surface-variant">Un code a été envoyé à <strong>{user?.email}</strong>. Saisissez-le pour confirmer l'activation.</p>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="text" inputMode="numeric" maxLength={6}
+                    value={twoFaCodeInput}
+                    onChange={e => setTwoFaCodeInput(e.target.value.replace(/\D/g, ''))}
+                    placeholder="• • • • • •"
+                    className="w-40 px-4 py-3 bg-white border border-outline-variant rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-center text-xl font-mono tracking-[0.4em]"
+                    required autoFocus
+                  />
+                  <button type="submit" disabled={twoFaEnabling || twoFaCodeInput.length < 6}
+                    className="px-5 py-3 bg-primary text-white rounded-lg text-label-md hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2">
+                    {twoFaEnabling && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
+                    Confirmer
+                  </button>
+                  <button type="button" onClick={() => { setTwoFaCodeStep(false); setTwoFaCodeInput('') }}
+                    className="px-4 py-3 border border-outline-variant rounded-lg text-label-md hover:bg-surface-container-low transition-colors">
+                    Annuler
+                  </button>
+                </div>
+              </form>
+            )}
+          </section>
+
           {/* ── Connexion Google ───────────────────────────────────────── */}
-          <section className="bg-white border border-[#e8e8f0] rounded-lg p-6 max-w-2xl">
+          <section className="bg-white border border-[#e8e8f0] rounded-lg p-6">
             <div className="mb-5">
               <h5 className="text-headline-md mb-1">Compte Google</h5>
               <p className="text-on-surface-variant text-body-md">Liez votre compte Google pour vous connecter en un clic.</p>
@@ -460,8 +624,9 @@ export default function ProfilePage() {
             )}
           </section>
 
-          {user?.has_password !== false && (
-          <section className="bg-white border border-[#e8e8f0] rounded-lg p-6 max-w-2xl">
+          {/* ── Mot de passe ───────────────────────────────────────────── */}
+          {(user?.has_password !== false || user?.has_password === undefined) && (
+          <section className="bg-white border border-[#e8e8f0] rounded-lg p-6">
             <div className="mb-6">
               <h5 className="text-headline-md mb-1">Changer le mot de passe</h5>
               <p className="text-on-surface-variant text-body-md">Utilisez un mot de passe fort d'au moins 8 caractères.</p>

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { getProfil, updateProfil, updatePassword, uploadAvatar, getHistorique, getEnfants, unlinkGoogle, setInitialPassword } = require('../controllers/profilController');
+const { getProfil, updateProfil, updatePassword, uploadAvatar, getHistorique, getEnfants, unlinkGoogle, setInitialPassword, resendVerifyEmail, send2faCode, enable2fa, disable2fa } = require('../controllers/profilController');
 const { getMes, marquerLue, marquerToutesLues } = require('../controllers/notificationController');
 const { authenticate } = require('../middlewares/auth');
 const { validateUpdateProfil } = require('../middlewares/validation');
@@ -14,14 +14,8 @@ const handleValidation = (req, res, next) => {
   next();
 };
 
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    cb(null, `avatar-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
-  }
-});
-const upload = multer({ storage, limits: { fileSize: 2 * 1024 * 1024 } });
+// memoryStorage : le buffer est passé au driveService, qui gère le stockage
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 router.get('/', authenticate, getProfil);
 router.put('/', authenticate, validateUpdateProfil, handleValidation, updateProfil);
@@ -31,6 +25,10 @@ router.get('/historique', authenticate, getHistorique);
 router.get('/enfants', authenticate, getEnfants);
 router.delete('/google-unlink', authenticate, unlinkGoogle);
 router.post('/set-initial-password', authenticate, setInitialPassword);
+router.post('/resend-verify-email',  authenticate, resendVerifyEmail);
+router.post('/2fa/send-code', authenticate, send2faCode);
+router.post('/2fa/enable',    authenticate, enable2fa);
+router.post('/2fa/disable',   authenticate, disable2fa);
 
 // Notifications
 router.get('/notifications', authenticate, getMes);

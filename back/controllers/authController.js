@@ -4,6 +4,17 @@ const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = requir
 const { validationResult } = require('express-validator');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
+const { send2faEmail, sendVerifyEmail } = require('../services/emailService');
+
+// Helper — envoie l'email de vérification sans bloquer la réponse
+function sendEmailVerification(user) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  user.update({ email_verify_token: token, email_verify_expires: expires })
+    .then(() => sendVerifyEmail({ user, token }))
+    .catch(() => {});
+}
 
 // Stockage en mémoire des tokens de réinitialisation (TTL 30 min)
 // Suffisant pour un serveur mono-process comme Hostinger Node.js
@@ -92,6 +103,8 @@ const register = async (req, res) => {
       const refreshToken = generateRefreshToken(payload);
       await user.update({ refresh_token: refreshToken });
 
+      sendEmailVerification(user);
+
       return res.status(201).json({
         success: true,
         message: 'Inscription réussie',
@@ -130,6 +143,8 @@ const register = async (req, res) => {
     const refreshToken = generateRefreshToken(payload);
     await user.update({ refresh_token: refreshToken });
 
+    sendEmailVerification(user);
+
     return res.status(201).json({
       success: true,
       message: 'Inscription réussie',
@@ -158,6 +173,20 @@ const login = async (req, res) => {
     const valid = await user.verifyPassword(password);
     if (!valid) {
       return res.status(401).json({ success: false, message: 'Identifiants invalides' });
+    }
+
+    // ── 2FA : si activée, envoyer un code et retourner un temp token ──
+    if (user.two_fa_enabled) {
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+      await user.update({ two_fa_code: code, two_fa_expires: expires });
+      send2faEmail({ user, code }).catch(() => {});
+      const tempToken = jwt.sign(
+        { two_fa_pending: true, user_id: user.id },
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' }
+      );
+      return res.json({ success: true, requires_2fa: true, temp_token: tempToken });
     }
 
     const payload = { id: user.id, role: user.role, club_id: user.club_id };
@@ -367,4 +396,56 @@ const cancelGooglePending = async (req, res) => {
   }
 };
 
-module.exports = { register, login, refresh, logout, googleCallback, me, forgotPassword, resetPassword, cancelGooglePending };
+// POST /api/auth/verify-2fa — vérifie le code 2FA et retourne le JWT complet
+const verify2fa = async (req, res) => {
+  const { temp_token, code } = req.body;
+  if (!temp_token || !code) {
+    return res.status(400).json({ success: false, message: 'Paramètres manquants' });
+  }
+  try {
+    const decoded = jwt.verify(temp_token, process.env.JWT_SECRET);
+    if (!decoded.two_fa_pending) {
+      return res.status(400).json({ success: false, message: 'Token invalide' });
+    }
+    const user = await User.findByPk(decoded.user_id);
+    if (
+      !user || !user.two_fa_code ||
+      user.two_fa_code !== String(code).trim() ||
+      !user.two_fa_expires || user.two_fa_expires < new Date()
+    ) {
+      return res.status(401).json({ success: false, message: 'Code invalide ou expiré' });
+    }
+
+    await user.update({ two_fa_code: null, two_fa_expires: null, derniere_connexion: new Date() });
+
+    const payload = { id: user.id, role: user.role, club_id: user.club_id };
+    const accessToken  = generateAccessToken(payload);
+    const refreshToken = generateRefreshToken(payload);
+    await user.update({ refresh_token: refreshToken });
+
+    return res.json({
+      success: true,
+      data: { user: user.toSafeJSON(), access_token: accessToken, refresh_token: refreshToken },
+    });
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Token invalide ou expiré' });
+  }
+};
+
+// GET /api/auth/verify-email?token=... — confirme l'adresse email et redirige
+const verifyEmail = async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.redirect(`${process.env.APP_URL}/login?error=token_missing`);
+  try {
+    const user = await User.findOne({ where: { email_verify_token: token } });
+    if (!user || !user.email_verify_expires || user.email_verify_expires < new Date()) {
+      return res.redirect(`${process.env.APP_URL}/login?error=token_invalid`);
+    }
+    await user.update({ email_verified: true, email_verify_token: null, email_verify_expires: null });
+    return res.redirect(`${process.env.APP_URL}/profil?tab=securite&verified=1`);
+  } catch {
+    return res.redirect(`${process.env.APP_URL}/login?error=server_error`);
+  }
+};
+
+module.exports = { register, login, refresh, logout, googleCallback, me, forgotPassword, resetPassword, cancelGooglePending, verify2fa, verifyEmail };

@@ -38,3 +38,7 @@ memory/
 context/
 changelog/
 instructions.md
+
+# ── SMTP ───────────────────────
+
+mailtosms.md
