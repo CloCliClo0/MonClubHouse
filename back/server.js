@@ -265,6 +265,30 @@ const applyStartupMigrations = async () => {
       await sequelize.query("ALTER TABLE users ADD COLUMN taille INT NULL");
       console.log('[DB] Colonne users.taille ajoutée');
     }
+    if (!cols.includes('email_verified')) {
+      await sequelize.query("ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0");
+      console.log('[DB] Colonne users.email_verified ajoutée');
+    }
+    if (!cols.includes('email_verify_token')) {
+      await sequelize.query("ALTER TABLE users ADD COLUMN email_verify_token VARCHAR(64) NULL");
+      console.log('[DB] Colonne users.email_verify_token ajoutée');
+    }
+    if (!cols.includes('email_verify_expires')) {
+      await sequelize.query("ALTER TABLE users ADD COLUMN email_verify_expires DATETIME NULL");
+      console.log('[DB] Colonne users.email_verify_expires ajoutée');
+    }
+    if (!cols.includes('two_fa_enabled')) {
+      await sequelize.query("ALTER TABLE users ADD COLUMN two_fa_enabled TINYINT(1) NOT NULL DEFAULT 0");
+      console.log('[DB] Colonne users.two_fa_enabled ajoutée');
+    }
+    if (!cols.includes('two_fa_code')) {
+      await sequelize.query("ALTER TABLE users ADD COLUMN two_fa_code VARCHAR(6) NULL");
+      console.log('[DB] Colonne users.two_fa_code ajoutée');
+    }
+    if (!cols.includes('two_fa_expires')) {
+      await sequelize.query("ALTER TABLE users ADD COLUMN two_fa_expires DATETIME NULL");
+      console.log('[DB] Colonne users.two_fa_expires ajoutée');
+    }
   } catch (e) {
     console.warn('[DB] Migration startup échouée (users) :', e.message);
   }

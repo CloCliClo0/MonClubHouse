@@ -63,7 +63,8 @@ passport.use(new GoogleStrategy(
       user.dataValues._isNew = isNew;
       return done(null, user);
     } catch (err) {
-      return done(err, false);
+      console.error('[Passport Google]', err.message, err.stack);
+      return done(null, false);
     }
   }
 ));
