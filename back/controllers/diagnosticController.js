@@ -1,4 +1,5 @@
 const { sequelize, User, Club, Equipe, Match, Licencie, InviteCode, Notification, Convocation, Message, Channel, Category, ChEquipe, ChMatch } = require('../models');
+const { sendTestEmail, isEmailConfigured } = require('../services/emailService');
 const os = require('os');
 
 const getServerDiagnostic = async (req, res) => {
@@ -190,4 +191,46 @@ const testGemini = async (req, res) => {
   return res.json({ success: true, data: { ok: false, model: null, ms: null, response: null, error: 'Aucun modèle Gemini disponible', tokens: null, quota } });
 };
 
-module.exports = { getServerDiagnostic, testGemini };
+const testEmail = async (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ success: false, message: 'user_id requis' });
+
+  try {
+    const user = await User.findByPk(user_id, { attributes: ['id', 'nom', 'prenom', 'email'] });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+
+    if (!isEmailConfigured()) {
+      return res.json({ success: true, data: { ok: false, ms: null, to: user.email, error: 'SMTP non configuré (SMTP_USER / SMTP_PASS manquants)' } });
+    }
+
+    const result = await sendTestEmail({ user });
+    return res.json({ success: true, data: { ok: result.sent, ms: result.ms, to: user.email, error: result.reason || null } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const testNotification = async (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ success: false, message: 'user_id requis' });
+
+  try {
+    const user = await User.findByPk(user_id, { attributes: ['id', 'nom', 'prenom', 'email'] });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+
+    const t0 = Date.now();
+    await Notification.create({
+      user_id: user.id,
+      type: 'systeme',
+      titre: '🔔 Notification de test',
+      contenu: `Test envoyé depuis le panel de diagnostic par le superadmin. Si vous voyez cette notification, le système de notifications in-app fonctionne correctement.`,
+      lien: '/diagnostic',
+    });
+    const ms = Date.now() - t0;
+    return res.json({ success: true, data: { ok: true, ms, to: `${user.prenom} ${user.nom}`, error: null } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getServerDiagnostic, testGemini, testEmail, testNotification };

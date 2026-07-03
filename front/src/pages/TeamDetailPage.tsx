@@ -8,6 +8,7 @@ type Licencie = {
   statut: 'actif' | 'inactif' | 'suspendu' | 'blesse'
   poste?: string
   numero_maillot?: number
+  numero_licence?: string
   user: {
     id: number; nom: string; prenom: string; email: string; avatar?: string; telephone?: string; parent_id?: number
     parent?: { id: number; nom: string; prenom: string; email: string; telephone?: string } | null
@@ -117,7 +118,7 @@ export default function TeamDetailPage() {
 
   const openLicModal = (lic: Licencie) => {
     setLicModal(lic)
-    setLicForm({ poste: lic.poste || '', numero_maillot: lic.numero_maillot ?? '', statut: lic.statut })
+    setLicForm({ poste: lic.poste || '', numero_maillot: lic.numero_maillot ?? '', statut: lic.statut, numero_licence: lic.numero_licence || '' })
   }
 
   const saveLicence = async () => {
@@ -128,6 +129,7 @@ export default function TeamDetailPage() {
         poste: licForm.poste || null,
         numero_maillot: licForm.numero_maillot !== '' ? Number(licForm.numero_maillot) : null,
         statut: licForm.statut,
+        numero_licence: licForm.numero_licence || null,
       })
       setLicModal(null)
       load()
@@ -260,6 +262,7 @@ export default function TeamDetailPage() {
                   <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden sm:table-cell">Statut</th>
                   <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden md:table-cell">Poste</th>
                   <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden md:table-cell">N°</th>
+                  <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden lg:table-cell">Licence</th>
                   <th className="px-4 py-3 text-left text-label-md text-on-surface-variant hidden lg:table-cell">Parent</th>
                   {canEditRoster && <th className="px-4 py-3 text-label-md text-on-surface-variant">Actions</th>}
                 </tr>
@@ -269,12 +272,27 @@ export default function TeamDetailPage() {
                   <tr key={lic.id} className="hover:bg-surface-container-low transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {lic.user.avatar
-                          ? <img src={lic.user.avatar} className="w-9 h-9 rounded-full object-cover" alt="" />
-                          : <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-white font-bold text-sm shrink-0">
+                        {lic.user.avatar ? (
+                          <>
+                            <img
+                              src={lic.user.avatar}
+                              className="w-9 h-9 rounded-full object-cover shrink-0"
+                              alt=""
+                              onError={e => {
+                                e.currentTarget.style.display = 'none';
+                                const next = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (next) next.style.display = 'flex';
+                              }}
+                            />
+                            <div style={{ display: 'none' }} className="w-9 h-9 rounded-full bg-primary-container items-center justify-center text-white font-bold text-sm shrink-0">
                               {lic.user.prenom?.[0]}{lic.user.nom?.[0]}
                             </div>
-                        }
+                          </>
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-white font-bold text-sm shrink-0">
+                            {lic.user.prenom?.[0]}{lic.user.nom?.[0]}
+                          </div>
+                        )}
                         <div>
                           <p className="text-label-lg text-on-surface">{lic.user.prenom} {lic.user.nom}</p>
                           <p className="text-body-sm text-on-surface-variant hidden sm:block">{lic.user.email}</p>
@@ -295,8 +313,11 @@ export default function TeamDetailPage() {
                     <td className="px-4 py-3 text-body-sm text-on-surface-variant hidden md:table-cell">
                       {lic.poste || <span className="opacity-40">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-body-sm text-on-surface hidden md:table-cell">
+                    <td className="px-4 py-3 text-body-sm text-on-surface hidden md:table-cell font-mono">
                       {lic.numero_maillot ?? <span className="opacity-40">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-body-sm font-mono text-on-surface-variant hidden lg:table-cell">
+                      {lic.numero_licence || <span className="opacity-40">—</span>}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       {lic.user.parent ? (
@@ -509,6 +530,17 @@ export default function TeamDetailPage() {
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">N° de licence</label>
+                <input
+                  type="text"
+                  value={licForm.numero_licence || ''}
+                  onChange={e => setLicForm(f => ({ ...f, numero_licence: e.target.value }))}
+                  placeholder="Ex : 123456789"
+                  maxLength={50}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Statut</label>

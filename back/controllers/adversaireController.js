@@ -2,7 +2,8 @@ const { Adversaire } = require('../models');
 
 const getAll = async (req, res) => {
   try {
-    const where = { club_id: req.user.club_id };
+    const where = {};
+    if (req.user.club_id !== null) where.club_id = req.user.club_id;
     if (req.query.categorie) where.categorie = req.query.categorie;
     const data = await Adversaire.findAll({ where, order: [['nom', 'ASC']] });
     return res.json({ success: true, data });
@@ -13,7 +14,9 @@ const getAll = async (req, res) => {
 
 const getById = async (req, res) => {
   try {
-    const adv = await Adversaire.findOne({ where: { id: req.params.id, club_id: req.user.club_id } });
+    const where = { id: req.params.id };
+    if (req.user.club_id !== null) where.club_id = req.user.club_id;
+    const adv = await Adversaire.findOne({ where });
     if (!adv) return res.status(404).json({ success: false, message: 'Adversaire introuvable' });
     return res.json({ success: true, data: adv });
   } catch {
@@ -42,7 +45,9 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    const adv = await Adversaire.findOne({ where: { id: req.params.id, club_id: req.user.club_id } });
+    const whereUpd = { id: req.params.id };
+    if (req.user.club_id !== null) whereUpd.club_id = req.user.club_id;
+    const adv = await Adversaire.findOne({ where: whereUpd });
     if (!adv) return res.status(404).json({ success: false, message: 'Adversaire introuvable' });
     // Whitelist explicite — empêche la modification de club_id ou d'autres champs sensibles
     const { nom, categorie, ville, contact, telephone, couleur } = req.body;
@@ -62,7 +67,9 @@ const update = async (req, res) => {
 
 const remove = async (req, res) => {
   try {
-    const adv = await Adversaire.findOne({ where: { id: req.params.id, club_id: req.user.club_id } });
+    const whereDel = { id: req.params.id };
+    if (req.user.club_id !== null) whereDel.club_id = req.user.club_id;
+    const adv = await Adversaire.findOne({ where: whereDel });
     if (!adv) return res.status(404).json({ success: false, message: 'Adversaire introuvable' });
     await adv.destroy();
     return res.json({ success: true, message: 'Adversaire supprimé' });

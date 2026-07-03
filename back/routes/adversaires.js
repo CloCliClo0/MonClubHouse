@@ -16,6 +16,6 @@ router.get('/',      authenticate, getAll);
 router.get('/:id',   authenticate, getById);
 router.post('/',     authenticate, requireMinRole('coach'), validateAdversaire, handleValidation, create);
 router.patch('/:id', authenticate, requireMinRole('coach'), validateAdversaire, handleValidation, update);
-router.delete('/:id',authenticate, requireMinRole('dirigeant'), remove);
+router.delete('/:id',authenticate, requireMinRole('coach'), remove);
 
 module.exports = router;

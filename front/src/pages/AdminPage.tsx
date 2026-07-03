@@ -510,6 +510,8 @@ export default function AdminPage() {
   const [assignForm, setAssignForm] = useState({ club_id: '', role: 'joueur' as Role, equipe_id: '' })
   const [assignEquipes, setAssignEquipes] = useState<Equipe[]>([])
   const [assignCategorie, setAssignCategorie] = useState('')
+  const [createEquipes, setCreateEquipes] = useState<Equipe[]>([])
+  const [createCategorie, setCreateCategorie] = useState('')
 
   // ── État codes ────────────────────────────────────────────
   const [codes, setCodes]         = useState<InviteCode[]>([])
@@ -615,7 +617,16 @@ export default function AdminPage() {
     return matchSearch && matchRole
   })
 
-  const openCreate = () => { setForm(BLANK); setError(''); setModal({ type: 'create' }) }
+  const openCreate = () => {
+    setForm(BLANK)
+    setError('')
+    setCreateEquipes([])
+    setCreateCategorie('')
+    if (!isSuperAdmin) {
+      api.get('/equipes').then(r => setCreateEquipes(r.data.data || [])).catch(() => {})
+    }
+    setModal({ type: 'create' })
+  }
   const openEdit   = (u: User) => { setForm({ nom: u.nom, prenom: u.prenom, email: u.email, role: u.role, password: '', club_id: String(u.club_id || '') }); setError(''); setModal({ type: 'edit', user: u }) }
   const openDelete = (u: User) => setModal({ type: 'delete', user: u })
   const openAssign = (u: User) => {
@@ -632,7 +643,16 @@ export default function AdminPage() {
     setSaving(true)
     try {
       if (modal.type === 'create') {
-        await api.post('/auth/register', { ...form, password_hash: form.password, club_id: form.club_id ? parseInt(form.club_id) : undefined })
+        const r = await api.post('/auth/register', { ...form, password_hash: form.password, club_id: form.club_id ? parseInt(form.club_id) : undefined })
+        const newUserId = r.data.data?.user?.id
+        if (newUserId && createCategorie) {
+          const catEquipes = createEquipes.filter(e => String(e.categorie?.id) === createCategorie)
+          if (['joueur', 'parent'].includes(form.role)) {
+            await Promise.all(catEquipes.map(eq => api.post('/licencies', { user_id: newUserId, equipe_id: eq.id }).catch(() => {})))
+          } else if (form.role === 'coach') {
+            await Promise.all(catEquipes.map(eq => api.post(`/equipes/${eq.id}/coachs/add`, { user_id: newUserId }).catch(() => {})))
+          }
+        }
         load()
         setModal({ type: 'none' })
       } else if (modal.type === 'edit') {
@@ -1124,13 +1144,46 @@ export default function AdminPage() {
                 <div className="space-y-1">
                   <label className="text-label-md text-on-surface-variant">Club</label>
                   <div className="relative">
-                    <select value={form.club_id} onChange={e => setForm(f => ({ ...f, club_id: e.target.value }))}
+                    <select value={form.club_id}
+                      onChange={e => {
+                        setForm(f => ({ ...f, club_id: e.target.value }))
+                        setCreateCategorie('')
+                        if (e.target.value) {
+                          api.get(`/equipes?club_id=${e.target.value}`).then(r => setCreateEquipes(r.data.data || [])).catch(() => setCreateEquipes([]))
+                        } else {
+                          setCreateEquipes([])
+                        }
+                      }}
                       className="w-full appearance-none px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all pr-8 bg-white">
                       <option value="">— Aucun club —</option>
                       {clubs.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                     </select>
                     <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
                   </div>
+                </div>
+              )}
+              {modal.type === 'create' && ['joueur', 'parent', 'coach'].includes(form.role) && createEquipes.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">
+                    Catégorie <span className="text-on-surface-variant/60">(optionnel)</span>
+                  </label>
+                  <div className="relative">
+                    <select value={createCategorie} onChange={e => setCreateCategorie(e.target.value)}
+                      className="w-full appearance-none px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all pr-8 bg-white">
+                      <option value="">Sans catégorie</option>
+                      {[...new Map(createEquipes.filter(e => e.categorie).map(e => [e.categorie!.id, e.categorie!])).values()].map(cat => (
+                        <option key={cat.id} value={String(cat.id)}>{cat.nom}</option>
+                      ))}
+                    </select>
+                    <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
+                  </div>
+                  {createCategorie && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {createEquipes.filter(e => String(e.categorie?.id) === createCategorie).map(eq => (
+                        <span key={eq.id} className="px-2.5 py-1 bg-primary/10 text-primary text-label-md rounded-full border border-primary/20">{eq.nom}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

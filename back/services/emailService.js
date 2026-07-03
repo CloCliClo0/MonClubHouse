@@ -283,6 +283,36 @@ async function sendBulkConvocationEmails({ joueurs, match, club }) {
 }
 
 /**
+ * Envoie un email de test de diagnostic à un utilisateur.
+ */
+async function sendTestEmail({ user }) {
+  if (!isEmailConfigured()) {
+    return { sent: false, reason: 'smtp_not_configured', ms: null };
+  }
+  const transporter = getTransporter();
+  const t0 = Date.now();
+  try {
+    await transporter.sendMail({
+      from: `"MonClubHouse" <${process.env.SMTP_USER}>`,
+      to: `"${user.prenom} ${user.nom}" <${user.email}>`,
+      subject: '[TEST] MonClubHouse — Test de configuration email',
+      html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1b4332;">🔔 Email de test</h2>
+        <p>Bonjour <strong>${user.prenom}</strong>,</p>
+        <p>Ceci est un email de test envoyé depuis le panel de diagnostic MonClubHouse.</p>
+        <p style="color:#15803d;font-weight:bold;">✅ La configuration SMTP est opérationnelle.</p>
+        <hr style="border:none;border-top:1px solid #e8e8f0;margin:24px 0;"/>
+        <p style="font-size:12px;color:#707973;">MonClubHouse — Diagnostic système</p>
+      </div>`,
+      text: `Bonjour ${user.prenom},\n\nCeci est un email de test envoyé depuis le panel de diagnostic.\nLa configuration SMTP est opérationnelle.`,
+    });
+    return { sent: true, ms: Date.now() - t0 };
+  } catch (err) {
+    return { sent: false, reason: err.message, ms: Date.now() - t0 };
+  }
+}
+
+/**
  * Vérifie la connexion SMTP (utile au démarrage du serveur).
  */
 async function verifyConnection() {
@@ -297,4 +327,4 @@ async function verifyConnection() {
   }
 }
 
-module.exports = { sendConvocationEmail, sendBulkConvocationEmails, verifyConnection, isEmailConfigured };
+module.exports = { sendConvocationEmail, sendBulkConvocationEmails, sendTestEmail, verifyConnection, isEmailConfigured };

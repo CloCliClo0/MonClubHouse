@@ -52,6 +52,10 @@ const ENDPOINTS: Omit<EndpointResult, 'status' | 'ok' | 'ms' | 'msg' | 'body'>[]
   { section: 'Codes',          method: 'GET', path: '/api/codes',                  label: "Codes d'invitation" },
   // Adversaires
   { section: 'Adversaires',    method: 'GET', path: '/api/adversaires',            label: 'Adversaires' },
+  // Support
+  { section: 'Support',        method: 'GET', path: '/api/support',                label: 'Tickets support (admin)' },
+  { section: 'Support',        method: 'GET', path: '/api/support/stats',          label: 'Stats tickets support' },
+  { section: 'Support',        method: 'GET', path: '/api/support/mes-tickets',    label: 'Mes tickets support' },
   // Championnat
   { section: 'Championnat',    method: 'GET', path: '/api/championnat/list',       label: 'Championnats list' },
   // Votes & Arbitrage
@@ -123,6 +127,49 @@ export default function DiagnosticPage() {
   type GeminiResult = { ok: boolean; model: string | null; ms: number | null; response: string | null; error: string | null; tokens: GeminiTokens | null; quota: GeminiQuota | null }
   const [geminiResult, setGeminiResult] = useState<GeminiResult | null>(null)
   const [geminiLoading, setGeminiLoading] = useState(false)
+
+  type DiagUser = { id: number; nom: string; prenom: string; email: string }
+  type TestFnResult = { ok: boolean; ms: number | null; to: string; error: string | null } | null
+  const [diagUsers, setDiagUsers]         = useState<DiagUser[]>([])
+  const [testUserId, setTestUserId]       = useState<string>('')
+  const [emailResult, setEmailResult]     = useState<TestFnResult>(null)
+  const [emailLoading, setEmailLoading]   = useState(false)
+  const [notifResult, setNotifResult]     = useState<TestFnResult>(null)
+  const [notifLoading, setNotifLoading]   = useState(false)
+
+  useEffect(() => {
+    api.get('/admin/users').then(r => {
+      const users: DiagUser[] = (r.data.data || []).map((u: any) => ({ id: u.id, nom: u.nom, prenom: u.prenom, email: u.email }))
+      setDiagUsers(users)
+      if (users.length > 0 && !testUserId) {
+        const selfId = localStorage.getItem('userId')
+        const self = selfId ? users.find(u => String(u.id) === selfId) : null
+        setTestUserId(self ? String(self.id) : String(users[0].id))
+      }
+    }).catch(() => {})
+  }, [])
+
+  const runTestEmail = async () => {
+    if (!testUserId) return
+    setEmailLoading(true); setEmailResult(null)
+    try {
+      const r = await api.post('/diagnostic/test-email', { user_id: Number(testUserId) })
+      setEmailResult(r.data.data)
+    } catch (err: any) {
+      setEmailResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
+    } finally { setEmailLoading(false) }
+  }
+
+  const runTestNotification = async () => {
+    if (!testUserId) return
+    setNotifLoading(true); setNotifResult(null)
+    try {
+      const r = await api.post('/diagnostic/test-notification', { user_id: Number(testUserId) })
+      setNotifResult(r.data.data)
+    } catch (err: any) {
+      setNotifResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
+    } finally { setNotifLoading(false) }
+  }
 
   const testGeminiApi = async () => {
     setGeminiLoading(true)
@@ -476,6 +523,108 @@ export default function DiagnosticPage() {
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Tests fonctionnels (email + notification) */}
+      <div className="bg-surface-container-low border border-[#e8e8f0] rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#e8e8f0] flex items-center gap-2">
+          <span className="material-symbols-outlined text-[18px] text-primary">science</span>
+          <span className="text-label-lg font-semibold">Tests fonctionnels</span>
+        </div>
+        <div className="p-5 space-y-5">
+          {/* Sélecteur utilisateur */}
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-[220px] space-y-1.5">
+              <label className="text-label-md text-on-surface-variant">Utilisateur cible</label>
+              <select
+                value={testUserId}
+                onChange={e => setTestUserId(e.target.value)}
+                className="w-full px-3 py-2 border border-outline-variant rounded-lg text-body-md bg-white focus:outline-none focus:border-primary"
+              >
+                {diagUsers.length === 0
+                  ? <option value="">Chargement…</option>
+                  : diagUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.prenom} {u.nom} — {u.email}
+                      </option>
+                    ))
+                }
+              </select>
+            </div>
+          </div>
+
+          {/* Test email */}
+          <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">mail</span>
+                <span className="text-label-lg font-semibold">Test envoi email (SMTP)</span>
+              </div>
+              <button
+                onClick={runTestEmail}
+                disabled={emailLoading || !testUserId}
+                className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+              >
+                {emailLoading
+                  ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  : <span className="material-symbols-outlined text-[16px]">send</span>
+                }
+                {emailLoading ? 'Envoi…' : 'Envoyer email test'}
+              </button>
+            </div>
+            {emailResult ? (
+              <div className={`px-4 py-3 flex flex-wrap gap-3 items-center ${emailResult.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                <span className={`material-symbols-outlined text-[20px] ${emailResult.ok ? 'text-green-500' : 'text-red-500'}`}>
+                  {emailResult.ok ? 'check_circle' : 'error'}
+                </span>
+                <span className={`text-label-md font-bold ${emailResult.ok ? 'text-green-700' : 'text-red-700'}`}>
+                  {emailResult.ok ? 'Email envoyé' : 'Échec'}
+                </span>
+                {emailResult.to && <span className="text-body-sm text-on-surface-variant font-mono">→ {emailResult.to}</span>}
+                {emailResult.ms !== null && <span className="text-body-sm text-on-surface-variant">{emailResult.ms}ms</span>}
+                {emailResult.error && <span className="text-body-sm text-red-600 font-mono">{emailResult.error}</span>}
+              </div>
+            ) : (
+              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Envoie un vrai email de test à l'utilisateur sélectionné via SMTP.</p>
+            )}
+          </div>
+
+          {/* Test notification in-app */}
+          <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">notifications</span>
+                <span className="text-label-lg font-semibold">Test notification in-app</span>
+              </div>
+              <button
+                onClick={runTestNotification}
+                disabled={notifLoading || !testUserId}
+                className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+              >
+                {notifLoading
+                  ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  : <span className="material-symbols-outlined text-[16px]">send</span>
+                }
+                {notifLoading ? 'Envoi…' : 'Envoyer notification'}
+              </button>
+            </div>
+            {notifResult ? (
+              <div className={`px-4 py-3 flex flex-wrap gap-3 items-center ${notifResult.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                <span className={`material-symbols-outlined text-[20px] ${notifResult.ok ? 'text-green-500' : 'text-red-500'}`}>
+                  {notifResult.ok ? 'check_circle' : 'error'}
+                </span>
+                <span className={`text-label-md font-bold ${notifResult.ok ? 'text-green-700' : 'text-red-700'}`}>
+                  {notifResult.ok ? 'Notification créée' : 'Échec'}
+                </span>
+                {notifResult.to && <span className="text-body-sm text-on-surface-variant">→ {notifResult.to}</span>}
+                {notifResult.ms !== null && <span className="text-body-sm text-on-surface-variant">{notifResult.ms}ms</span>}
+                {notifResult.error && <span className="text-body-sm text-red-600 font-mono">{notifResult.error}</span>}
+              </div>
+            ) : (
+              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Crée une notification in-app visible dans la cloche de l'utilisateur sélectionné.</p>
+            )}
+          </div>
         </div>
       </div>
 
