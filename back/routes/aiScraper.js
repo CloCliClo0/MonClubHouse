@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { getQuota, analyseWithAI, importMatches } = require('../controllers/aiScraperController');
+const { getQuota, analyseWithAI, checkTeams, importMatches } = require('../controllers/aiScraperController');
 const { authenticate } = require('../middlewares/auth');
 const { requireMinRole } = require('../middlewares/rbac');
 
@@ -19,6 +19,7 @@ const upload = multer({
 // Accès : coach et au-dessus (coach=3, dirigeant=4, admin=5, superadmin=6)
 router.get('/quota',   authenticate, requireMinRole('coach'), getQuota);
 router.post('/analyse', authenticate, requireMinRole('coach'), upload.single('file'), analyseWithAI);
+router.post('/check-teams', authenticate, requireMinRole('coach'), checkTeams);
 router.post('/import',  authenticate, requireMinRole('coach'), importMatches);
 
 module.exports = router;

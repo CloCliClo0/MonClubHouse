@@ -53,6 +53,18 @@ export default function ScraperPage() {
   const [importing, setImporting]       = useState(false)
   const [importResult, setImportResult] = useState<{ created_matchs: number; new_teams: string[] } | null>(null)
 
+  /* ── Vérification équipes ── */
+  type TeamInfo = {
+    name: string
+    status: 'exists' | 'similar' | 'new'
+    match?: { id: number; nom: string }
+    suggestions?: { id: number; nom: string; pct: number }[]
+  }
+  type TeamStep = null | 'checking' | 'review' | 'importing'
+  const [teamStep, setTeamStep]       = useState<TeamStep>(null)
+  const [teamInfos, setTeamInfos]     = useState<TeamInfo[]>([])
+  const [teamOverrides, setTeamOverrides] = useState<Record<string, string>>({})
+
   /* ── Quota ── */
   const [quota, setQuota]         = useState<Quota | null>(null)
   const quotaExhausted = quota !== null && quota.remaining === 0
@@ -114,16 +126,27 @@ export default function ScraperPage() {
       const data = r.data.data
       // Mise à jour du quota uniquement si le serveur renvoie les infos
       if (data.quota) setQuota(data.quota)
+
+      // Garde : l'IA confond parfois championnat et saison (ex: "2026-2027" comme nom de compétition)
+      const YEAR_RE = /^\d{4}-\d{4}$/
+      let iaChamp  = data.championnat as string | null
+      let iaSaison = data.saison as string | null
+      if (iaChamp && YEAR_RE.test(iaChamp.trim())) {
+        // Valeur d'année → la réaffecter à saison si non fournie, ignorer en tant que championnat
+        if (!iaSaison) iaSaison = iaChamp
+        iaChamp = null
+      }
+
       // Pré-remplir le championnat si l'IA en détecte un et qu'aucun n'est sélectionné
-      if (data.championnat) {
-        if (championnats.includes(data.championnat)) {
-          setChampSelect(data.championnat)
+      if (iaChamp) {
+        if (championnats.includes(iaChamp)) {
+          setChampSelect(iaChamp)
         } else if (!champNew) {
           setChampSelect(NEW_CHAMP_SENTINEL)
-          setChampNew(data.championnat)
+          setChampNew(iaChamp)
         }
       }
-      if (data.saison) setSaisonName(data.saison)
+      if (iaSaison) setSaisonName(iaSaison)
       setMatches((data.matches || []).map((m: any) => ({ ...m, selected: true })))
     } catch (e: any) {
       const status = e?.response?.status
@@ -138,32 +161,56 @@ export default function ScraperPage() {
     }
   }
 
+  /* ── Vérification des équipes avant import ── */
+  const handleCheckTeams = async () => {
+    const selected = matches.filter(m => m.selected)
+    const teamNames = [...new Set(selected.flatMap(m => [m.dom, m.ext]).filter(Boolean))]
+    setTeamStep('checking')
+    setTeamOverrides({})
+    try {
+      const r = await api.post('/ai-scraper/check-teams', {
+        equipe_ref_id: Number(selectedEqId),
+        saison: saisonName.trim() || season,
+        championnat: champName.trim() || null,
+        team_names: teamNames,
+      })
+      setTeamInfos(r.data.data.teams)
+      setTeamStep('review')
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Erreur lors de la vérification des équipes')
+      setTeamStep(null)
+    }
+  }
+
   /* ── Import ── */
   const handleImport = async () => {
     const selected = matches.filter(m => m.selected)
     if (!selected.length || !selectedEqId || !champName.trim()) return
-    setImporting(true); setError(null)
+    setTeamStep('importing')
+    setError(null)
     try {
       const r = await api.post('/ai-scraper/import', {
         equipe_ref_id: Number(selectedEqId),
         saison: saisonName.trim() || season,
         championnat: champName.trim(),
         matches: selected,
+        team_overrides: teamOverrides,
       })
       setImportResult(r.data.data)
-      // Recharger la liste des championnats (nouveau peut avoir été créé)
+      setTeamStep(null)
       if (champSelect === NEW_CHAMP_SENTINEL && champNew.trim()) {
         setChampionnats(prev => prev.includes(champNew.trim()) ? prev : [...prev, champNew.trim()])
       }
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Erreur lors de l\'import')
+      setTeamStep(null)
     } finally {
       setImporting(false)
     }
   }
 
-  const toggleMatch   = (i: number) => setMatches(p => p.map((m, idx) => idx === i ? { ...m, selected: !m.selected } : m))
-  const toggleAll     = (v: boolean) => setMatches(p => p.map(m => ({ ...m, selected: v })))
+  const toggleMatch   = (i: number) => { setMatches(p => p.map((m, idx) => idx === i ? { ...m, selected: !m.selected } : m)); setTeamStep(null) }
+  const toggleAll     = (v: boolean) => { setMatches(p => p.map(m => ({ ...m, selected: v }))); setTeamStep(null) }
   const selectedCount = matches.filter(m => m.selected).length
   const canAnalyse    = sourceMode === 'file' ? !!file : !!html.trim()
 
@@ -419,15 +466,129 @@ export default function ScraperPage() {
             <p className="text-body-md text-on-surface-variant">
               <strong>{selectedCount}</strong> match{selectedCount > 1 ? 's' : ''} sélectionné{selectedCount > 1 ? 's' : ''}
             </p>
-            <button onClick={handleImport}
-              disabled={selectedCount === 0 || !selectedEqId || !champName.trim() || importing}
-              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg text-label-lg hover:bg-green-700 disabled:opacity-40 transition-colors">
-              {importing
-                ? <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
-                : <span className="material-symbols-outlined text-[18px]">upload</span>}
-              {importing ? 'Import…' : `Importer ${selectedCount} match${selectedCount > 1 ? 's' : ''}`}
-            </button>
+            {teamStep === null && (
+              <button onClick={handleCheckTeams}
+                disabled={selectedCount === 0 || !selectedEqId || !champName.trim()}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg text-label-lg hover:bg-blue-700 disabled:opacity-40 transition-colors">
+                <span className="material-symbols-outlined text-[18px]">manage_search</span>
+                Vérifier les équipes →
+              </button>
+            )}
+            {teamStep === 'checking' && (
+              <span className="flex items-center gap-2 text-body-md text-on-surface-variant">
+                <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                Vérification des équipes…
+              </span>
+            )}
+            {(teamStep === 'review' || teamStep === 'importing') && (
+              <button onClick={() => setTeamStep(null)}
+                className="text-label-md text-on-surface-variant hover:underline">
+                ← Modifier la sélection
+              </button>
+            )}
           </div>
+
+          {/* Panel vérification équipes */}
+          {(teamStep === 'review' || teamStep === 'importing') && (() => { const isImporting = teamStep === 'importing'; return (
+            <div className="border-t border-[#e8e8f0]">
+              <div className="px-4 py-3 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-600 text-[18px]">verified_user</span>
+                <span className="text-label-md font-semibold text-amber-800">Vérification des équipes avant import</span>
+                <span className="ml-auto text-label-sm text-amber-700">
+                  {teamInfos.filter(t => t.status === 'new').length} nouvelle{teamInfos.filter(t => t.status === 'new').length > 1 ? 's' : ''} ·{' '}
+                  {teamInfos.filter(t => t.status === 'similar').length} à vérifier ·{' '}
+                  {teamInfos.filter(t => t.status === 'exists').length} existante{teamInfos.filter(t => t.status === 'exists').length > 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div className="divide-y divide-[#e8e8f0] max-h-72 overflow-y-auto">
+                {teamInfos.map(t => (
+                  <div key={t.name} className={`flex items-start gap-3 px-4 py-3 text-body-sm
+                    ${t.status === 'exists'  ? 'bg-green-50/60'  : ''}
+                    ${t.status === 'similar' ? 'bg-amber-50/60'  : ''}
+                    ${t.status === 'new'     ? 'bg-blue-50/60'   : ''}`}>
+
+                    {/* Icône statut */}
+                    <span className={`material-symbols-outlined text-[18px] shrink-0 mt-0.5
+                      ${t.status === 'exists'  ? 'text-green-600'  : ''}
+                      ${t.status === 'similar' ? 'text-amber-600'  : ''}
+                      ${t.status === 'new'     ? 'text-blue-600'   : ''}`}>
+                      {t.status === 'exists' ? 'check_circle' : t.status === 'similar' ? 'help' : 'add_circle'}
+                    </span>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-on-surface truncate">
+                        {teamOverrides[t.name] || t.name}
+                        {teamOverrides[t.name] && teamOverrides[t.name] !== t.name && (
+                          <span className="ml-2 text-label-sm text-on-surface-variant line-through">{t.name}</span>
+                        )}
+                      </p>
+
+                      {t.status === 'exists' && t.match && (
+                        <p className="text-green-700 text-[11px]">Déjà présente dans le championnat</p>
+                      )}
+
+                      {t.status === 'new' && !teamOverrides[t.name] && (
+                        <p className="text-blue-700 text-[11px]">Sera créée automatiquement</p>
+                      )}
+
+                      {t.status === 'similar' && (
+                        <div className="mt-1 space-y-1">
+                          <p className="text-amber-700 text-[11px] font-medium">Équipe similaire trouvée — vérifiez :</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {t.suggestions!.map(s => (
+                              <button key={s.id}
+                                onClick={() => setTeamOverrides(o => ({ ...o, [t.name]: s.nom }))}
+                                className={`px-2.5 py-1 rounded text-label-sm border transition-colors
+                                  ${(teamOverrides[t.name] === s.nom)
+                                    ? 'bg-amber-600 text-white border-amber-600'
+                                    : 'bg-white border-amber-300 text-amber-800 hover:bg-amber-100'}`}>
+                                {s.nom} <span className="opacity-60">({s.pct}%)</span>
+                              </button>
+                            ))}
+                            <button
+                              onClick={() => setTeamOverrides(o => { const n = { ...o }; delete n[t.name]; return n })}
+                              className={`px-2.5 py-1 rounded text-label-sm border transition-colors
+                                ${(!teamOverrides[t.name])
+                                  ? 'bg-blue-600 text-white border-blue-600'
+                                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                              + Créer "{t.name}"
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Résumé + bouton confirmer */}
+              <div className="px-4 py-3 bg-gray-50 border-t border-[#e8e8f0] flex items-center justify-between gap-3 flex-wrap">
+                <div className="text-body-sm text-on-surface-variant">
+                  {teamInfos.filter(t => t.status === 'similar' && !teamOverrides[t.name]).length > 0 && (
+                    <span className="flex items-center gap-1 text-amber-700">
+                      <span className="material-symbols-outlined text-[14px]">warning</span>
+                      {teamInfos.filter(t => t.status === 'similar' && !teamOverrides[t.name]).length} équipe(s) similaire(s) non résolue(s) — seront créées comme nouvelles
+                    </span>
+                  )}
+                  {teamInfos.filter(t => t.status === 'similar' && !teamOverrides[t.name]).length === 0 && (
+                    <span className="flex items-center gap-1 text-green-700">
+                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                      Toutes les équipes sont vérifiées
+                    </span>
+                  )}
+                </div>
+                <button onClick={handleImport}
+                  disabled={isImporting}
+                  className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg text-label-lg hover:bg-green-700 disabled:opacity-40 transition-colors">
+                  {isImporting
+                    ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>Import…</>
+                    : <><span className="material-symbols-outlined text-[18px]">upload</span>Confirmer et importer {selectedCount} match{selectedCount > 1 ? 's' : ''}</>
+                  }
+                </button>
+              </div>
+            </div>
+          ); })()}
         </div>
       )}
 

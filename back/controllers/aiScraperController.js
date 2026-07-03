@@ -40,6 +40,10 @@ Pour chaque match, fournis exactement ces champs :
 Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte avant ou après :
 {"matches":[...],"championnat":"nom du championnat ou null","saison":"ex: 2024-2025 ou null"}
 
+RÈGLES IMPORTANTES :
+- "championnat" = NOM de la compétition sportive (ex: "Régional 2", "Division Honneur", "Championnat National U15", "Coupe de France"). Ne mets JAMAIS une année (ex: "2026-2027") dans ce champ. Si tu ne trouves pas le nom exact, mets null.
+- "saison" = l'année sportive uniquement, au format AAAA-AAAA (ex: "2024-2025", "2025-2026"). Ce champ ne contient QUE des chiffres séparés par un tiret.
+
 Si aucun match n'est trouvé, retourne : {"matches":[],"championnat":null,"saison":null}`;
 
 // GET /ai-scraper/quota
@@ -157,10 +161,83 @@ const analyseWithAI = async (req, res) => {
   }
 };
 
+// POST /ai-scraper/check-teams
+const checkTeams = async (req, res) => {
+  try {
+    const { equipe_ref_id, saison, championnat, team_names } = req.body;
+    if (!equipe_ref_id || !saison || !Array.isArray(team_names) || team_names.length === 0) {
+      return res.status(400).json({ success: false, message: 'Paramètres invalides' });
+    }
+
+    let club_id = req.user.club_id;
+    if (!club_id) {
+      const { Equipe } = require('../models');
+      const eq = await Equipe.findByPk(equipe_ref_id, { attributes: ['club_id'] });
+      club_id = eq?.club_id || null;
+    }
+    if (!club_id) return res.status(400).json({ success: false, message: 'Impossible de déterminer le club.' });
+
+    const existing = await ChEquipe.findAll({
+      where: { club_id, equipe_ref_id, saison, championnat: championnat || null },
+      attributes: ['id', 'nom'],
+      raw: true,
+    });
+
+    function norm(s) {
+      return s.toLowerCase().trim()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, (_, i) => i);
+      for (let j = 1; j <= n; j++) {
+        let prev = dp[0]; dp[0] = j;
+        for (let i = 1; i <= m; i++) {
+          const tmp = dp[i];
+          dp[i] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[i - 1], dp[i]);
+          prev = tmp;
+        }
+      }
+      return dp[m];
+    }
+
+    function simScore(a, b) {
+      const na = norm(a), nb = norm(b);
+      if (na === nb) return 1;
+      if (na.includes(nb) || nb.includes(na)) return 0.85;
+      const dist = levenshtein(na, nb);
+      const maxLen = Math.max(na.length, nb.length);
+      return maxLen === 0 ? 1 : Math.max(0, 1 - dist / maxLen);
+    }
+
+    const uniqueNames = [...new Set(team_names.map(n => String(n).trim()).filter(Boolean))];
+    const teams = uniqueNames.map(name => {
+      const exactMatch = existing.find(e => norm(e.nom) === norm(name));
+      if (exactMatch) return { name, status: 'exists', match: { id: exactMatch.id, nom: exactMatch.nom } };
+
+      const similar = existing
+        .map(e => ({ id: e.id, nom: e.nom, pct: Math.round(simScore(name, e.nom) * 100) }))
+        .filter(e => e.pct >= 55)
+        .sort((a, b) => b.pct - a.pct)
+        .slice(0, 3);
+
+      if (similar.length > 0) return { name, status: 'similar', suggestions: similar };
+      return { name, status: 'new' };
+    });
+
+    return res.json({ success: true, data: { teams, existing_count: existing.length } });
+  } catch (err) {
+    console.error('[AI Scraper] Erreur check-teams:', err.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 // POST /ai-scraper/import
 const importMatches = async (req, res) => {
   try {
-    const { equipe_ref_id, saison, championnat, matches } = req.body;
+    const { equipe_ref_id, saison, championnat, matches, team_overrides = {} } = req.body;
 
     if (!equipe_ref_id || !saison || !Array.isArray(matches) || matches.length === 0) {
       return res.status(400).json({ success: false, message: 'Paramètres invalides' });
@@ -182,15 +259,17 @@ const importMatches = async (req, res) => {
     let createdMatchs = 0;
 
     const getOrCreateTeam = async (nom) => {
-      const key = nom.trim().toLowerCase();
+      // Appliquer l'override admin si défini (ex : "Paris FC" → "FC Paris")
+      const resolvedNom = (team_overrides[nom.trim()] || nom.trim());
+      const key = resolvedNom.toLowerCase();
       if (teamCache[key]) return teamCache[key];
       let eq = await ChEquipe.findOne({
-        where: { club_id, equipe_ref_id, saison, championnat: championnat || null, nom: nom.trim() },
+        where: { club_id, equipe_ref_id, saison, championnat: championnat || null, nom: resolvedNom },
       });
       if (!eq) {
         eq = await ChEquipe.create({
           club_id, equipe_ref_id, equipe_id: null,
-          nom: nom.trim(), saison, championnat: championnat || null, couleur: '#6c757d',
+          nom: resolvedNom, saison, championnat: championnat || null, couleur: '#6c757d',
         });
         newTeams.push(eq.nom);
       }
@@ -223,4 +302,4 @@ const importMatches = async (req, res) => {
   }
 };
 
-module.exports = { getQuota, analyseWithAI, importMatches, buildQuotaInfo };
+module.exports = { getQuota, analyseWithAI, checkTeams, importMatches, buildQuotaInfo };
