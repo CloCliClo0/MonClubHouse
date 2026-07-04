@@ -1,9 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import PhotoUpload from '../components/PhotoUpload'
+import BirthdateSelect from '../components/BirthdateSelect'
+import SubscriptionGate from '../components/SubscriptionGate'
 import api from '../services/api'
 
-type Tab = 'mon-profil' | 'securite' | 'notifications' | 'mes-enfants'
+type Tab = 'mon-profil' | 'securite' | 'notifications' | 'mes-enfants' | 'abonnement'
+
+type SubStatus = {
+  enabled: boolean
+  active: boolean
+  can_buy_for_club: boolean
+  club_subscription: { plan: string; current_period_end: string | null } | null
+  user_subscription: { plan: string; current_period_end: string | null } | null
+}
 type Child = { id: number; nom: string; prenom: string; avatar?: string }
 type UserData = {
   id: number; nom: string; prenom: string; email: string
@@ -53,6 +63,13 @@ export default function ProfilePage() {
   const [unlinkingGoogle, setUnlinkingGoogle] = useState(false)
   const [initPwd, setInitPwd]       = useState('')
   const [initPwdSaving, setInitPwdSaving] = useState(false)
+
+  // Abonnement
+  const [subStatus, setSubStatus] = useState<SubStatus | null>(null)
+  useEffect(() => {
+    if (tab !== 'abonnement' || subStatus) return
+    api.get('/subscription/status').then(r => setSubStatus(r.data.data)).catch(() => {})
+  }, [tab])
 
   // Email verification
   const [resendingVerify, setResendingVerify] = useState(false)
@@ -247,6 +264,7 @@ export default function ProfilePage() {
     ...(role === 'parent' ? [{ key: 'mes-enfants' as Tab, label: 'Mes enfants' }] : []),
     { key: 'securite', label: 'Sécurité' },
     { key: 'notifications', label: 'Notifications' },
+    { key: 'abonnement', label: 'Abonnement' },
   ]
 
   return (
@@ -344,8 +362,8 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-label-md text-on-surface-variant">Date de naissance</label>
-                      <input value={dateNaiss} onChange={e => setDate(e.target.value)} type="date"
-                        className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+                      <BirthdateSelect value={dateNaiss} onChange={setDate}
+                        className="w-full px-3 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
@@ -714,6 +732,49 @@ export default function ProfilePage() {
               </div>
             )}
           </section>
+        </div>
+      )}
+
+      {/* ── Abonnement ──────────────────────────────────────────────────── */}
+      {tab === 'abonnement' && (
+        <div className="space-y-6">
+          {!subStatus ? (
+            <div className="h-32 bg-surface-container-low rounded-lg animate-pulse" />
+          ) : !subStatus.enabled ? (
+            <div className="bg-white border border-[#e8e8f0] rounded-lg p-6 text-center text-on-surface-variant">
+              <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">workspace_premium</span>
+              <p className="text-body-md">Les abonnements ne sont pas encore activés sur cette plateforme.</p>
+            </div>
+          ) : (
+            <>
+              <section className="bg-white border border-[#e8e8f0] rounded-lg p-6">
+                <h5 className="text-headline-md mb-3">Statut de l'abonnement</h5>
+                {subStatus.active ? (
+                  <div className="flex items-center gap-3 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                    <span className="material-symbols-outlined">check_circle</span>
+                    <div>
+                      <p className="text-label-lg font-semibold">Abonnement actif</p>
+                      {(subStatus.club_subscription || subStatus.user_subscription) && (
+                        <p className="text-body-sm">
+                          Formule {(subStatus.club_subscription || subStatus.user_subscription)!.plan}
+                          {(subStatus.club_subscription || subStatus.user_subscription)!.current_period_end &&
+                            ` — renouvellement le ${new Date((subStatus.club_subscription || subStatus.user_subscription)!.current_period_end!).toLocaleDateString('fr-FR')}`}
+                          {subStatus.club_subscription && ' (couvert par votre club)'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-4 py-3">
+                    <span className="material-symbols-outlined">warning</span>
+                    <p className="text-label-lg font-semibold">Aucun abonnement actif</p>
+                  </div>
+                )}
+              </section>
+
+              <SubscriptionGate variant="page" canBuyForClub={subStatus.can_buy_for_club} />
+            </>
+          )}
         </div>
       )}
     </div>

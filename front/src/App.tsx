@@ -52,6 +52,8 @@ const ArbitragePage    = lazy(() => import('./pages/ArbitragePage'))
 const SuperAdminPage   = lazy(() => import('./pages/SuperAdminPage'))
 const DiagnosticPage   = lazy(() => import('./pages/DiagnosticPage'))
 const SupportAdminPage = lazy(() => import('./pages/SupportAdminPage'))
+const PromoCodesPage   = lazy(() => import('./pages/PromoCodesPage'))
+const SubscriptionAdminPage = lazy(() => import('./pages/SubscriptionAdminPage'))
 const HelpPage         = lazy(() => import('./pages/HelpPage'))
 const DocumentationPage = lazy(() => import('./pages/DocumentationPage'))
 const SupportPage      = lazy(() => import('./pages/SupportPage'))
@@ -103,6 +105,8 @@ export default function App() {
               <Route path="/super-admin"            element={<SuperAdminPage />} />
               <Route path="/diagnostic"             element={<DiagnosticPage />} />
               <Route path="/support-admin"          element={<SupportAdminPage />} />
+              <Route path="/codes-promo"            element={<PromoCodesPage />} />
+              <Route path="/abonnements-admin"      element={<SubscriptionAdminPage />} />
               <Route path="/aide"                   element={<HelpPage />} />
               <Route path="/aide/documentation"     element={<DocumentationPage />} />
               <Route path="/aide/support"           element={<SupportPage />} />

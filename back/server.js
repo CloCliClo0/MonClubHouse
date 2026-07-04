@@ -140,6 +140,10 @@ app.use(cors({
 app.options('*', cors());
 
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// Webhook Stripe : body brut requis pour la vérification de signature — AVANT express.json()
+app.post('/api/subscription/webhook', express.raw({ type: 'application/json' }), require('./controllers/subscriptionController').webhook);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
@@ -193,6 +197,8 @@ app.use('/api/arbitrage',    arbitrageRoutes);
 app.use('/api/categories',   categoriesRoutes);
 app.use('/api/diagnostic',   require('./routes/diagnostic'));
 app.use('/api/support',      require('./routes/support'));
+app.use('/api/promo-codes',  require('./routes/promoCodes'));
+app.use('/api/subscription', require('./routes/subscription'));
 
 // Auth Google — uniquement les routes OAuth (hors /api pour le redirect Google)
 // Les endpoints sensibles (login, register) ne sont exposés qu'à /api/auth/ (avec rate limiting)
@@ -353,6 +359,63 @@ const applyStartupMigrations = async () => {
   } catch (e) {
     console.warn('[DB] Migration startup échouée (support_tickets) :', e.message);
   }
+
+  // Création table promo_codes si absente
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS promo_codes (
+        id           INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        code         VARCHAR(30) NOT NULL UNIQUE,
+        type         ENUM('percent','fixed') NOT NULL DEFAULT 'percent',
+        valeur       INT NOT NULL,
+        description  VARCHAR(200) NULL,
+        max_uses     INT NULL,
+        uses_count   INT NOT NULL DEFAULT 0,
+        expires_at   DATETIME NULL,
+        actif        TINYINT(1) NOT NULL DEFAULT 1,
+        created_by   INT NULL,
+        createdAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_promo_actif (actif)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('[DB] Table promo_codes OK');
+
+    // Code promo partenaire — idempotent (ne recrée pas s'il existe déjà)
+    await sequelize.query(`
+      INSERT IGNORE INTO promo_codes (code, type, valeur, description, actif, createdAt, updatedAt)
+      VALUES ('CODE-FCLEDOULIEU', 'percent', 20, 'Partenariat FC Le Doulieu', 1, NOW(), NOW())
+    `);
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée (promo_codes) :', e.message);
+  }
+
+  // Création table subscriptions si absente
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id                     INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        owner_type             ENUM('club','user') NOT NULL,
+        owner_id               INT NOT NULL,
+        plan                   ENUM('mensuel','annuel') NOT NULL,
+        statut                 ENUM('actif','expire','annule','impaye') NOT NULL DEFAULT 'actif',
+        stripe_customer_id     VARCHAR(100) NULL,
+        stripe_subscription_id VARCHAR(100) NULL UNIQUE,
+        promo_code             VARCHAR(30) NULL,
+        current_period_end     DATETIME NULL,
+        rappel_envoye          TINYINT(1) NOT NULL DEFAULT 0,
+        createdAt              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_sub_owner (owner_type, owner_id),
+        INDEX idx_sub_statut (statut),
+        INDEX idx_sub_period_end (current_period_end)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    console.log('[DB] Table subscriptions OK');
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée (subscriptions) :', e.message);
+  }
+
 };
 
 const connectDB = async (retries = 10, delay = 5000) => {
@@ -384,6 +447,14 @@ connectDB().then(() => {
       catch (e) { console.error('[Cron rappels]', e.message); }
     });
     console.log('[Cron] Rappels J-1 planifiés (toutes les heures)');
+
+    // Cron rappels de renouvellement d'abonnement — une fois par jour
+    const { createRenewalReminders } = require('./services/subscriptionService');
+    cron.schedule('0 8 * * *', async () => {
+      try { await createRenewalReminders(); }
+      catch (e) { console.error('[Cron rappels abonnement]', e.message); }
+    });
+    console.log('[Cron] Rappels renouvellement abonnement planifiés (quotidien 8h)');
   } catch (e) {
     console.warn('[Cron] node-cron non disponible :', e.message);
   }

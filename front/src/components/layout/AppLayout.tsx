@@ -5,7 +5,11 @@ import Topbar from './Topbar'
 import { getToken } from '../../services/auth'
 import api from '../../services/api'
 import PhotoUpload from '../PhotoUpload'
+import BirthdateSelect from '../BirthdateSelect'
+import SubscriptionGate from '../SubscriptionGate'
 import { useAuth } from '../../contexts/AuthContext'
+
+const CAN_BUY_FOR_CLUB = ['dirigeant', 'admin', 'superadmin']
 
 type ProfileData = {
   date_naissance: string | null
@@ -94,8 +98,7 @@ function ProfileCompleteModal({ onDone }: { onDone: () => void }) {
               Date de naissance
               <span className="text-error">*</span>
             </label>
-            <input type="date" value={dateNaiss} onChange={e => setDateNaiss(e.target.value)} required
-              className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+            <BirthdateSelect value={dateNaiss} onChange={setDateNaiss} />
           </div>
 
           {/* Téléphone */}
@@ -176,6 +179,8 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [profileChecked, setProfileChecked] = useState(false)
+  const [showSubscriptionGate, setShowSubscriptionGate] = useState(false)
+  const [canBuyForClub, setCanBuyForClub] = useState(false)
 
   useEffect(() => {
     const role = localStorage.getItem('role') || 'joueur'
@@ -197,12 +202,27 @@ export default function AppLayout() {
         setShowProfileModal(true)
       }
     }).catch(() => {}).finally(() => setProfileChecked(true))
+
+    api.get('/subscription/status').then(res => {
+      const s = res.data.data
+      setCanBuyForClub(!!s.can_buy_for_club)
+      if (s.enabled && !s.active && !sessionStorage.getItem('subscription_gate_dismissed')) {
+        setShowSubscriptionGate(true)
+      }
+    }).catch(() => {})
   }, [])
 
   return (
     <div className="min-h-screen bg-[#f4f4f6]">
       {showProfileModal && (
         <ProfileCompleteModal onDone={() => setShowProfileModal(false)} />
+      )}
+
+      {!showProfileModal && showSubscriptionGate && (
+        <SubscriptionGate canBuyForClub={canBuyForClub} onClose={() => {
+          sessionStorage.setItem('subscription_gate_dismissed', '1')
+          setShowSubscriptionGate(false)
+        }} />
       )}
 
       {/* Overlay mobile */}

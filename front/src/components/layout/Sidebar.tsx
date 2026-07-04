@@ -31,6 +31,8 @@ export default function Sidebar({ open, onClose }: Props) {
     SUPER_ADMIN: { path: '/super-admin',  icon: 'shield_person',        label: 'Gestion clubs'     },
     DIAGNOSTIC:  { path: '/diagnostic',  icon: 'bug_report',           label: 'Diagnostic'        },
     SUPPORT_ADM: { path: '/support-admin', icon: 'support_agent',       label: 'Support'           },
+    PROMO_CODES: { path: '/codes-promo',  icon: 'sell',                 label: 'Codes promo'       },
+    ABONNEMENTS: { path: '/abonnements-admin', icon: 'workspace_premium', label: 'Abonnements'      },
     SCRAPER:     { path: '/scraper',      icon: 'code_blocks',          label: 'Import FFF'        },
     ARBITRAGE:   { path: '/arbitrage',   icon: 'sports_handball',       label: 'Arbitrage'         },
   }
@@ -42,15 +44,21 @@ export default function Sidebar({ open, onClose }: Props) {
       { label: t.nav.administration, items: [NAV.ADMIN, NAV.SUPER_ADMIN] },
       { label: 'Outils',            items: [NAV.SCRAPER, NAV.DIAGNOSTIC] },
       { label: 'Support',           items: [NAV.SUPPORT_ADM] },
+      { label: 'Abonnements',       items: [NAV.PROMO_CODES, NAV.ABONNEMENTS] },
     ],
     admin: [
+      { label: 'Club',          items: [NAV.MON_CLUB, NAV.EQUIPES] },
+      { label: 'Planning',      items: [NAV.CALENDRIER, NAV.ARBITRAGE] },
+      { label: 'Compétition',   items: [NAV.SAISON, NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
       { label: t.nav.administration, items: [NAV.ADMIN] },
-      { label: 'Outils',            items: [NAV.SCRAPER] },
+      { label: 'Outils',        items: [NAV.SCRAPER] },
+      { label: 'Communication', items: [NAV.MESSAGES] },
     ],
     dirigeant: [
       { label: 'Club',          items: [NAV.MON_CLUB, NAV.EQUIPES] },
       { label: 'Planning',      items: [NAV.CALENDRIER, NAV.ARBITRAGE] },
       { label: 'Compétition',   items: [NAV.SAISON, NAV.ADVERSAIRES, NAV.RESULTATS, NAV.STATS] },
+      { label: t.nav.administration, items: [NAV.ADMIN] },
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
     coach: [

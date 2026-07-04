@@ -60,7 +60,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-interface SmsLink { joueur: { id: number; nom: string; prenom: string }; telephone: string | null; smsUri: string | null; body?: string }
+interface SmsLink { joueur: { id: number; nom: string; prenom: string }; telephone: string | null; smsUri: string | null; whatsappUri: string | null; body?: string }
 
 export default function ConvocationsPage() {
   const { user: authUser } = useAuth()
@@ -72,6 +72,7 @@ export default function ConvocationsPage() {
   const [loadingMatches, setLoadingMatches] = useState(true)
   const [loadingPlayers, setLoadingPlayers] = useState(false)
   const [isClubFallback, setIsClubFallback] = useState(false)
+  const [exportingAll, setExportingAll] = useState(false)
 
   // Panneau d'ajout
   const [showAddPanel, setShowAddPanel]   = useState(false)
@@ -316,6 +317,76 @@ export default function ConvocationsPage() {
     win.print()
   }
 
+  const handleExportAll = async () => {
+    if (matches.length === 0 || exportingAll) return
+    setExportingAll(true)
+    try {
+      const withConvocations = await Promise.all(matches.map(async m => {
+        try {
+          const r = await api.get(`/matchs/${m.id}/convocations`)
+          const list = r.data.data || r.data || []
+          return { match: m, joueurs: list.map((c: any) => ({ ...c.joueur, statut: c.statut })) }
+        } catch {
+          return { match: m, joueurs: [] }
+        }
+      }))
+
+      const byEquipe = new Map<string, typeof withConvocations>()
+      withConvocations.forEach(entry => {
+        const key = entry.match.equipe?.nom || 'Équipe'
+        if (!byEquipe.has(key)) byEquipe.set(key, [])
+        byEquipe.get(key)!.push(entry)
+      })
+
+      const sections = [...byEquipe.entries()].map(([equipeNom, entries]) => `
+        <h2>${equipeNom}</h2>
+        ${entries.map(({ match, joueurs }) => `
+          <h3>${match.adversaire ? `vs ${match.adversaire}` : 'Entraînement'} — ${new Date(match.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+          ${joueurs.length === 0 ? '<p style="color:#999">Aucun joueur convoqué</p>' : `
+            <table>
+              <thead><tr><th>#</th><th>Joueur</th><th>Statut</th></tr></thead>
+              <tbody>${joueurs.map((j: any, i: number) => `
+                <tr>
+                  <td style="text-align:center">${i + 1}</td>
+                  <td><strong>${j.prenom} ${j.nom}</strong></td>
+                  <td style="background:${
+                    j.statut === 'present' ? '#dcfce7' :
+                    j.statut === 'absent' ? '#fee2e2' :
+                    j.statut === 'incertain' ? '#fef3c7' : '#ffedd5'
+                  }">${BADGE[(j.statut === 'convoque' ? 'sans_reponse' : j.statut) as PlayerStatut]?.label || j.statut}</td>
+                </tr>`).join('')}</tbody>
+            </table>`}
+        `).join('')}
+      `).join('<hr style="margin:24px 0;border:none;border-top:1px solid #ddd">')
+
+      const win = window.open('', '_blank')
+      if (!win) return
+      win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+        <title>Toutes les convocations</title>
+        <style>
+          body{font-family:Arial,sans-serif;padding:24px;color:#111;max-width:800px;margin:0 auto}
+          h1{font-size:20px;margin:0 0 12px}
+          h2{font-size:17px;margin:24px 0 4px;color:#0f5238}
+          h3{font-size:14px;margin:12px 0 4px;color:#333}
+          p{margin:2px 0;font-size:13px;color:#555}
+          table{width:100%;border-collapse:collapse;margin-top:6px;margin-bottom:12px;font-size:13px}
+          th{background:#f0f0f0;padding:6px 10px;text-align:left;border:1px solid #ddd}
+          td{padding:6px 10px;border:1px solid #ddd}
+          @media print{body{padding:0}}
+        </style>
+      </head><body>
+        <h1>Toutes les convocations à venir</h1>
+        ${sections}
+        <p style="margin-top:24px;font-size:11px;color:#999">Généré le ${new Date().toLocaleDateString('fr-FR')} via MonClubHouse</p>
+      </body></html>`)
+      win.document.close()
+      win.focus()
+      win.print()
+    } finally {
+      setExportingAll(false)
+    }
+  }
+
   const handleSend = async () => {
     if (!selectedMatch) return
     setSendStep('sending')
@@ -337,9 +408,19 @@ export default function ConvocationsPage() {
   if (!selectedMatch) {
     return (
       <div>
-        <div className="mb-6">
-          <h2 className="text-headline-lg text-on-surface">Convocations</h2>
-          <p className="text-body-md text-on-surface-variant">Sélectionnez un match pour gérer les convocations</p>
+        <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-headline-lg text-on-surface">Convocations</h2>
+            <p className="text-body-md text-on-surface-variant">Sélectionnez un match pour gérer les convocations</p>
+          </div>
+          <button
+            onClick={handleExportAll}
+            disabled={matches.length === 0 || exportingAll}
+            className="flex items-center gap-2 bg-white border border-[#e8e8f0] text-on-surface px-4 py-2.5 rounded-lg text-label-lg hover:bg-surface-container-low transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[20px]">{exportingAll ? 'progress_activity' : 'file_download'}</span>
+            {exportingAll ? 'Export…' : 'Exporter toutes les convocations'}
+          </button>
         </div>
 
         {loadingMatches ? (
@@ -412,8 +493,8 @@ export default function ConvocationsPage() {
             disabled={players.length === 0 || loadingSms}
             className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-green-700 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <span className="material-symbols-outlined text-[20px]">sms</span>
-            SMS
+            <span className="material-symbols-outlined text-[20px]">share</span>
+            Partager
           </button>
           <button
             onClick={() => setSendStep('preview')}
@@ -432,8 +513,8 @@ export default function ConvocationsPage() {
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-5 space-y-3">
           <div className="flex items-center justify-between">
             <p className="font-semibold text-green-800 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[20px]">sms</span>
-              Envoi SMS depuis votre téléphone
+              <span className="material-symbols-outlined text-[20px]">share</span>
+              Partager avec les joueurs convoqués
             </p>
             <div className="flex gap-2">
               <button onClick={copierTousNumeros} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">
@@ -442,7 +523,7 @@ export default function ConvocationsPage() {
               <button onClick={() => setShowSmsPanel(false)} className="text-xs text-gray-500 px-2 py-1">✕</button>
             </div>
           </div>
-          <p className="text-xs text-green-700">Cliquez sur "Envoyer" pour ouvrir votre application SMS avec le message pré-rempli.</p>
+          <p className="text-xs text-green-700">Ouvre l'application Messages ou WhatsApp de votre téléphone avec le message pré-rempli, pour chaque joueur convoqué.</p>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {smsLinks.map(l => (
               <div key={l.joueur.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-green-100">
@@ -451,9 +532,17 @@ export default function ConvocationsPage() {
                   <p className="text-xs text-gray-500">{l.telephone || 'Pas de numéro'}</p>
                 </div>
                 {l.smsUri ? (
-                  <a href={l.smsUri} className="text-xs bg-green-100 text-green-700 font-medium px-3 py-1.5 rounded-lg hover:bg-green-200 transition">
-                    Envoyer
-                  </a>
+                  <div className="flex gap-1.5">
+                    <a href={l.smsUri} className="text-xs bg-green-100 text-green-700 font-medium px-3 py-1.5 rounded-lg hover:bg-green-200 transition flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">sms</span>Message
+                    </a>
+                    {l.whatsappUri && (
+                      <a href={l.whatsappUri} target="_blank" rel="noopener noreferrer"
+                        className="text-xs bg-emerald-100 text-emerald-700 font-medium px-3 py-1.5 rounded-lg hover:bg-emerald-200 transition flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">chat</span>WhatsApp
+                      </a>
+                    )}
+                  </div>
                 ) : (
                   <span className="text-xs text-gray-400">—</span>
                 )}

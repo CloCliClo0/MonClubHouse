@@ -8,11 +8,30 @@ const getByMatch = async (req, res) => {
     const match = await Match.findByPk(req.params.matchId, { attributes: ['id', 'equipe_id'] });
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
 
+    // Joueur/parent : uniquement s'ils (ou leur enfant) sont eux-mêmes convoqués à ce match
+    if (['joueur', 'parent'].includes(req.user.role)) {
+      const idsAutorises = [req.user.id];
+      if (req.user.role === 'parent') {
+        const enfants = await User.findAll({ where: { parent_id: req.user.id }, attributes: ['id'] });
+        idsAutorises.push(...enfants.map(e => e.id));
+      }
+      const estConvoque = await Convocation.findOne({
+        where: { match_id: req.params.matchId, joueur_id: { [Op.in]: idsAutorises } },
+        attributes: ['id'],
+      });
+      if (!estConvoque) return res.status(403).json({ success: false, message: 'Vous n\'êtes pas convoqué à ce match' });
+    }
+
+    // Joueur/parent : pas besoin de l'email des coéquipiers
+    const joueurAttributes = ['coach', 'dirigeant', 'admin', 'superadmin'].includes(req.user.role)
+      ? ['id', 'nom', 'prenom', 'email', 'avatar']
+      : ['id', 'nom', 'prenom', 'avatar'];
+
     const convocations = await Convocation.findAll({
       where: { match_id: req.params.matchId },
       include: [{
         model: User, as: 'joueur',
-        attributes: ['id', 'nom', 'prenom', 'email', 'avatar'],
+        attributes: joueurAttributes,
         include: [{
           model: Licencie, as: 'licence',
           attributes: ['numero_maillot', 'poste'],
@@ -221,11 +240,12 @@ const getSmsLinks = async (req, res) => {
 
     const links = convocations.map(conv => {
       const j = conv.joueur;
-      if (!j?.telephone) return { joueur: j, telephone: null, smsUri: null };
+      if (!j?.telephone) return { joueur: j, telephone: null, smsUri: null, whatsappUri: null };
       const tel = j.telephone.replace(/\s+/g, '').replace(/^0/, '+33');
       const body = `Bonjour ${j.prenom}, ${typeLabel} le ${dateStr} à ${heureStr}${heureRdvStr}${adversaireStr} - Lieu : ${lieuStr}. Bonne chance ! 🏆`;
       const smsUri = `sms:${tel}?body=${encodeURIComponent(body)}`;
-      return { joueur: { id: j.id, nom: j.nom, prenom: j.prenom }, telephone: tel, smsUri, body };
+      const whatsappUri = `https://wa.me/${tel.replace(/^\+/, '')}?text=${encodeURIComponent(body)}`;
+      return { joueur: { id: j.id, nom: j.nom, prenom: j.prenom }, telephone: tel, smsUri, whatsappUri, body };
     });
 
     return res.json({ success: true, data: links, match: { adversaire: match.adversaire, date: match.date, type: match.type } });

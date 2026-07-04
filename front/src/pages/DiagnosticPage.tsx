@@ -145,8 +145,6 @@ export default function DiagnosticPage() {
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [convocEmailResult, setConvocEmailResult] = useState<TestFnResult>(null)
   const [convocEmailLoading, setConvocEmailLoading] = useState(false)
-  const [convocSmsResult, setConvocSmsResult]   = useState<(TestFnResult & { to?: string }) | null>(null)
-  const [convocSmsLoading, setConvocSmsLoading] = useState(false)
 
   useEffect(() => {
     api.get('/admin/users').then(r => {
@@ -212,17 +210,6 @@ export default function DiagnosticPage() {
     } catch (err: any) {
       setConvocEmailResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
     } finally { setConvocEmailLoading(false) }
-  }
-
-  const runTestConvocSms = async () => {
-    if (!testUserId) return
-    setConvocSmsLoading(true); setConvocSmsResult(null)
-    try {
-      const r = await api.post('/diagnostic/test-convoc-sms', { user_id: Number(testUserId) })
-      setConvocSmsResult(r.data.data)
-    } catch (err: any) {
-      setConvocSmsResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
-    } finally { setConvocSmsLoading(false) }
   }
 
   const runTestVerifyEmail = async () => {
@@ -727,45 +714,6 @@ export default function DiagnosticPage() {
               </div>
             ) : (
               <p className="px-4 py-3 text-body-sm text-on-surface-variant">Envoie un email de convocation test (match fictif) à l'utilisateur sélectionné depuis <strong>convocations@monclubhouse.fr</strong>.</p>
-            )}
-          </div>
-
-          {/* ── Convocation SMS ── */}
-          <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">sms</span>
-                <div>
-                  <span className="text-label-lg font-semibold">Test convocation par SMS</span>
-                  <span className="ml-2 text-[10px] font-semibold text-white bg-amber-600 px-2 py-0.5 rounded-full">ClickSend</span>
-                </div>
-              </div>
-              <button
-                onClick={runTestConvocSms}
-                disabled={convocSmsLoading || !testUserId}
-                className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
-              >
-                {convocSmsLoading
-                  ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                  : <span className="material-symbols-outlined text-[16px]">send</span>
-                }
-                {convocSmsLoading ? 'Envoi…' : 'Envoyer SMS'}
-              </button>
-            </div>
-            {convocSmsResult ? (
-              <div className={`px-4 py-3 flex flex-wrap gap-3 items-center ${convocSmsResult.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
-                <span className={`material-symbols-outlined text-[20px] ${convocSmsResult.ok ? 'text-green-500' : 'text-red-500'}`}>
-                  {convocSmsResult.ok ? 'check_circle' : 'error'}
-                </span>
-                <span className={`text-label-md font-bold ${convocSmsResult.ok ? 'text-green-700' : 'text-red-700'}`}>
-                  {convocSmsResult.ok ? 'SMS envoyé' : 'Échec'}
-                </span>
-                {convocSmsResult.to && <span className="text-body-sm font-mono text-on-surface-variant">→ {convocSmsResult.to}</span>}
-                {convocSmsResult.ms !== null && <span className="text-body-sm text-on-surface-variant">{convocSmsResult.ms}ms</span>}
-                {convocSmsResult.error && <span className="text-body-sm text-red-600 font-mono">{convocSmsResult.error}</span>}
-              </div>
-            ) : (
-              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Envoie un SMS de convocation test au numéro de téléphone de l'utilisateur sélectionné (champ téléphone requis dans son profil).</p>
             )}
           </div>
 

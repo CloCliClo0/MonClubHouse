@@ -1,6 +1,5 @@
 const { sequelize, User, Club, Equipe, Match, Licencie, InviteCode, Notification, Convocation, Message, Channel, Category, ChEquipe, ChMatch } = require('../models');
 const { sendTestEmail, sendTestConvocEmail, isEmailConfigured } = require('../services/emailService');
-const { sendTestConvocSms, isSmsConfigured } = require('../services/smsService');
 const os = require('os');
 
 const getServerDiagnostic = async (req, res) => {
@@ -311,22 +310,4 @@ const testConvocEmail = async (req, res) => {
   }
 };
 
-const testConvocSms = async (req, res) => {
-  const { user_id } = req.body;
-  if (!user_id) return res.status(400).json({ success: false, message: 'user_id requis' });
-  try {
-    const user = await User.findByPk(user_id, { attributes: ['id', 'nom', 'prenom', 'email', 'telephone'] });
-    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
-
-    if (!isSmsConfigured()) {
-      return res.json({ success: true, data: { ok: false, ms: null, to: user.telephone || null, error: 'CLICKSEND_API_TOKEN non configurée dans .env' } });
-    }
-
-    const result = await sendTestConvocSms({ user });
-    return res.json({ success: true, data: { ok: result.sent, ms: result.ms, to: result.to || user.telephone, error: result.reason || null } });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = { getServerDiagnostic, testGemini, testDrive, testDiag2fa, testDiagEmailVerify, testEmail, testNotification, testConvocEmail, testConvocSms };
+module.exports = { getServerDiagnostic, testGemini, testDrive, testDiag2fa, testDiagEmailVerify, testEmail, testNotification, testConvocEmail };

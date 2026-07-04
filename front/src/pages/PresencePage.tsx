@@ -19,6 +19,12 @@ interface ConvocationJoueur {
   prenom: string
 }
 
+interface RosterEntry {
+  id: number
+  statut: 'convoque' | 'present' | 'absent' | 'incertain'
+  joueur?: { id: number; nom: string; prenom: string }
+}
+
 interface Convocation {
   id: number
   match_id: number
@@ -54,6 +60,9 @@ export default function PresencePage() {
   const [motifAbsence, setMotifAbsence] = useState('')
   const [showMotif, setShowMotif] = useState<number | null>(null)
   const [filter, setFilter] = useState<'all' | 'match' | 'entrainement'>('all')
+  const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null)
+  const [rosterCache, setRosterCache] = useState<Record<number, RosterEntry[]>>({})
+  const [loadingRoster, setLoadingRoster] = useState<number | null>(null)
 
   const isParent = user?.role === 'parent'
 
@@ -107,6 +116,24 @@ export default function PresencePage() {
       console.error(err)
     } finally {
       setRepondingId(null)
+    }
+  }
+
+  const toggleRoster = async (matchId: number) => {
+    if (expandedMatchId === matchId) {
+      setExpandedMatchId(null)
+      return
+    }
+    setExpandedMatchId(matchId)
+    if (rosterCache[matchId]) return
+    setLoadingRoster(matchId)
+    try {
+      const r = await api.get(`/matchs/${matchId}/convocations`)
+      setRosterCache(prev => ({ ...prev, [matchId]: r.data.data || [] }))
+    } catch {
+      setRosterCache(prev => ({ ...prev, [matchId]: [] }))
+    } finally {
+      setLoadingRoster(null)
     }
   }
 
@@ -236,6 +263,36 @@ export default function PresencePage() {
             )}
           </div>
         )}
+
+        {/* Liste des convoqués */}
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <button
+            onClick={() => toggleRoster(m.id)}
+            className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-1"
+          >
+            {expandedMatchId === m.id ? 'Masquer les convoqués' : 'Voir les convoqués'}
+          </button>
+          {expandedMatchId === m.id && (
+            <div className="mt-2 space-y-1">
+              {loadingRoster === m.id ? (
+                <div className="flex justify-center py-3">
+                  <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (rosterCache[m.id] || []).length === 0 ? (
+                <p className="text-xs text-gray-400 py-1">Aucun joueur convoqué.</p>
+              ) : (
+                (rosterCache[m.id] || []).map(r => (
+                  <div key={r.id} className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-1.5">
+                    <span className="text-gray-700">{r.joueur ? `${r.joueur.prenom} ${r.joueur.nom}` : '—'}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUT_COLORS[r.statut]}`}>
+                      {STATUT_LABELS[r.statut]}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
     )
   }

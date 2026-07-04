@@ -58,7 +58,36 @@ const create = async (req, res) => {
       if (req.body[key] !== undefined) data[key] = req.body[key];
     }
     const licencie = await Licencie.create(data);
-    return res.status(201).json({ success: true, data: licencie });
+
+    // Auto-inscription dans les autres équipes de la même catégorie
+    // (ex: catégorie Senior avec équipes A et B → rejoindre l'une rejoint l'autre)
+    const autresEquipes = [];
+    const equipe = await Equipe.findByPk(data.equipe_id, { attributes: ['id', 'club_id', 'categorie_id'] });
+    if (equipe?.categorie_id) {
+      const siblings = await Equipe.findAll({
+        where: { categorie_id: equipe.categorie_id, club_id: equipe.club_id, actif: true },
+        attributes: ['id'],
+      });
+      const siblingIds = siblings.map(s => s.id).filter(id => id !== equipe.id);
+      if (siblingIds.length > 0) {
+        const alreadyIn = await Licencie.findAll({
+          where: { user_id: data.user_id, equipe_id: siblingIds },
+          attributes: ['equipe_id'],
+        });
+        const alreadyInIds = new Set(alreadyIn.map(l => l.equipe_id));
+        const toCreate = siblingIds.filter(id => !alreadyInIds.has(id));
+        if (toCreate.length > 0) {
+          const created = await Licencie.bulkCreate(toCreate.map(equipe_id => ({
+            user_id: data.user_id,
+            equipe_id,
+            statut: data.statut || 'actif',
+          })));
+          autresEquipes.push(...created);
+        }
+      }
+    }
+
+    return res.status(201).json({ success: true, data: licencie, autres_equipes: autresEquipes.length });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
