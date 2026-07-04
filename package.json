@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "postinstall": "npm install --prefix back",
-    "build": "npm install --prefix front --production=false && npm run build --prefix front",
+    "build": "npm install --prefix back && npm install --prefix front --production=false && npm run build --prefix front",
     "start": "node back/server.js",
     "dev": "npm run dev --prefix back",
     "migrate": "npm run migrate --prefix back",
