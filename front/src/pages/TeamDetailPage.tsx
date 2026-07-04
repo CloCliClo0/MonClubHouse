@@ -37,6 +37,7 @@ export default function TeamDetailPage() {
   const role = localStorage.getItem('role') || 'joueur'
   const canManage    = ['superadmin', 'admin', 'dirigeant', 'coach'].includes(role)
   const canEditRoster = ['superadmin', 'admin', 'dirigeant', 'coach'].includes(role)
+  const canDelete    = ['superadmin', 'admin', 'dirigeant'].includes(role) // aligné sur requireMinRole('dirigeant') côté back
 
   const [team, setTeam]       = useState<TeamDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,6 +55,7 @@ export default function TeamDetailPage() {
   const [clubCategories, setClubCategories] = useState<{ id: number; nom: string }[]>([])
   const [saving, setSaving]     = useState(false)
   const [editMsg, setEditMsg]   = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   // Modal licence
   const [licModal, setLicModal] = useState<Licencie | null>(null)
@@ -137,6 +139,19 @@ export default function TeamDetailPage() {
       alert(err.response?.data?.message || 'Erreur')
     } finally {
       setSavingLic(false)
+    }
+  }
+
+  const deleteTeam = async () => {
+    if (!confirm(`Supprimer l'équipe "${team?.nom}" ? Elle sera désactivée et n'apparaîtra plus dans la liste des équipes (l'historique des joueurs/matchs est conservé).`)) return
+    setDeleting(true)
+    try {
+      await api.patch(`/equipes/${id}/disable`)
+      navigate('/equipes')
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur lors de la suppression de l\'équipe')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -442,6 +457,20 @@ export default function TeamDetailPage() {
               {editMsg && <p className={`text-body-sm ${editMsg.includes('Erreur') ? 'text-error' : 'text-primary'}`}>{editMsg}</p>}
             </div>
           </form>
+
+          {canDelete && (
+            <div className="mt-8 pt-6 border-t border-[#e8e8f0]">
+              <p className="text-label-md text-on-surface-variant mb-3">Zone dangereuse</p>
+              <button
+                onClick={deleteTeam}
+                disabled={deleting}
+                className="flex items-center gap-2 border border-error text-error px-4 py-2.5 rounded-lg text-label-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">delete</span>
+                {deleting ? 'Suppression…' : "Supprimer l'équipe"}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

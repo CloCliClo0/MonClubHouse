@@ -16,6 +16,8 @@ const Subscription = sequelize.define('Subscription', {
   rappel_envoye:          { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
 }, {
   tableName: 'subscriptions',
+  timestamps: true,
+  underscored: false,
 });
 
 module.exports = Subscription;

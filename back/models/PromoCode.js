@@ -14,6 +14,8 @@ const PromoCode = sequelize.define('PromoCode', {
   created_by:  { type: DataTypes.INTEGER, allowNull: true },
 }, {
   tableName: 'promo_codes',
+  timestamps: true,
+  underscored: false,
 });
 
 module.exports = PromoCode;

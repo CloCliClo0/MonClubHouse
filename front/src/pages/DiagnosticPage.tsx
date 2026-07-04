@@ -78,6 +78,10 @@ const ENDPOINTS: Omit<EndpointResult, 'status' | 'ok' | 'ms' | 'msg' | 'body'>[]
   // Matchs événements
   { section: 'Matchs',         method: 'GET', path: '/api/matchs/1/events',            label: 'Événements match #1' },
   { section: 'Matchs',         method: 'GET', path: '/api/matchs/1/convocations',      label: 'Convocations match #1' },
+  // Abonnement / Codes promo
+  { section: 'Abonnement',     method: 'GET', path: '/api/subscription/status',        label: 'Statut abonnement' },
+  { section: 'Abonnement',     method: 'GET', path: '/api/subscription/admin',         label: 'Liste abonnements (superadmin)' },
+  { section: 'Abonnement',     method: 'GET', path: '/api/promo-codes',                label: 'Codes promo (superadmin)' },
 ]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -127,6 +131,10 @@ export default function DiagnosticPage() {
   type GeminiResult = { ok: boolean; model: string | null; ms: number | null; response: string | null; error: string | null; tokens: GeminiTokens | null; quota: GeminiQuota | null }
   const [geminiResult, setGeminiResult] = useState<GeminiResult | null>(null)
   const [geminiLoading, setGeminiLoading] = useState(false)
+
+  type StripeResult = { ok: boolean; mode: 'test' | 'live'; enabled: boolean; ms: number | null; error: string | null; livemode: boolean | null; available: { amount: number; currency: string }[] | null }
+  const [stripeResult, setStripeResult] = useState<StripeResult | null>(null)
+  const [stripeLoading, setStripeLoading] = useState(false)
 
   type DiagUser = { id: number; nom: string; prenom: string; email: string }
   type TestFnResult = { ok: boolean; ms: number | null; to: string; error: string | null } | null
@@ -233,6 +241,19 @@ export default function DiagnosticPage() {
       setGeminiResult({ ok: false, model: null, ms: null, response: null, error: err?.response?.data?.message || err?.message || 'Erreur réseau', tokens: null, quota: null })
     } finally {
       setGeminiLoading(false)
+    }
+  }
+
+  const testStripeApi = async () => {
+    setStripeLoading(true)
+    setStripeResult(null)
+    try {
+      const r = await api.get('/diagnostic/stripe')
+      setStripeResult(r.data.data)
+    } catch (err: any) {
+      setStripeResult({ ok: false, mode: 'test', enabled: false, ms: null, error: err?.response?.data?.message || err?.message || 'Erreur réseau', livemode: null, available: null })
+    } finally {
+      setStripeLoading(false)
     }
   }
 
@@ -571,6 +592,72 @@ export default function DiagnosticPage() {
                 <div className="rounded-lg px-4 py-3 border bg-red-900/20 border-red-800/40">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant mb-1">Erreur</p>
                   <p className="text-label-md text-red-300 font-mono break-all">{geminiResult.error}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stripe API test */}
+      <div className="bg-surface-container-low border border-[#e8e8f0] rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+          <span className="text-label-lg font-semibold flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-primary">payments</span>
+            Test API paiement (Stripe)
+          </span>
+          <button
+            onClick={testStripeApi}
+            disabled={stripeLoading}
+            className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+          >
+            {stripeLoading
+              ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              : <span className="material-symbols-outlined text-[16px]">send</span>
+            }
+            {stripeLoading ? 'Test en cours…' : 'Tester Stripe'}
+          </button>
+        </div>
+        <div className="p-5">
+          {!stripeResult && !stripeLoading && (
+            <p className="text-body-sm text-on-surface-variant">Vérifie la connectivité et la validité de la clé Stripe (lecture seule — aucune session de paiement créée).</p>
+          )}
+          {stripeLoading && (
+            <p className="text-body-sm text-on-surface-variant animate-pulse">Appel en lecture seule à l'API Stripe (balance)…</p>
+          )}
+          {stripeResult && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-3">
+                <div className={`rounded-lg px-4 py-3 border flex items-center gap-2 ${stripeResult.ok ? 'bg-green-900/20 border-green-800/40' : 'bg-red-900/20 border-red-800/40'}`}>
+                  <span className={`material-symbols-outlined text-[20px] ${stripeResult.ok ? 'text-green-400' : 'text-red-400'}`}>
+                    {stripeResult.ok ? 'check_circle' : 'error'}
+                  </span>
+                  <div>
+                    <p className={`text-label-lg font-bold ${stripeResult.ok ? 'text-green-300' : 'text-red-300'}`}>
+                      {stripeResult.ok ? 'Opérationnel' : 'Échec'}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant">Statut</p>
+                  </div>
+                </div>
+                <InfoTile icon={stripeResult.enabled ? 'toggle_on' : 'toggle_off'} label="Abonnements activés" value={stripeResult.enabled ? 'Oui' : 'Non (SUBSCRIPTION_ENABLED=false)'} warn={!stripeResult.enabled} />
+                <InfoTile icon={stripeResult.mode === 'live' ? 'warning' : 'science'} label="Mode Stripe" value={stripeResult.mode === 'live' ? 'LIVE (réel)' : 'Test'} warn={stripeResult.mode === 'live'} />
+                {stripeResult.ms !== null && (
+                  <InfoTile icon="speed" label="Latence" value={`${stripeResult.ms}ms`} warn={stripeResult.ms > 3000} />
+                )}
+              </div>
+
+              {stripeResult.available && (
+                <div className="flex flex-wrap gap-3">
+                  {stripeResult.available.map(a => (
+                    <InfoTile key={a.currency} icon="account_balance_wallet" label={`Solde ${a.currency.toUpperCase()}`} value={(a.amount / 100).toFixed(2)} />
+                  ))}
+                </div>
+              )}
+
+              {stripeResult.error && (
+                <div className="rounded-lg px-4 py-3 border bg-red-900/20 border-red-800/40">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant mb-1">Erreur</p>
+                  <p className="text-label-md text-red-300 font-mono break-all">{stripeResult.error}</p>
                 </div>
               )}
             </div>

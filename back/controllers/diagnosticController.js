@@ -191,6 +191,38 @@ const testGemini = async (req, res) => {
   return res.json({ success: true, data: { ok: false, model: null, ms: null, response: null, error: 'Aucun modèle Gemini disponible', tokens: null, quota } });
 };
 
+const testStripe = async (req, res) => {
+  const { getStripe, isSubscriptionEnabled } = require('../services/subscriptionService');
+  const mode = process.env.STRIPE_ENV === 'production' ? 'live' : 'test';
+  const enabled = isSubscriptionEnabled();
+  const stripe = getStripe();
+
+  if (!stripe) {
+    return res.json({
+      success: true,
+      data: { ok: false, mode, enabled, ms: null, livemode: null, available: null, error: 'Clé API Stripe non configurée dans .env (STRIPE_API_KEY_TEST / STRIPE_API_KEY)' },
+    });
+  }
+
+  const t0 = Date.now();
+  try {
+    // Appel en lecture seule, sans effet de bord (pas de session Checkout créée) — vérifie uniquement la connectivité/validité de la clé.
+    const balance = await stripe.balance.retrieve();
+    const ms = Date.now() - t0;
+    return res.json({
+      success: true,
+      data: {
+        ok: true, mode, enabled, ms, error: null,
+        livemode: balance.livemode,
+        available: (balance.available || []).map(a => ({ amount: a.amount, currency: a.currency })),
+      },
+    });
+  } catch (err) {
+    const ms = Date.now() - t0;
+    return res.json({ success: true, data: { ok: false, mode, enabled, ms, livemode: null, available: null, error: err.message } });
+  }
+};
+
 const testDrive = async (req, res) => {
   const t0 = Date.now();
   try {
@@ -310,4 +342,4 @@ const testConvocEmail = async (req, res) => {
   }
 };
 
-module.exports = { getServerDiagnostic, testGemini, testDrive, testDiag2fa, testDiagEmailVerify, testEmail, testNotification, testConvocEmail };
+module.exports = { getServerDiagnostic, testGemini, testStripe, testDrive, testDiag2fa, testDiagEmailVerify, testEmail, testNotification, testConvocEmail };
