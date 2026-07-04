@@ -1,6 +1,7 @@
 const { InviteCode, Equipe, Club, User, Licencie, Category } = require('../models');
 const { Op } = require('sequelize');
 const crypto = require('crypto');
+const { assignUserToEquipes, equipeIdsForCategory, equipeIdsForCategoryByName } = require('../services/rosterService');
 
 // Génère un code lisible ex: MCH-U15-A3F2
 const makeCode = (prefix = 'MCH') =>
@@ -118,7 +119,7 @@ const validateCode = async (req, res) => {
         actif: true,
         [Op.or]: [{ expires_at: null }, { expires_at: { [Op.gt]: new Date() } }],
       },
-      include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie'] }],
+      include: [{ model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'] }],
     });
 
     if (!inviteCode) return res.status(404).json({ success: false, message: 'Code invalide ou expiré' });
@@ -132,51 +133,32 @@ const validateCode = async (req, res) => {
       club_id: inviteCode.club_id,
     });
 
-    // Création du licencié si joueur (equipe_id peut être null pour codes catégorie)
-    if (inviteCode.role === 'joueur') {
-      let equipeIds = inviteCode.equipe_id ? [inviteCode.equipe_id] : [];
-
-      // Code de catégorie (pas d'équipe précise) : rejoindre TOUTES les équipes de cette catégorie
-      if (equipeIds.length === 0 && inviteCode.categorie) {
-        const equipesCategorie = await Equipe.findAll({
-          where: { club_id: inviteCode.club_id, actif: true },
-          include: [{ model: Category, as: 'categorie', attributes: ['nom'], where: { nom: inviteCode.categorie } }],
-          attributes: ['id'],
-        });
-        equipeIds = equipesCategorie.map(e => e.id);
+    // Affectation à la catégorie (toutes les équipes actives) ou, à défaut, à l'équipe précise du code —
+    // pour joueur, parent ET coach (les codes catégorie stockent le nom en texte libre, pas une FK).
+    if (['joueur', 'parent', 'coach'].includes(inviteCode.role)) {
+      let equipeIds = [];
+      if (inviteCode.equipe_id) {
+        equipeIds = inviteCode.equipe?.categorie_id
+          ? await equipeIdsForCategory({ clubId: inviteCode.club_id, categorieId: inviteCode.equipe.categorie_id })
+          : [inviteCode.equipe_id];
+      } else if (inviteCode.categorie) {
+        equipeIds = await equipeIdsForCategoryByName({ clubId: inviteCode.club_id, categorieName: inviteCode.categorie });
       }
 
       if (equipeIds.length > 0) {
-        // Auto-inscription dans toutes les autres équipes de la même catégorie que la première
-        const equipeRef = await Equipe.findByPk(equipeIds[0], { attributes: ['id', 'categorie_id'] });
-        if (equipeRef?.categorie_id) {
-          const siblings = await Equipe.findAll({
-            where: { categorie_id: equipeRef.categorie_id, club_id: inviteCode.club_id, actif: true },
-            attributes: ['id'],
-          });
-          equipeIds = [...new Set([...equipeIds, ...siblings.map(s => s.id)])];
-        }
-
-        const existants = await Licencie.findAll({
-          where: { user_id: req.user.id, equipe_id: equipeIds },
-          attributes: ['equipe_id'],
-        });
-        const existantsIds = new Set(existants.map(l => l.equipe_id));
-        const aCreer = equipeIds.filter(id => !existantsIds.has(id));
-        if (aCreer.length > 0) {
-          await Licencie.bulkCreate(aCreer.map(equipe_id => ({
-            user_id: req.user.id,
-            equipe_id,
-            club_id: inviteCode.club_id,
-            statut: 'actif',
-          })));
-        }
-      } else {
+        await assignUserToEquipes({ userId: req.user.id, clubId: inviteCode.club_id, equipeIds, role: inviteCode.role });
+      } else if (inviteCode.role !== 'coach') {
         // Ni équipe ni catégorie précisée sur le code : licencié rattaché au club sans équipe
         await Licencie.findOrCreate({
           where: { user_id: req.user.id },
           defaults: { user_id: req.user.id, equipe_id: null, club_id: inviteCode.club_id, statut: 'actif' },
         });
+      }
+
+      // Coach : conserve le FK direct historique `coach_id` sur l'équipe précise du code,
+      // uniquement si elle n'a pas déjà de coach titulaire.
+      if (inviteCode.role === 'coach' && inviteCode.equipe_id) {
+        await Equipe.update({ coach_id: req.user.id }, { where: { id: inviteCode.equipe_id, coach_id: null } });
       }
     }
 

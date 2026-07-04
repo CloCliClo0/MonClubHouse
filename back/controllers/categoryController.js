@@ -1,4 +1,7 @@
-const { Category, Club, Equipe } = require('../models');
+const { Category, Club, Equipe, User } = require('../models');
+const { assignUserToEquipes, equipeIdsForCategory } = require('../services/rosterService');
+
+const ASSIGNABLE_ROLES = ['joueur', 'parent', 'coach'];
 
 const getByClub = async (req, res) => {
   try {
@@ -53,4 +56,31 @@ const remove = async (req, res) => {
   }
 };
 
-module.exports = { getByClub, create, update, remove };
+// POST /api/categories/:id/assign — affecte un utilisateur à TOUTES les équipes actives de la catégorie
+const assignMember = async (req, res) => {
+  try {
+    const club_id = req.user.role === 'superadmin' ? req.body.club_id || req.user.club_id : req.user.club_id;
+    const cat = await Category.findOne({ where: { id: req.params.id, club_id } });
+    if (!cat) return res.status(404).json({ success: false, message: 'Catégorie introuvable.' });
+
+    const { user_id, role } = req.body;
+    if (!user_id || !ASSIGNABLE_ROLES.includes(role)) {
+      return res.status(400).json({ success: false, message: 'user_id et role (joueur/parent/coach) requis.' });
+    }
+
+    const user = await User.findOne({ where: { id: user_id, club_id } });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable dans ce club.' });
+
+    const equipeIds = await equipeIdsForCategory({ clubId: club_id, categorieId: cat.id });
+    if (equipeIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Aucune équipe active dans cette catégorie.' });
+    }
+
+    const { assignedCount } = await assignUserToEquipes({ userId: user.id, clubId: club_id, equipeIds, role });
+    return res.json({ success: true, data: { assigned_count: assignedCount } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getByClub, create, update, remove, assignMember };

@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const { send2faEmail, sendVerifyEmail } = require('../services/emailService');
+const { assignUserToEquipes, equipeIdsForCategory, equipeIdsForCategoryByName } = require('../services/rosterService');
 
 // Helper — envoie l'email de vérification sans bloquer la réponse
 function sendEmailVerification(user) {
@@ -93,19 +94,33 @@ const register = async (req, res) => {
         actif:   true,
       });
 
-      // Licencié si joueur/parent
-      if ((invite.role === 'joueur' || invite.role === 'parent') && invite.equipe_id) {
-        await Licencie.upsert({
-          user_id:  user.id,
-          equipe_id: invite.equipe_id,
-          statut:   'actif',
-          date_inscription: new Date().toISOString().slice(0, 10),
-        }, { conflictFields: ['user_id'] });
-      }
+      // Affectation à la catégorie (toutes les équipes actives) ou, à défaut, à l'équipe précise du code.
+      // Un code catégorie (equipe_id null) résout la catégorie par son nom (InviteCode.categorie = texte libre).
+      if (['joueur', 'parent', 'coach'].includes(invite.role)) {
+        let equipeIds = [];
+        if (invite.equipe_id) {
+          equipeIds = invite.equipe?.categorie_id
+            ? await equipeIdsForCategory({ clubId: invite.club_id, categorieId: invite.equipe.categorie_id })
+            : [invite.equipe_id];
+        } else if (invite.categorie) {
+          equipeIds = await equipeIdsForCategoryByName({ clubId: invite.club_id, categorieName: invite.categorie });
+        }
 
-      // Affecter le coach
-      if (invite.role === 'coach' && invite.equipe_id) {
-        await Equipe.update({ coach_id: user.id }, { where: { id: invite.equipe_id } });
+        if (equipeIds.length > 0) {
+          await assignUserToEquipes({ userId: user.id, clubId: invite.club_id, equipeIds, role: invite.role });
+        } else if (invite.role !== 'coach') {
+          // Ni équipe ni catégorie résolue : licencié rattaché au club sans équipe (joueur/parent uniquement)
+          await Licencie.findOrCreate({
+            where: { user_id: user.id },
+            defaults: { user_id: user.id, equipe_id: null, club_id: invite.club_id, statut: 'actif' },
+          });
+        }
+
+        // Coach : conserve aussi le FK direct historique `coach_id` sur l'équipe précise du code,
+        // uniquement si elle n'a pas déjà de coach titulaire (ne jamais écraser une affectation existante).
+        if (invite.role === 'coach' && invite.equipe_id) {
+          await Equipe.update({ coach_id: user.id }, { where: { id: invite.equipe_id, coach_id: null } });
+        }
       }
 
       // Incrément atomique (optimistic locking) — évite la race condition entre requêtes concurrentes
@@ -145,7 +160,11 @@ const register = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Email déjà utilisé.' });
     }
 
-    const safeRole = ['joueur', 'parent', 'coach', 'dirigeant', 'admin', 'visiteur'].includes(role) ? role : 'joueur';
+    // Seul un superadmin peut créer un compte admin ou superadmin
+    const assignableRoles = req.user.role === 'superadmin'
+      ? ['joueur', 'parent', 'coach', 'dirigeant', 'admin', 'superadmin']
+      : ['joueur', 'parent', 'coach', 'dirigeant'];
+    const safeRole = assignableRoles.includes(role) ? role : 'joueur';
     // Superadmin peut définir un club_id, les autres admins utilisent le leur
     const userClubId = req.user.role === 'superadmin'
       ? (club_id ? parseInt(club_id) : null)

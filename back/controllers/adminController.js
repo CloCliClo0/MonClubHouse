@@ -61,8 +61,10 @@ const updateUserRole = async (req, res) => {
     }
 
     const { role } = req.body;
-    const rolesValides = ['admin', 'dirigeant', 'coach', 'joueur', 'parent', 'visiteur'];
-    if (req.user.role !== 'superadmin') rolesValides.splice(0, 1);
+    // Seul un superadmin peut affecter le rôle admin ou superadmin
+    const rolesValides = req.user.role === 'superadmin'
+      ? ['superadmin', 'admin', 'dirigeant', 'coach', 'joueur', 'parent']
+      : ['dirigeant', 'coach', 'joueur', 'parent'];
     if (!rolesValides.includes(role)) {
       return res.status(400).json({ success: false, message: 'Rôle invalide' });
     }
@@ -99,7 +101,8 @@ const updateUser = async (req, res) => {
     if (nom    !== undefined) updates.nom    = nom;
     if (prenom !== undefined) updates.prenom = prenom;
     if (role   !== undefined) {
-      const allowed = ['dirigeant', 'coach', 'joueur', 'parent', 'visiteur'];
+      // Seul un superadmin peut affecter le rôle admin ou superadmin
+      const allowed = ['dirigeant', 'coach', 'joueur', 'parent'];
       if (req.user.role === 'superadmin') allowed.push('superadmin', 'admin');
       if (allowed.includes(role)) updates.role = role;
     }

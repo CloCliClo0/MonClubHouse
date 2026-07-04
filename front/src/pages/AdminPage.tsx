@@ -15,7 +15,7 @@ type Equipe = { id: number; nom: string; categorie?: CategoryRef | null }
 // ─────────────────────────────────────────────────────────────
 
 type Role = 'superadmin' | 'admin' | 'dirigeant' | 'coach' | 'joueur' | 'parent' | 'visiteur'
-const ROLES: Role[] = ['superadmin', 'admin', 'dirigeant', 'coach', 'joueur', 'parent', 'visiteur']
+const ROLES: Role[] = ['superadmin', 'admin', 'dirigeant', 'coach', 'joueur', 'parent']
 
 const roleColors: Record<Role, string> = {
   superadmin: 'bg-red-100 text-red-700',
@@ -478,6 +478,8 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
 
 export default function AdminPage() {
   const isSuperAdmin = localStorage.getItem('role') === 'superadmin'
+  // Seul un superadmin peut affecter le rôle admin ou superadmin à un utilisateur
+  const assignableRoles: Role[] = isSuperAdmin ? ROLES : ROLES.filter(r => !['superadmin', 'admin'].includes(r))
   const [activeTab, setActiveTab] = useState<'users' | 'codes' | 'clubs'>('users')
   const [managedClub, setManagedClub] = useState<Club | null>(null)
 
@@ -645,13 +647,10 @@ export default function AdminPage() {
       if (modal.type === 'create') {
         const r = await api.post('/auth/register', { ...form, password_hash: form.password, club_id: form.club_id ? parseInt(form.club_id) : undefined })
         const newUserId = r.data.data?.user?.id
-        if (newUserId && createCategorie) {
-          const catEquipes = createEquipes.filter(e => String(e.categorie?.id) === createCategorie)
-          if (['joueur', 'parent'].includes(form.role)) {
-            await Promise.all(catEquipes.map(eq => api.post('/licencies', { user_id: newUserId, equipe_id: eq.id }).catch(() => {})))
-          } else if (form.role === 'coach') {
-            await Promise.all(catEquipes.map(eq => api.post(`/equipes/${eq.id}/coachs/add`, { user_id: newUserId }).catch(() => {})))
-          }
+        // Affecte à TOUTES les équipes de la catégorie choisie (joueur/parent/coach) — un seul appel,
+        // le serveur gère la cascade (cf. rosterService.assignUserToEquipes).
+        if (newUserId && createCategorie && ['joueur', 'parent', 'coach'].includes(form.role)) {
+          await api.post(`/categories/${createCategorie}/assign`, { user_id: newUserId, role: form.role }).catch(() => {})
         }
         load()
         setModal({ type: 'none' })
@@ -664,14 +663,9 @@ export default function AdminPage() {
           club_id: assignForm.club_id ? parseInt(assignForm.club_id) : null,
           role:    assignForm.role,
         })
-        // Si on assigne un coach à une catégorie, créer les liens equipe_coachs
-        if (assignForm.role === 'coach' && assignCategorie) {
-          const equipesInCat = assignEquipes.filter(e => String(e.categorie?.id) === assignCategorie)
-          await Promise.all(
-            equipesInCat.map(eq =>
-              api.post(`/equipes/${eq.id}/coachs/add`, { user_id: modal.user.id }).catch(() => {})
-            )
-          )
+        // Affecte à TOUTES les équipes de la catégorie choisie (joueur/parent/coach)
+        if (assignCategorie && ['joueur', 'parent', 'coach'].includes(assignForm.role)) {
+          await api.post(`/categories/${assignCategorie}/assign`, { user_id: modal.user.id, role: assignForm.role }).catch(() => {})
         }
         load()
         setModal({ type: 'none' })
@@ -1039,8 +1033,10 @@ export default function AdminPage() {
                   <td className="px-4 py-3 text-body-md text-on-surface-variant hidden md:table-cell">{u.email}</td>
                   <td className="px-4 py-3">
                     <select value={u.role} onChange={e => updateRole(u.id, e.target.value as Role)}
-                      className={`px-3 py-1 rounded-full text-label-md font-semibold border-none focus:outline-none cursor-pointer ${roleColors[u.role]}`}>
-                      {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                      disabled={!isSuperAdmin && ['admin', 'superadmin'].includes(u.role)}
+                      title={!isSuperAdmin && ['admin', 'superadmin'].includes(u.role) ? 'Seul un superadmin peut modifier ce rôle' : undefined}
+                      className={`px-3 py-1 rounded-full text-label-md font-semibold border-none focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 ${roleColors[u.role]}`}>
+                      {(assignableRoles.includes(u.role) ? assignableRoles : [...assignableRoles, u.role]).map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </td>
                   {isSuperAdmin && (
@@ -1136,7 +1132,7 @@ export default function AdminPage() {
                 <div className="relative">
                   <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as Role }))}
                     className="w-full appearance-none px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all pr-8 bg-white">
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {assignableRoles.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                   <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
                 </div>
@@ -1251,7 +1247,7 @@ export default function AdminPage() {
                   onChange={e => setAssignForm(f => ({ ...f, role: e.target.value as Role }))}
                   className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
                 >
-                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                  {assignableRoles.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
 

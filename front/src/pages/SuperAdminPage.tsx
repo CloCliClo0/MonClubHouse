@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
+import PhotoUpload from '../components/PhotoUpload'
 
 type Club = {
   id: number; nom: string; logo?: string; ville?: string; email?: string
   telephone?: string; description?: string; couleur_primaire?: string; actif: boolean
+  adresse?: string; code_postal?: string; site_web?: string; numero_affiliation?: string
 }
 type Category = { id: number; nom: string; couleur?: string }
 type Equipe = { id: number; nom: string; categorie?: Category | null; niveau?: string; couleur?: string; actif: boolean }
 type Role = 'superadmin' | 'admin' | 'dirigeant' | 'coach' | 'joueur' | 'parent' | 'visiteur'
 type User = { id: number; nom: string; prenom: string; email: string; role: Role; actif: boolean; derniere_connexion: string | null }
 type InviteCode = { id: number; code: string; role: string; label?: string; uses_count: number; max_uses: number; actif: boolean; categorie?: string; equipe?: { id: number; nom: string } }
+type Terrain = { id: number; nom: string; type: string; capacite: number | null; adresse: string | null }
+type Subscription = { id: number; owner_type: string; plan: string; statut: string; current_period_end: string | null; promo_code: string | null }
 
 const ROLE_COLORS: Record<string, string> = {
   superadmin: 'bg-red-100 text-red-700', admin: 'bg-purple-100 text-purple-700',
@@ -30,12 +34,27 @@ export default function SuperAdminPage() {
   const [clubs, setClubs] = useState<Club[]>([])
   const [clubsLoading, setClubsLoading] = useState(true)
   const [selectedClub, setSelectedClub] = useState<Club | null>(null)
-  const [tab, setTab] = useState<'infos' | 'equipes' | 'membres' | 'codes'>('infos')
+  const [tab, setTab] = useState<'infos' | 'terrains' | 'equipes' | 'membres' | 'codes' | 'abonnement'>('infos')
 
   // Infos
-  const [infos, setInfos] = useState({ nom: '', ville: '', email: '', telephone: '', description: '', couleur_primaire: '#1b4332' })
+  const [infos, setInfos] = useState({
+    nom: '', ville: '', email: '', telephone: '', description: '', couleur_primaire: '#1b4332',
+    adresse: '', code_postal: '', site_web: '', numero_affiliation: '',
+  })
   const [infoSaving, setInfoSaving] = useState(false)
   const [infoSaved, setInfoSaved] = useState(false)
+
+  // Terrains
+  const [terrains, setTerrains] = useState<Terrain[]>([])
+  const [terrainsLoading, setTerrainsLoading] = useState(false)
+  const [showTerrainForm, setShowTerrainForm] = useState(false)
+  const [terrainForm, setTerrainForm] = useState({ nom: '', type: 'gazon_naturel', capacite: '', adresse: '' })
+  const [terrainSaving, setTerrainSaving] = useState(false)
+
+  // Abonnement
+  const [clubSubscription, setClubSubscription] = useState<Subscription | null>(null)
+  const [subLoading, setSubLoading] = useState(false)
+  const [subChecked, setSubChecked] = useState(false)
 
   // Équipes / Catégories
   const [equipes, setEquipes] = useState<Equipe[]>([])
@@ -71,10 +90,21 @@ export default function SuperAdminPage() {
     api.get('/clubs').then(r => setClubs(r.data.data || [])).catch(() => setClubs([])).finally(() => setClubsLoading(false))
   }, [])
 
-  const selectClub = (club: Club) => {
+  const applyClubInfos = (club: Club) => {
     setSelectedClub(club)
+    setInfos({
+      nom: club.nom, ville: club.ville || '', email: club.email || '', telephone: club.telephone || '',
+      description: club.description || '', couleur_primaire: club.couleur_primaire || '#1b4332',
+      adresse: club.adresse || '', code_postal: club.code_postal || '', site_web: club.site_web || '',
+      numero_affiliation: club.numero_affiliation || '',
+    })
+  }
+
+  const selectClub = (club: Club) => {
+    // GET /clubs ne retourne que id/nom/logo/ville/couleur_primaire/actif → on récupère le club complet
+    applyClubInfos(club)
     setTab('infos')
-    setInfos({ nom: club.nom, ville: club.ville || '', email: club.email || '', telephone: club.telephone || '', description: club.description || '', couleur_primaire: club.couleur_primaire || '#1b4332' })
+    api.get(`/clubs/${club.id}`).then(r => { if (r.data.data) applyClubInfos(r.data.data) }).catch(() => {})
   }
 
   useEffect(() => {
@@ -99,7 +129,37 @@ export default function SuperAdminPage() {
       api.get(`/equipes?club_id=${selectedClub.id}`).then(r => setEquipes(r.data.data || [])).catch(() => {})
       api.get(`/categories?club_id=${selectedClub.id}`).then(r => setClubCategories(r.data.data || [])).catch(() => {})
     }
+    if (tab === 'terrains') {
+      setTerrainsLoading(true)
+      api.get(`/clubs/terrains?club_id=${selectedClub.id}`).then(r => setTerrains(r.data.data || [])).catch(() => setTerrains([])).finally(() => setTerrainsLoading(false))
+    }
+    if (tab === 'abonnement') {
+      setSubLoading(true)
+      api.get('/subscription/admin').then(r => {
+        const subs: (Subscription & { owner_type: string; owner?: { id: number } })[] = r.data.data || []
+        const found = subs.find(s => s.owner_type === 'club' && s.owner?.id === selectedClub.id)
+        setClubSubscription(found || null)
+      }).catch(() => setClubSubscription(null)).finally(() => { setSubLoading(false); setSubChecked(true) })
+    }
   }, [tab, selectedClub])
+
+  const createTerrain = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!selectedClub || !terrainForm.nom.trim()) return
+    setTerrainSaving(true)
+    try {
+      await api.post('/clubs/terrains', { ...terrainForm, club_id: selectedClub.id, capacite: terrainForm.capacite ? parseInt(terrainForm.capacite) : null })
+      const r = await api.get(`/clubs/terrains?club_id=${selectedClub.id}`)
+      setTerrains(r.data.data || [])
+      setShowTerrainForm(false); setTerrainForm({ nom: '', type: 'gazon_naturel', capacite: '', adresse: '' })
+    } catch {}
+    finally { setTerrainSaving(false) }
+  }
+
+  const deleteTerrain = async (id: number) => {
+    if (!confirm('Désactiver ce terrain ?')) return
+    await api.patch(`/clubs/terrains/${id}/disable`).catch(() => {})
+    setTerrains(prev => prev.filter(t => t.id !== id))
+  }
 
   const saveInfos = async () => {
     if (!selectedClub) return
@@ -283,10 +343,12 @@ export default function SuperAdminPage() {
       {/* Sous-onglets */}
       <div className="flex border-b border-[#e8e8f0] mb-6 overflow-x-auto">
         {[
-          { key: 'infos',   label: 'Infos du club', icon: 'info'    },
-          { key: 'equipes', label: 'Équipes',        icon: 'groups'  },
-          { key: 'membres', label: 'Membres',        icon: 'person'  },
-          { key: 'codes',   label: 'Codes accès',    icon: 'key'     },
+          { key: 'infos',      label: 'Infos du club',    icon: 'info'          },
+          { key: 'terrains',   label: 'Terrains',          icon: 'stadium'       },
+          { key: 'equipes',    label: 'Catégories & Équipes', icon: 'groups'    },
+          { key: 'membres',    label: 'Membres',           icon: 'person'        },
+          { key: 'codes',      label: 'Codes accès',       icon: 'key'           },
+          { key: 'abonnement', label: 'Abonnement',        icon: 'workspace_premium' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)}
             className={`flex items-center gap-2 px-5 py-3 text-label-lg whitespace-nowrap transition-all ${
@@ -300,13 +362,48 @@ export default function SuperAdminPage() {
 
       {/* ── Infos ── */}
       {tab === 'infos' && (
-        <div className="bg-white border border-[#e8e8f0] rounded-xl p-6 max-w-2xl space-y-4">
+        <div className="bg-white border border-[#e8e8f0] rounded-xl p-6 max-w-2xl space-y-5">
+          <div className="flex items-center justify-between pb-4 border-b border-[#e8e8f0]">
+            <div className="flex items-center gap-4">
+              <PhotoUpload
+                type="club" shape="square" size={72}
+                currentUrl={selectedClub.logo || undefined}
+                label="Logo"
+                onSuccess={async (url) => {
+                  await api.patch(`/clubs/${selectedClub.id}`, { logo: url }).catch(() => {})
+                  setSelectedClub(c => c ? { ...c, logo: url } : c)
+                }}
+              />
+              <div>
+                <p className="text-label-md text-on-surface-variant">Statut du club</p>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${selectedClub.actif ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {selectedClub.actif ? 'Actif' : 'Inactif'}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                const actif = !selectedClub.actif
+                await api.patch(`/clubs/${selectedClub.id}`, { actif }).catch(() => {})
+                setSelectedClub(c => c ? { ...c, actif } : c)
+                setClubs(prev => prev.map(c => c.id === selectedClub.id ? { ...c, actif } : c))
+              }}
+              className="px-4 py-2 border border-outline-variant rounded-lg text-label-md hover:bg-surface-container-low transition-colors"
+            >
+              {selectedClub.actif ? 'Désactiver le club' : 'Réactiver le club'}
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {([
-              { label: 'Nom du club *', key: 'nom',       type: 'text'  },
-              { label: 'Ville',         key: 'ville',     type: 'text'  },
-              { label: 'Email',         key: 'email',     type: 'email' },
-              { label: 'Téléphone',     key: 'telephone', type: 'tel'   },
+              { label: 'Nom du club *',     key: 'nom',                type: 'text'  },
+              { label: 'Ville',             key: 'ville',              type: 'text'  },
+              { label: 'Adresse',           key: 'adresse',            type: 'text'  },
+              { label: 'Code postal',       key: 'code_postal',        type: 'text'  },
+              { label: 'Email',             key: 'email',              type: 'email' },
+              { label: 'Téléphone',         key: 'telephone',          type: 'tel'   },
+              { label: 'Site web',          key: 'site_web',           type: 'text'  },
+              { label: 'N° affiliation',    key: 'numero_affiliation', type: 'text'  },
             ] as const).map(f => (
               <div key={f.key} className="space-y-1">
                 <label className="text-label-md text-on-surface-variant">{f.label}</label>
@@ -338,6 +435,125 @@ export default function SuperAdminPage() {
               {infoSaved ? '✓ Enregistré' : 'Enregistrer'}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Terrains ── */}
+      {tab === 'terrains' && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button onClick={() => setShowTerrainForm(v => !v)}
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
+              <span className="material-symbols-outlined text-[20px]">add</span>
+              Ajouter un terrain
+            </button>
+          </div>
+
+          {showTerrainForm && (
+            <form onSubmit={createTerrain} className="bg-white border border-[#e8e8f0] rounded-xl p-5">
+              <h3 className="text-headline-md mb-4">Nouveau terrain</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Nom *</label>
+                  <input required value={terrainForm.nom} onChange={e => setTerrainForm(f => ({ ...f, nom: e.target.value }))}
+                    placeholder="Ex : Stade Municipal"
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Type</label>
+                  <select value={terrainForm.type} onChange={e => setTerrainForm(f => ({ ...f, type: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary bg-white">
+                    {[['gazon_naturel','Gazon naturel'],['gazon_synthetique','Gazon synthétique'],['salle','Salle'],['gymnase','Gymnase'],['piste','Piste'],['autre','Autre']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Capacité</label>
+                  <input type="number" value={terrainForm.capacite} onChange={e => setTerrainForm(f => ({ ...f, capacite: e.target.value }))}
+                    placeholder="Ex : 500"
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-label-md text-on-surface-variant">Adresse</label>
+                  <input value={terrainForm.adresse} onChange={e => setTerrainForm(f => ({ ...f, adresse: e.target.value }))}
+                    placeholder="Ex : 12 Rue du Stade"
+                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-4">
+                <button type="button" onClick={() => setShowTerrainForm(false)}
+                  className="px-4 py-2 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
+                <button type="submit" disabled={terrainSaving || !terrainForm.nom.trim()}
+                  className="px-5 py-2 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40">Ajouter</button>
+              </div>
+            </form>
+          )}
+
+          <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+            {terrainsLoading ? (
+              <div className="p-6 space-y-3">{[1,2].map(i => <div key={i} className="h-16 bg-surface-container-low rounded animate-pulse" />)}</div>
+            ) : terrains.length === 0 ? (
+              <div className="py-12 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">stadium</span>
+                <p>Aucun terrain pour ce club</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#e8e8f0]">
+                {terrains.map(t => (
+                  <div key={t.id} className="px-5 py-3 flex items-center gap-3">
+                    <span className="material-symbols-outlined text-primary text-[20px]">stadium</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-label-lg text-on-surface">{t.nom}</p>
+                      <p className="text-body-sm text-on-surface-variant">
+                        {t.type}{t.capacite ? ` · ${t.capacite} places` : ''}{t.adresse ? ` · ${t.adresse}` : ''}
+                      </p>
+                    </div>
+                    <button onClick={() => deleteTerrain(t.id)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Abonnement ── */}
+      {tab === 'abonnement' && (
+        <div className="bg-white border border-[#e8e8f0] rounded-xl p-6 max-w-2xl">
+          {subLoading ? (
+            <div className="h-24 bg-surface-container-low rounded-xl animate-pulse" />
+          ) : clubSubscription ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-[28px]">workspace_premium</span>
+                <div>
+                  <p className="text-headline-md text-on-surface">Abonnement club — {clubSubscription.plan}</p>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${clubSubscription.statut === 'actif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {clubSubscription.statut}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-body-md">
+                <div>
+                  <p className="text-label-md text-on-surface-variant">Échéance</p>
+                  <p className="text-on-surface">{clubSubscription.current_period_end ? new Date(clubSubscription.current_period_end).toLocaleDateString('fr-FR') : '—'}</p>
+                </div>
+                {clubSubscription.promo_code && (
+                  <div>
+                    <p className="text-label-md text-on-surface-variant">Code promo utilisé</p>
+                    <p className="text-on-surface font-mono">{clubSubscription.promo_code}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="py-12 text-center text-on-surface-variant">
+              <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">workspace_premium</span>
+              <p>{subChecked ? "Aucun abonnement club actif — les membres passent par un abonnement individuel si activé." : 'Chargement…'}</p>
+            </div>
+          )}
         </div>
       )}
 

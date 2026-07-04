@@ -80,7 +80,7 @@ const validateUpdateUser = [
   body('nom').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Nom invalide'),
   body('prenom').optional().trim().isLength({ max: 100 }),
   body('role').optional()
-    .isIn(['superadmin', 'admin', 'dirigeant', 'coach', 'joueur', 'parent', 'visiteur'])
+    .isIn(['superadmin', 'admin', 'dirigeant', 'coach', 'joueur', 'parent'])
     .withMessage('Rôle invalide'),
   body('club_id').optional({ nullable: true }).isInt({ min: 1 }).withMessage('club_id invalide'),
 ];

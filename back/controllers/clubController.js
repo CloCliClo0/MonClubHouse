@@ -93,11 +93,12 @@ const getStats = async (req, res) => {
   }
 };
 
-// GET /clubs/terrains — terrains du club de l'utilisateur
+// GET /clubs/terrains — terrains du club de l'utilisateur (superadmin : ?club_id= pour cibler un club précis)
 const getTerrains = async (req, res) => {
   try {
     const where = { actif: true };
-    if (req.user?.club_id) where.club_id = req.user.club_id;
+    if (req.user?.role === 'superadmin' && req.query.club_id) where.club_id = req.query.club_id;
+    else if (req.user?.club_id) where.club_id = req.user.club_id;
     const terrains = await Terrain.findAll({ where, order: [['nom', 'ASC']] });
     return res.json({ success: true, data: terrains });
   } catch (err) {

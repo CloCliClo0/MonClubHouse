@@ -23,7 +23,7 @@ type Equipe = {
   coachs_extra?: { id: number; nom: string; prenom: string }[]
 }
 
-type UserShort = { id: number; nom: string; prenom: string; role: string }
+type UserShort = { id: number; nom: string; prenom: string; role: string; email?: string }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -165,6 +165,12 @@ export default function ClubPage() {
   const [savingCat, setSavingCat]   = useState(false)
   const [deleteCatId, setDeleteCatId] = useState<number | null>(null)
 
+  // ── Ajout d'un membre à une catégorie (joueur/parent/coach → cascade sur toutes ses équipes) ──
+  const [clubUsers, setClubUsers]   = useState<UserShort[]>([])
+  const [memberModal, setMemberModal] = useState<{ open: false } | { open: true; categoryId: number }>({ open: false })
+  const [memberSearch, setMemberSearch] = useState('')
+  const [addingMemberId, setAddingMemberId] = useState<number | null>(null)
+
   // ── Load ──────────────────────────────────────────────────────────
 
   const load = async () => {
@@ -196,6 +202,7 @@ export default function ClubPage() {
       setClubCategories(catRes?.data?.data || [])
       const users: UserShort[] = uRes?.data?.data || []
       setCoaches(users.filter(u => ['coach', 'dirigeant', 'admin', 'superadmin'].includes(u.role)))
+      setClubUsers(users)
     } finally {
       setLoading(false)
     }
@@ -350,6 +357,29 @@ export default function ClubPage() {
     await api.delete(`/categories/${id}`).catch(() => {})
     load(); setDeleteCatId(null)
   }
+
+  // ── Ajout d'un membre à une catégorie ──────────────────────────
+  const openMemberModal = (categoryId: number) => {
+    setMemberSearch('')
+    setMemberModal({ open: true, categoryId })
+  }
+  const addMember = async (user: UserShort) => {
+    if (!memberModal.open) return
+    setAddingMemberId(user.id)
+    try {
+      await api.post(`/categories/${memberModal.categoryId}/assign`, { user_id: user.id, role: user.role })
+      load()
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Erreur lors de l'ajout")
+    } finally {
+      setAddingMemberId(null)
+    }
+  }
+  const memberModalCategoryId = memberModal.open ? memberModal.categoryId : null
+  const filteredMemberUsers = clubUsers.filter(u =>
+    ['joueur', 'parent', 'coach'].includes(u.role) &&
+    `${u.prenom} ${u.nom} ${u.email || ''}`.toLowerCase().includes(memberSearch.toLowerCase())
+  )
 
   // ── Loading / No club ─────────────────────────────────────────────
 
@@ -753,13 +783,22 @@ export default function ClubPage() {
                   </span>
                 </div>
                 {canManage && (
-                  <button
-                    onClick={() => openAddEquipe(selectedCatView)}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-lg text-label-md hover:bg-primary/90 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">add</span>
-                    Créer une équipe
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openMemberModal(selectedCatView)}
+                      className="flex items-center gap-1.5 px-3 py-2 border border-primary text-primary rounded-lg text-label-md hover:bg-primary/5 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">person_add</span>
+                      Ajouter un membre
+                    </button>
+                    <button
+                      onClick={() => openAddEquipe(selectedCatView)}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-lg text-label-md hover:bg-primary/90 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">add</span>
+                      Créer une équipe
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -828,12 +867,21 @@ export default function ClubPage() {
                       </span>
                     </div>
                     {canManage && (
-                      <button
-                        onClick={() => openAddEquipe(cat.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-primary hover:bg-primary/10 rounded-lg text-label-md transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">add</span>Ajouter
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openMemberModal(cat.id)}
+                          title="Ajouter un membre à cette catégorie"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-primary hover:bg-primary/10 rounded-lg text-label-md transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">person_add</span>
+                        </button>
+                        <button
+                          onClick={() => openAddEquipe(cat.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-primary hover:bg-primary/10 rounded-lg text-label-md transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">add</span>Ajouter
+                        </button>
+                      </div>
                     )}
                   </div>
                   {eqs.length === 0 ? (
@@ -1136,6 +1184,62 @@ export default function ClubPage() {
                   : <><span className="material-symbols-outlined text-[18px]">{catModal.editing ? 'save' : 'add'}</span>{catModal.editing ? 'Enregistrer' : 'Créer'}</>
                 }
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════ Modal Ajouter un membre à la catégorie ═════ */}
+      {memberModal.open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setMemberModal({ open: false })}>
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-[#e8e8f0] flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-headline-md">Ajouter un membre</h3>
+                <p className="text-body-sm text-on-surface-variant mt-0.5">
+                  Catégorie « {clubCategories.find(c => c.id === memberModalCategoryId)?.nom} » — affecte automatiquement à toutes ses équipes.
+                </p>
+              </div>
+              <button onClick={() => setMemberModal({ open: false })}><span className="material-symbols-outlined text-on-surface-variant">close</span></button>
+            </div>
+            <div className="p-4 shrink-0">
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+                <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)} autoFocus
+                  placeholder="Rechercher un joueur, parent ou coach du club…"
+                  className="w-full pl-10 pr-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y divide-[#e8e8f0]">
+              {filteredMemberUsers.length === 0 ? (
+                <div className="py-10 text-center text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[36px] block mb-2 opacity-30">person_search</span>
+                  <p className="text-body-md">{memberSearch ? 'Aucun résultat' : 'Aucun joueur/parent/coach dans ce club'}</p>
+                </div>
+              ) : (
+                filteredMemberUsers.map(u => (
+                  <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors">
+                    <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      {u.prenom?.[0]}{u.nom?.[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-label-lg text-on-surface">{u.prenom} {u.nom}</p>
+                      <p className="text-body-sm text-on-surface-variant truncate capitalize">{u.role}{u.email ? ` — ${u.email}` : ''}</p>
+                    </div>
+                    <button
+                      onClick={() => addMember(u)}
+                      disabled={addingMemberId === u.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-label-md hover:bg-primary-container disabled:opacity-50 transition-colors shrink-0"
+                    >
+                      {addingMemberId === u.id
+                        ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        : <span className="material-symbols-outlined text-[16px]">add</span>
+                      }
+                      Ajouter
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
