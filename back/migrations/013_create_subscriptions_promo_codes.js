@@ -12,8 +12,8 @@ module.exports = {
       expires_at:  { type: Sequelize.DATE, allowNull: true },
       actif:       { type: Sequelize.BOOLEAN, allowNull: false, defaultValue: true },
       created_by:  { type: Sequelize.INTEGER, allowNull: true, references: { model: 'users', key: 'id' }, onDelete: 'SET NULL' },
-      created_at:  { type: Sequelize.DATE, allowNull: false },
-      updated_at:  { type: Sequelize.DATE, allowNull: false },
+      createdAt:   { type: Sequelize.DATE, allowNull: false },
+      updatedAt:   { type: Sequelize.DATE, allowNull: false },
     });
 
     await queryInterface.createTable('subscriptions', {
@@ -27,8 +27,8 @@ module.exports = {
       promo_code:             { type: Sequelize.STRING(30), allowNull: true },
       current_period_end:     { type: Sequelize.DATE, allowNull: true },
       rappel_envoye:          { type: Sequelize.BOOLEAN, allowNull: false, defaultValue: false },
-      created_at:             { type: Sequelize.DATE, allowNull: false },
-      updated_at:             { type: Sequelize.DATE, allowNull: false },
+      createdAt:              { type: Sequelize.DATE, allowNull: false },
+      updatedAt:              { type: Sequelize.DATE, allowNull: false },
     });
     await queryInterface.addIndex('subscriptions', ['owner_type', 'owner_id']);
   },

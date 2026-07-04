@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import api from '../services/api'
+import api, { getApiErrorMessage } from '../services/api'
 
 // ── Types codes ───────────────────────────────────────────────
 type CategoryRef = { id: number; nom: string; couleur?: string }
@@ -677,7 +677,7 @@ export default function AdminPage() {
         setModal({ type: 'none' })
       }
     } catch (e: any) {
-      setError(e.response?.data?.message || 'Erreur')
+      setError(getApiErrorMessage(e))
     } finally {
       setSaving(false)
     }
@@ -1128,6 +1128,7 @@ export default function AdminPage() {
                     type="password"
                     className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all"
                     placeholder="••••••••" />
+                  <p className="text-[11px] text-on-surface-variant">Minimum 8 caractères, avec au moins une majuscule, une minuscule et un chiffre.</p>
                 </div>
               )}
               <div className="space-y-1">

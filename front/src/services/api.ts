@@ -27,4 +27,14 @@ api.interceptors.response.use(
   }
 )
 
+// Extrait un message affichable d'une erreur API — gère { message } et { errors: [...] } (express-validator)
+export function getApiErrorMessage(err: any, fallback = 'Erreur'): string {
+  const data = err?.response?.data
+  if (data?.message) return data.message
+  if (Array.isArray(data?.errors) && data.errors.length > 0) {
+    return data.errors.map((e: any) => e.msg).filter(Boolean).join(' — ') || fallback
+  }
+  return err?.message || fallback
+}
+
 export default api
