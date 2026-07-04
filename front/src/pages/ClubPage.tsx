@@ -513,6 +513,12 @@ export default function ClubPage() {
                     {editMode && canManage ? (
                       <input value={(form as any)[item.k] || ''} onChange={e => setF(item.k, e.target.value)}
                         className="text-body-md text-on-surface border-b border-outline-variant focus:outline-none focus:border-primary w-full mt-0.5 bg-transparent" />
+                    ) : item.k === 'site_web' && club.site_web ? (
+                      <a href={/^https?:\/\//i.test(club.site_web) ? club.site_web : `https://${club.site_web}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-body-md text-primary hover:underline break-all">
+                        {club.site_web}
+                      </a>
                     ) : (
                       <p className="text-body-md text-on-surface">{(club as any)[item.k] || '—'}</p>
                     )}

@@ -1,5 +1,31 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import api from '../services/api'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type ClubSummary = { id: number; nom: string; logo?: string | null; ville?: string | null; couleur_primaire?: string | null; actif: boolean }
+
+type Category = { id: number; nom: string; couleur?: string }
+type Sport = { id: number; nom: string }
+
+type Equipe = {
+  id: number; nom: string; genre: string; format: string
+  couleur_maillot?: string | null
+  categorie?: Category | null
+  sport?: Sport | null
+}
+
+type Terrain = { id: number; nom: string; type: string; adresse?: string | null }
+
+type ClubDetail = {
+  id: number; nom: string; logo?: string | null; description?: string | null
+  adresse?: string | null; ville?: string | null; code_postal?: string | null
+  telephone?: string | null; email?: string | null; site_web?: string | null
+  couleur_primaire?: string | null; couleur_secondaire?: string | null
+  equipes?: Equipe[]
+  terrains?: Terrain[]
+}
 
 type Match = {
   id: number
@@ -9,21 +35,8 @@ type Match = {
   score_adversaire: number | null
   statut: string
   domicile_exterieur: string
-  championnat: string
+  championnat: string | null
   equipe?: { nom: string; categorie?: { id: number; nom: string } | null }
-}
-
-type Standing = {
-  rank: number
-  team: string
-  played: number
-  won: number
-  drawn: number
-  lost: number
-  gf: number
-  ga: number
-  pts: number
-  current?: boolean
 }
 
 const statusStyle: Record<string, { bg: string; dot: string }> = {
@@ -39,97 +52,199 @@ function getResult(m: Match): string | null {
   return 'Nul'
 }
 
-type Tab = 'resultats' | 'classement'
+function normalizeUrl(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`
+}
 
-export default function PublicResultsPage() {
-  const [tab, setTab]             = useState<Tab>('resultats')
-  const [matches, setMatches]     = useState<Match[]>([])
-  const [standings, setStandings] = useState<Standing[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [clubName, setClubName]   = useState('MonClubHouse')
-  const [search, setSearch]       = useState('')
-  const [catFilter, setCatFilter] = useState('Toutes')
+// ── En-tête public (commun aux deux vues) ────────────────────────────────────
+
+function PublicHeader({ clubName, clubLogo, backLink }: { clubName: string; clubLogo?: string | null; backLink?: string }) {
+  return (
+    <header className="bg-[#2b2d42] text-white sticky top-0 z-50">
+      <div className="max-w-[1100px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          {backLink && (
+            <Link to={backLink} className="text-white/60 hover:text-white shrink-0" title="Retour">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </Link>
+          )}
+          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center font-black text-sm overflow-hidden shrink-0">
+            {clubLogo ? <img src={clubLogo} alt="" className="w-full h-full object-cover" /> : clubName.slice(0, 3).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <span className="font-bold text-base leading-none block truncate">{clubName}</span>
+            <span className="text-white/50 text-[11px] uppercase tracking-widest">Page publique</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <Link to="/login" className="px-4 py-2 text-white/70 hover:text-white text-label-lg transition-colors">
+            Se connecter
+          </Link>
+          <Link to="/register" className="px-4 py-2 bg-primary rounded-lg text-white text-label-lg hover:bg-primary-container transition-colors">
+            Rejoindre le club
+          </Link>
+        </div>
+      </div>
+    </header>
+  )
+}
+
+// ── Vue 1 : choisir un club ───────────────────────────────────────────────────
+
+function ClubPicker() {
+  const [clubs, setClubs]     = useState<ClubSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch]   = useState('')
 
   useEffect(() => {
-    const base = '/api'
-
-    // Pas de token — appels publics (optionalAuth)
-    Promise.all([
-      fetch(`${base}/matchs`).then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
-      fetch(`${base}/resultats`).then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
-    ]).then(([mRes, rRes]) => {
-      const ms: Match[] = mRes.data || []
-      const rs: Standing[] = rRes.data || []
-      const played = ms.filter(m => m.statut === 'termine')
-      setMatches(played)
-      setStandings(rs)
-      if (ms.length > 0 && ms[0].equipe?.nom) {
-        const name = ms[0].equipe!.nom.replace(/(Seniors|U\d+|B|A).*/, '').trim()
-        if (name) setClubName(name)
-      }
-    }).finally(() => setLoading(false))
+    api.get('/clubs').then(r => setClubs((r.data.data || []).filter((c: ClubSummary) => c.actif)))
+      .catch(() => setClubs([]))
+      .finally(() => setLoading(false))
   }, [])
 
-  const wins   = matches.filter(m => getResult(m) === 'Victoire').length
-  const draws  = matches.filter(m => getResult(m) === 'Nul').length
-  const losses = matches.filter(m => getResult(m) === 'Défaite').length
-
-  // Catégories disponibles
-  const cats = ['Toutes', ...Array.from(new Set(matches.map(m => m.equipe?.categorie?.nom).filter(Boolean)))] as string[]
-
-  const filteredMatches = matches.filter(m => {
-    const matchSearch = search.trim().toLowerCase()
-    const matchesCat  = catFilter === 'Toutes' || m.equipe?.categorie?.nom === catFilter
-    const matchesSearch = !matchSearch ||
-      m.adversaire?.toLowerCase().includes(matchSearch) ||
-      m.equipe?.nom?.toLowerCase().includes(matchSearch) ||
-      m.championnat?.toLowerCase().includes(matchSearch)
-    return matchesCat && matchesSearch
-  })
+  const filtered = clubs.filter(c =>
+    `${c.nom} ${c.ville || ''}`.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <div className="min-h-screen bg-[#f4f4f6]">
-      {/* Header public */}
-      <header className="bg-[#2b2d42] text-white sticky top-0 z-50">
-        <div className="max-w-[1100px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center font-black text-sm">
-              MCH
-            </div>
-            <div>
-              <span className="font-bold text-base leading-none block">{clubName}</span>
-              <span className="text-white/50 text-[11px] uppercase tracking-widest">Résultats publics</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="px-4 py-2 text-white/70 hover:text-white text-label-lg transition-colors">
-              Se connecter
-            </Link>
-            <Link to="/register" className="px-4 py-2 bg-primary rounded-lg text-white text-label-lg hover:bg-primary-container transition-colors">
-              Rejoindre le club
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader clubName="MonClubHouse" />
 
-      {/* Hero */}
       <div className="bg-[#2b2d42]">
         <div className="max-w-[1100px] mx-auto px-6 pt-10 pb-14">
-          <h1 className="text-display-lg text-white mb-2">Résultats & Classement</h1>
-          <p className="text-white/60 text-body-lg">Performances de {clubName}</p>
-
-          {/* Recherche */}
+          <h1 className="text-display-lg text-white mb-2">Trouvez votre club</h1>
+          <p className="text-white/60 text-body-lg">Infos, équipes et résultats — sans compte, en accès libre.</p>
           <div className="mt-6 relative max-w-md">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-[20px]">search</span>
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher un adversaire, équipe, compétition…"
+              placeholder="Rechercher un club, une ville…"
               className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-white/40 text-body-md"
             />
           </div>
+        </div>
+      </div>
 
-          {!loading && matches.length > 0 && (
+      <div className="max-w-[1100px] mx-auto px-6 -mt-6 pb-12">
+        <div className="bg-white rounded-2xl border border-[#e8e8f0] overflow-hidden shadow-sm p-6">
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1,2,3,4,5,6].map(i => <div key={i} className="h-20 bg-surface-container-low rounded-xl animate-pulse" />)}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-16 text-center text-on-surface-variant">
+              <span className="material-symbols-outlined text-[48px] opacity-20 block mb-3">home_work</span>
+              <p className="text-headline-md text-on-surface mb-1">Aucun club trouvé</p>
+              <p className="text-body-md">{search ? 'Essayez une autre recherche.' : 'Aucun club publié pour le moment.'}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map(c => (
+                <Link key={c.id} to={`/resultats-club/${c.id}`}
+                  className="flex items-center gap-3 p-4 border border-[#e8e8f0] rounded-xl hover:border-primary/40 hover:shadow-sm transition-all">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center text-white font-black text-sm shrink-0"
+                    style={{ backgroundColor: c.couleur_primaire || '#0f5238' }}>
+                    {c.logo ? <img src={c.logo} alt="" className="w-full h-full object-cover" /> : c.nom.slice(0, 3).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-label-lg text-on-surface truncate">{c.nom}</p>
+                    {c.ville && <p className="text-body-sm text-on-surface-variant truncate">{c.ville}</p>}
+                  </div>
+                  <span className="material-symbols-outlined ml-auto text-on-surface-variant/40 shrink-0">chevron_right</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Vue 2 : page publique d'un club ───────────────────────────────────────────
+
+type Tab = 'infos' | 'equipes' | 'resultats'
+
+function ClubPublicPage({ clubId }: { clubId: string }) {
+  const [tab, setTab]         = useState<Tab>('infos')
+  const [club, setClub]       = useState<ClubDetail | null>(null)
+  const [matches, setMatches] = useState<Match[]>([])
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const [search, setSearch]       = useState('')
+  const [catFilter, setCatFilter] = useState('Toutes')
+
+  useEffect(() => {
+    setLoading(true)
+    Promise.all([
+      api.get(`/clubs/${clubId}`).catch(() => null),
+      fetch(`/api/resultats?club_id=${clubId}&limit=100`).then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
+    ]).then(([cRes, rRes]) => {
+      if (!cRes?.data?.data) { setNotFound(true); return }
+      setClub(cRes.data.data)
+      setMatches((rRes.data || []).filter((m: Match) => m.statut === 'termine'))
+    }).finally(() => setLoading(false))
+  }, [clubId])
+
+  const wins   = matches.filter(m => getResult(m) === 'Victoire').length
+  const draws  = matches.filter(m => getResult(m) === 'Nul').length
+  const losses = matches.filter(m => getResult(m) === 'Défaite').length
+
+  const cats = ['Toutes', ...Array.from(new Set(matches.map(m => m.equipe?.categorie?.nom).filter(Boolean)))] as string[]
+  const filteredMatches = matches.filter(m => {
+    const s = search.trim().toLowerCase()
+    const matchesCat = catFilter === 'Toutes' || m.equipe?.categorie?.nom === catFilter
+    const matchesSearch = !s ||
+      m.adversaire?.toLowerCase().includes(s) ||
+      m.equipe?.nom?.toLowerCase().includes(s) ||
+      m.championnat?.toLowerCase().includes(s)
+    return matchesCat && matchesSearch
+  })
+
+  const equipesByCategorie = (club?.equipes || []).reduce((acc, eq) => {
+    const key = eq.categorie?.nom || 'Sans catégorie'
+    if (!acc[key]) acc[key] = []
+    acc[key].push(eq)
+    return acc
+  }, {} as Record<string, Equipe[]>)
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f4f4f6]">
+        <PublicHeader clubName="MonClubHouse" backLink="/resultats-club" />
+        <div className="max-w-[1100px] mx-auto px-6 py-10 space-y-4">
+          <div className="h-32 bg-white border border-[#e8e8f0] rounded-2xl animate-pulse" />
+          <div className="h-64 bg-white border border-[#e8e8f0] rounded-2xl animate-pulse" />
+        </div>
+      </div>
+    )
+  }
+
+  if (notFound || !club) {
+    return (
+      <div className="min-h-screen bg-[#f4f4f6]">
+        <PublicHeader clubName="MonClubHouse" backLink="/resultats-club" />
+        <div className="max-w-[1100px] mx-auto px-6 py-20 text-center text-on-surface-variant">
+          <span className="material-symbols-outlined text-[56px] opacity-20 block mb-4">home_work</span>
+          <p className="text-headline-md text-on-surface mb-2">Club introuvable</p>
+          <Link to="/resultats-club" className="text-primary hover:underline">← Retour à la liste des clubs</Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f4f4f6]">
+      <PublicHeader clubName={club.nom} clubLogo={club.logo} backLink="/resultats-club" />
+
+      {/* Hero */}
+      <div className="bg-[#2b2d42]">
+        <div className="max-w-[1100px] mx-auto px-6 pt-10 pb-14">
+          <h1 className="text-display-lg text-white mb-2">{club.nom}</h1>
+          <p className="text-white/60 text-body-lg">{[club.ville, club.description?.slice(0, 80)].filter(Boolean).join(' · ') || 'Bienvenue sur la page publique du club.'}</p>
+
+          {matches.length > 0 && (
             <div className="grid grid-cols-3 gap-4 mt-6 max-w-sm">
               <div className="bg-white/10 rounded-xl p-4 text-center">
                 <p className="text-2xl font-black text-green-400">{wins}</p>
@@ -149,28 +264,129 @@ export default function PublicResultsPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-[1100px] mx-auto px-6 -mt-6">
+      <div className="max-w-[1100px] mx-auto px-6 -mt-6 pb-12">
         <div className="bg-white rounded-2xl border border-[#e8e8f0] overflow-hidden shadow-sm">
-          <div className="flex items-center border-b border-[#e8e8f0] px-4">
-            {(['resultats', 'classement'] as Tab[]).map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`px-6 py-4 text-label-lg capitalize transition-all ${
-                  tab === t ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
+          <div className="flex items-center border-b border-[#e8e8f0] px-4 overflow-x-auto">
+            {([['infos', 'info', 'Infos'], ['equipes', 'sports_soccer', 'Équipes'], ['resultats', 'scoreboard', 'Résultats']] as [Tab, string, string][]).map(([key, icon, label]) => (
+              <button key={key} onClick={() => setTab(key)}
+                className={`flex items-center gap-2 px-6 py-4 text-label-lg whitespace-nowrap transition-all ${
+                  tab === key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
                 }`}>
-                {t === 'resultats' ? 'Résultats' : 'Classement'}
+                <span className="material-symbols-outlined text-[18px]">{icon}</span>
+                {label}
               </button>
             ))}
           </div>
 
-          {loading && (
-            <div className="p-8 space-y-3">
-              {[1,2,3].map(i => <div key={i} className="h-16 bg-surface-container-low rounded-xl animate-pulse" />)}
+          {/* Infos */}
+          {tab === 'infos' && (
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                {[
+                  { icon: 'location_on', label: 'Adresse', value: [club.adresse, club.code_postal, club.ville].filter(Boolean).join(', ') },
+                  { icon: 'phone', label: 'Téléphone', value: club.telephone },
+                  { icon: 'mail', label: 'Email', value: club.email },
+                ].map(item => item.value && (
+                  <div key={item.label} className="flex items-start gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                      <span className="material-symbols-outlined text-primary text-[18px]">{item.icon}</span>
+                    </div>
+                    <div>
+                      <p className="text-label-md text-on-surface-variant">{item.label}</p>
+                      <p className="text-body-md text-on-surface">{item.value}</p>
+                    </div>
+                  </div>
+                ))}
+                {club.site_web && (
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                      <span className="material-symbols-outlined text-primary text-[18px]">public</span>
+                    </div>
+                    <div>
+                      <p className="text-label-md text-on-surface-variant">Site web</p>
+                      <a href={normalizeUrl(club.site_web)} target="_blank" rel="noopener noreferrer"
+                        className="text-body-md text-primary hover:underline break-all">
+                        {club.site_web}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {club.terrains && club.terrains.length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                      <span className="material-symbols-outlined text-primary text-[18px]">stadium</span>
+                    </div>
+                    <div>
+                      <p className="text-label-md text-on-surface-variant mb-1">Terrains</p>
+                      <div className="space-y-0.5">
+                        {club.terrains.map(t => (
+                          <p key={t.id} className="text-body-md text-on-surface">{t.nom}{t.adresse ? ` — ${t.adresse}` : ''}</p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-label-md text-on-surface-variant mb-2">Description</p>
+                <p className="text-body-md text-on-surface-variant leading-relaxed whitespace-pre-line">
+                  {club.description || 'Aucune description renseignée.'}
+                </p>
+              </div>
             </div>
           )}
 
-          {!loading && tab === 'resultats' && (
+          {/* Équipes */}
+          {tab === 'equipes' && (
             <div className="p-6">
-              {/* Filtre par catégorie */}
+              {!club.equipes || club.equipes.length === 0 ? (
+                <div className="py-16 text-center text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[48px] opacity-20 block mb-3">sports_soccer</span>
+                  <p className="text-headline-md text-on-surface mb-1">Aucune équipe publiée</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {Object.entries(equipesByCategorie).map(([catName, eqs]) => (
+                    <div key={catName}>
+                      <p className="text-label-lg font-bold text-on-surface mb-3 flex items-center gap-2">
+                        {eqs[0].categorie?.couleur && <span className="w-2.5 h-2.5 rounded-full" style={{ background: eqs[0].categorie.couleur }} />}
+                        {catName}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {eqs.map(eq => (
+                          <div key={eq.id} className="flex items-center gap-3 p-3 border border-[#e8e8f0] rounded-xl">
+                            <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
+                              style={{ backgroundColor: eq.couleur_maillot || '#0f5238' }}>
+                              {eq.nom.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-label-lg text-on-surface truncate">{eq.nom}</p>
+                              <p className="text-body-sm text-on-surface-variant">
+                                {eq.genre} {eq.format !== 'autre' ? `· ${eq.format}v${eq.format}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Résultats */}
+          {tab === 'resultats' && (
+            <div className="p-6">
+              <div className="mb-5 relative max-w-md">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-[20px]">search</span>
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Rechercher un adversaire, équipe, compétition…"
+                  className="w-full pl-10 pr-4 py-2.5 border border-outline-variant rounded-xl focus:outline-none focus:border-primary text-body-md"
+                />
+              </div>
               {cats.length > 2 && (
                 <div className="flex gap-2 flex-wrap mb-5">
                   {cats.map(cat => (
@@ -228,56 +444,10 @@ export default function PublicResultsPage() {
               )}
             </div>
           )}
-
-          {!loading && tab === 'classement' && (
-            <div className="p-6">
-              {standings.length === 0 ? (
-                <div className="py-16 text-center text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[48px] opacity-20 block mb-3">leaderboard</span>
-                  <p className="text-headline-md text-on-surface mb-1">Classement indisponible</p>
-                  <p className="text-body-md">Le classement se calcule à partir des résultats saisis.</p>
-                </div>
-              ) : (
-                <div className="rounded-xl overflow-hidden border border-[#e8e8f0]">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-surface-container-low">
-                        {['#','Équipe','J','G','N','P','BP','BC','Pts'].map(h => (
-                          <th key={h} className={`px-4 py-3 text-label-md text-on-surface-variant ${h === 'Équipe' ? 'text-left' : 'text-center'} ${['BP','BC'].includes(h) ? 'hidden sm:table-cell' : ''}`}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#e8e8f0]">
-                      {standings.map(s => (
-                        <tr key={s.rank} className={`transition-colors ${s.current ? 'bg-primary/5' : 'hover:bg-surface-container-low'}`}>
-                          <td className="px-4 py-3">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-label-md font-bold ${s.rank === 1 ? 'bg-yellow-400 text-yellow-900' : s.rank <= 3 ? 'bg-primary/10 text-primary' : 'text-on-surface-variant'}`}>
-                              {s.rank}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`text-label-lg ${s.current ? 'text-primary font-bold' : 'text-on-surface'}`}>{s.team}</span>
-                            {s.current && <span className="ml-2 text-[10px] bg-primary text-white px-1.5 py-0.5 rounded font-bold uppercase">Nous</span>}
-                          </td>
-                          <td className="px-4 py-3 text-center text-body-md">{s.played}</td>
-                          <td className="px-4 py-3 text-center text-body-md text-green-600">{s.won}</td>
-                          <td className="px-4 py-3 text-center text-body-md text-orange-500">{s.drawn}</td>
-                          <td className="px-4 py-3 text-center text-body-md text-error">{s.lost}</td>
-                          <td className="px-4 py-3 text-center text-body-md hidden sm:table-cell">{s.gf}</td>
-                          <td className="px-4 py-3 text-center text-body-md hidden sm:table-cell">{s.ga}</td>
-                          <td className="px-4 py-3 text-center"><span className={`font-black text-headline-md ${s.current ? 'text-primary' : 'text-on-surface'}`}>{s.pts}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* CTA */}
-        <div className="mt-8 mb-10 bg-white border border-[#e8e8f0] rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="mt-8 bg-white border border-[#e8e8f0] rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <h3 className="text-headline-md text-on-surface mb-1">Vous êtes membre du club ?</h3>
             <p className="text-body-md text-on-surface-variant">Connectez-vous pour accéder aux convocations, au chat, à la composition et plus.</p>
@@ -290,4 +460,11 @@ export default function PublicResultsPage() {
       </div>
     </div>
   )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function PublicResultsPage() {
+  const { clubId } = useParams<{ clubId?: string }>()
+  return clubId ? <ClubPublicPage clubId={clubId} /> : <ClubPicker />
 }

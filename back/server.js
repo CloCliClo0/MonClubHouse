@@ -416,6 +416,26 @@ const applyStartupMigrations = async () => {
     console.warn('[DB] Migration startup échouée (subscriptions) :', e.message);
   }
 
+  // Réécrit les anciennes URLs Drive `uc?export=view` (de plus en plus bloquées par Google en cross-origin)
+  // vers l'endpoint `thumbnail`, seul format fiable pour l'affichage direct en <img>.
+  try {
+    const OLD_PREFIX = 'https://drive.google.com/uc?export=view&id=';
+    const NEW_PREFIX = 'https://drive.google.com/thumbnail?id=';
+    for (const { table, column } of [
+      { table: 'users', column: 'avatar' },
+      { table: 'clubs', column: 'logo' },
+      { table: 'messages', column: 'fichier_url' },
+    ]) {
+      const [result] = await sequelize.query(
+        `UPDATE \`${table}\` SET \`${column}\` = CONCAT(REPLACE(\`${column}\`, ?, ?), '&sz=w1000') WHERE \`${column}\` LIKE ?`,
+        { replacements: [OLD_PREFIX, NEW_PREFIX, `${OLD_PREFIX}%`] }
+      );
+      if (result?.affectedRows) console.log(`[DB] ${result.affectedRows} URL(s) Drive migrées (${table}.${column})`);
+    }
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée (URLs Drive) :', e.message);
+  }
+
 };
 
 const connectDB = async (retries = 10, delay = 5000) => {

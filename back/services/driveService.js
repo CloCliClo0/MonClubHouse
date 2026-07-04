@@ -76,8 +76,10 @@ async function uploadToDrive({ buffer, filename, mimetype, subfolder = '' }) {
       requestBody: { role: 'reader', type: 'anyone' },
     });
 
-    // URL directe pour affichage
-    const directUrl = `https://drive.google.com/uc?export=view&id=${res.data.id}`;
+    // URL directe pour affichage — `uc?export=view` est de plus en plus souvent bloqué par Google
+    // pour l'affichage cross-origin (interstitiel/403) ; `thumbnail` est l'endpoint officiellement
+    // supporté pour l'intégration d'images Drive dans une page tierce.
+    const directUrl = `https://drive.google.com/thumbnail?id=${res.data.id}&sz=w1000`;
     const thumbnailUrl = `https://drive.google.com/thumbnail?id=${res.data.id}&sz=w400`;
 
     return {

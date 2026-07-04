@@ -1,4 +1,4 @@
-const { Club, Terrain, User, Equipe, Sport } = require('../models');
+const { Club, Terrain, User, Equipe, Sport, Category } = require('../models');
 const { validationResult } = require('express-validator');
 
 const getAll = async (req, res) => {
@@ -20,7 +20,10 @@ const getById = async (req, res) => {
       include: [
         { model: Terrain, as: 'terrains', where: { actif: true }, required: false },
         { model: Equipe, as: 'equipes', where: { actif: true }, required: false,
-          include: [{ model: Sport, as: 'sport' }]
+          include: [
+            { model: Sport, as: 'sport' },
+            { model: Category, as: 'categorie', attributes: ['id', 'nom', 'couleur'], required: false },
+          ]
         }
       ]
     });

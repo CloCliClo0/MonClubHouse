@@ -72,6 +72,7 @@ export default function App() {
             <Route path="/register"            element={<RegisterPage />} />
             <Route path="/setup-club"          element={<SetupClubPage />} />
             <Route path="/resultats-club"      element={<PublicResultsPage />} />
+            <Route path="/resultats-club/:clubId" element={<PublicResultsPage />} />
             <Route path="/auth/callback"       element={<AuthCallbackPage />} />
             <Route path="/join"                element={<JoinPage />} />
             <Route path="/forgot-password"     element={<ForgotPasswordPage />} />

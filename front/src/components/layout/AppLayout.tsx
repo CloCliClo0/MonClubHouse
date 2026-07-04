@@ -206,7 +206,8 @@ export default function AppLayout() {
     api.get('/subscription/status').then(res => {
       const s = res.data.data
       setCanBuyForClub(!!s.can_buy_for_club)
-      if (s.enabled && !s.active && !sessionStorage.getItem('subscription_gate_dismissed')) {
+      // Abonnement obligatoire (sauf SUBSCRIPTION_ENABLED=false) : gate bloquante, pas de "plus tard".
+      if (s.enabled && !s.active) {
         setShowSubscriptionGate(true)
       }
     }).catch(() => {})
@@ -219,10 +220,7 @@ export default function AppLayout() {
       )}
 
       {!showProfileModal && showSubscriptionGate && (
-        <SubscriptionGate canBuyForClub={canBuyForClub} onClose={() => {
-          sessionStorage.setItem('subscription_gate_dismissed', '1')
-          setShowSubscriptionGate(false)
-        }} />
+        <SubscriptionGate canBuyForClub={canBuyForClub} />
       )}
 
       {/* Overlay mobile */}

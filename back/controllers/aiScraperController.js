@@ -133,12 +133,16 @@ const analyseWithAI = async (req, res) => {
 
       console.error(`[AI Scraper] Modèle ${modelName} — status=${err.status} message=${err.message}`);
 
-      // Erreur d'auth : inutile d'essayer les autres modèles
+      // Erreur d'auth : peut être spécifique à CE modèle (accès restreint/payant) plutôt qu'à la clé —
+      // on tente les modèles suivants avant d'abandonner, comme pour le quota.
       if (isAuth) {
-        return res.status(502).json({
-          success: false,
-          message: 'Clé API Gemini invalide ou accès refusé. Vérifiez la clé dans le fichier .env (GEMINI_API_KEY).',
-        });
+        if (modelName === MODELS[MODELS.length - 1]) {
+          return res.status(502).json({
+            success: false,
+            message: 'Clé API Gemini invalide ou accès refusé pour tous les modèles disponibles. Vérifiez la clé dans le fichier .env (GEMINI_API_KEY) et son accès aux modèles Gemini dans Google AI Studio.',
+          });
+        }
+        continue;
       }
 
       // Modèle introuvable → essayer le suivant

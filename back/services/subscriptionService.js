@@ -32,6 +32,7 @@ function getPlanAmount(plan, ownerType = 'user') {
 // Accès actif : abonnement club (couvre tous les membres) OU abonnement individuel
 async function hasActiveAccess(user) {
   if (!isSubscriptionEnabled()) return true;
+  if (user.role === 'superadmin') return true; // gère la plateforme et les abonnements de tous les clubs — ne doit jamais s'auto-bloquer
   const now = new Date();
 
   if (user.club_id) {
