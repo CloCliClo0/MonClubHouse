@@ -683,7 +683,7 @@ export default function ClubPage() {
                     : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant'
                 }`}
               >
-                Toutes ({usedCategories.length})
+                Toutes ({clubCategories.length})
               </button>
               {clubCategories.map(cat => {
                 const count = equipesByCategorie[cat.id]?.length || 0
@@ -791,13 +791,13 @@ export default function ClubPage() {
                 </div>
               )}
             </div>
-          ) : usedCategories.length === 0 ? (
-            /* ── Aucune équipe dans le club ── */
+          ) : clubCategories.length === 0 && equipes.length === 0 ? (
+            /* ── Aucune catégorie ni équipe dans le club ── */
             <div className="py-16 text-center bg-white border border-[#e8e8f0] rounded-xl">
               <span className="material-symbols-outlined text-[56px] text-on-surface-variant/30 block mb-4">sports_soccer</span>
               <p className="text-headline-md text-on-surface mb-2">Aucune équipe créée</p>
               <p className="text-body-md text-on-surface-variant mb-5">
-                Sélectionnez une catégorie ci-dessus pour créer votre première équipe.
+                Créez une catégorie puis votre première équipe.
               </p>
               {canManage && (
                 <button
@@ -810,41 +810,50 @@ export default function ClubPage() {
               )}
             </div>
           ) : (
-            /* ── Vue de toutes les catégories actives ── */
-            usedCategories.map(cat => (
-              <div key={cat.id} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
-                <div className="px-5 py-3 border-b border-[#e8e8f0] flex items-center justify-between bg-surface-container-low/30">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setSelectedCatView(cat.id)}
-                      className="px-3 py-1 bg-primary text-white rounded-full text-label-md font-bold hover:bg-primary/80 transition-colors"
-                    >
-                      {cat.nom}
-                    </button>
-                    <span className="text-body-sm text-on-surface-variant">
-                      {equipesByCategorie[cat.id].length} équipe{equipesByCategorie[cat.id].length > 1 ? 's' : ''}
-                    </span>
+            /* ── Vue de toutes les catégories (y compris celles sans équipe) ── */
+            clubCategories.map(cat => {
+              const eqs = equipesByCategorie[cat.id] || []
+              return (
+                <div key={cat.id} className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+                  <div className="px-5 py-3 border-b border-[#e8e8f0] flex items-center justify-between bg-surface-container-low/30">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setSelectedCatView(cat.id)}
+                        className="px-3 py-1 bg-primary text-white rounded-full text-label-md font-bold hover:bg-primary/80 transition-colors"
+                      >
+                        {cat.nom}
+                      </button>
+                      <span className="text-body-sm text-on-surface-variant">
+                        {eqs.length} équipe{eqs.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {canManage && (
+                      <button
+                        onClick={() => openAddEquipe(cat.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-primary hover:bg-primary/10 rounded-lg text-label-md transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">add</span>Ajouter
+                      </button>
+                    )}
                   </div>
-                  {canManage && (
-                    <button
-                      onClick={() => openAddEquipe(cat.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-primary hover:bg-primary/10 rounded-lg text-label-md transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">add</span>Ajouter
-                    </button>
+                  {eqs.length === 0 ? (
+                    <div className="py-8 text-center text-on-surface-variant">
+                      <p className="text-body-sm">Aucune équipe dans cette catégorie.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#e8e8f0]">
+                      {eqs.map(eq => (
+                        <EquipeRow
+                          key={eq.id} eq={eq} canManage={canManage}
+                          onEdit={() => openEditEquipe(eq)}
+                          onDelete={() => setDeleteEquipeId(eq.id)}
+                        />
+                      ))}
+                    </div>
                   )}
                 </div>
-                <div className="divide-y divide-[#e8e8f0]">
-                  {equipesByCategorie[cat.id].map(eq => (
-                    <EquipeRow
-                      key={eq.id} eq={eq} canManage={canManage}
-                      onEdit={() => openEditEquipe(eq)}
-                      onDelete={() => setDeleteEquipeId(eq.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       )}
@@ -982,6 +991,12 @@ export default function ClubPage() {
                     <span className="ml-2 text-primary font-semibold">{selectedCoachIds.length} sélectionné{selectedCoachIds.length > 1 ? 's' : ''}</span>
                   )}
                 </label>
+                {equipeModalCatId > 0 && (
+                  <p className="text-body-sm text-on-surface-variant px-1">
+                    Affectés automatiquement à toutes les équipes de la catégorie « {clubCategories.find(c => c.id === equipeModalCatId)?.nom} ».
+                    Pour retirer un coach d'une équipe précise, utilisez la gestion de cette équipe.
+                  </p>
+                )}
                 {coaches.length === 0 ? (
                   <p className="text-body-sm text-on-surface-variant italic px-1">Aucun coach disponible dans le club.</p>
                 ) : (

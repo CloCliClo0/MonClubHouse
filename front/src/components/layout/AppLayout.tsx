@@ -10,6 +10,7 @@ import SubscriptionGate from '../SubscriptionGate'
 import { useAuth } from '../../contexts/AuthContext'
 
 const CAN_BUY_FOR_CLUB = ['dirigeant', 'admin', 'superadmin']
+const SUBSCRIPTION_GATE_ID = 'subscription-gate-root'
 
 type ProfileData = {
   date_naissance: string | null
@@ -213,6 +214,20 @@ export default function AppLayout() {
     }).catch(() => {})
   }, [])
 
+  // Empêche le contournement de la gate via les outils de développement (suppression manuelle du DOM) :
+  // si l'élément disparaît du DOM alors qu'il devrait être affiché, on recharge la page — la gate
+  // réapparaît immédiatement puisqu'elle est pilotée par le statut d'abonnement renvoyé par le serveur.
+  useEffect(() => {
+    if (!showSubscriptionGate) return
+    const observer = new MutationObserver(() => {
+      if (!document.getElementById(SUBSCRIPTION_GATE_ID)) {
+        window.location.reload()
+      }
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [showSubscriptionGate])
+
   return (
     <div className="min-h-screen bg-[#f4f4f6]">
       {showProfileModal && (
@@ -220,7 +235,9 @@ export default function AppLayout() {
       )}
 
       {!showProfileModal && showSubscriptionGate && (
-        <SubscriptionGate canBuyForClub={canBuyForClub} />
+        <div id={SUBSCRIPTION_GATE_ID}>
+          <SubscriptionGate canBuyForClub={canBuyForClub} />
+        </div>
       )}
 
       {/* Overlay mobile */}

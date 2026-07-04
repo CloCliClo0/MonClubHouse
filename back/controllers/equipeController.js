@@ -160,6 +160,23 @@ const updateCoachs = async (req, res) => {
     await EquipeCoach.destroy({ where: { equipe_id: equipe.id } });
     if (coach_ids.length > 0) {
       await EquipeCoach.bulkCreate(coach_ids.map(uid => ({ equipe_id: equipe.id, user_id: uid })));
+
+      // Auto-affectation aux autres équipes de la même catégorie (même principe que les licenciés
+      // joueur/parent, cf. licencieController.create) — un coach ajouté à une équipe rejoint aussi
+      // les équipes soeurs. Ne retire jamais un coach d'une équipe soeur (retrait toujours par équipe).
+      if (equipe.categorie_id) {
+        const siblings = await Equipe.findAll({
+          where: { categorie_id: equipe.categorie_id, club_id: equipe.club_id, actif: true, id: { [Op.ne]: equipe.id } },
+          attributes: ['id'],
+        });
+        if (siblings.length > 0) {
+          const rows = [];
+          for (const sibling of siblings) {
+            for (const uid of coach_ids) rows.push({ equipe_id: sibling.id, user_id: uid });
+          }
+          await EquipeCoach.bulkCreate(rows, { ignoreDuplicates: true });
+        }
+      }
     }
 
     return res.json({ success: true });
