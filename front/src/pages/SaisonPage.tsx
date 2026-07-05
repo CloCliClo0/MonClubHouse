@@ -20,7 +20,6 @@ type MatchItem = {
 }
 
 type TabKey = 'match' | 'amical' | 'coupe' | 'tournoi'
-type AllTab = TabKey | 'classement'
 
 type ChEquipeRow = {
   id: number; nom: string; equipe_id: number | null; couleur: string
@@ -93,7 +92,7 @@ export default function SaisonPage() {
   const [loadingEquipes, setLoadingEquipes] = useState(true)
   const [selectedCat, setSelectedCat]       = useState<string>('')
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null)
-  const [activeTab, setActiveTab]           = useState<AllTab>('match')
+  const [activeTab, setActiveTab]           = useState<TabKey>('match')
 
   // ── State saison (classement) — plusieurs championnats possibles par saison ──
   const [saisonsList, setSaisonsList]   = useState<string[]>([])
@@ -161,7 +160,7 @@ export default function SaisonPage() {
   // ── Chargement matchs ─────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!selectedTeamId || activeTab === 'classement') { setMatchs([]); return }
+    if (!selectedTeamId) { setMatchs([]); return }
     setLoadingMatchs(true)
     api.get(`/matchs?equipe_id=${selectedTeamId}&type=${activeTab}`)
       .then(r => setMatchs(r.data.data || r.data || []))
@@ -186,7 +185,7 @@ export default function SaisonPage() {
   // ── Chargement classement ─────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!selectedTeamId || activeTab !== 'classement') return
+    if (!selectedTeamId || activeTab !== 'match') return
     api.get(`/championnat/list?equipe_ref_id=${selectedTeamId}&saison=${selectedSaison}`)
       .then(r => {
         const list: string[] = r.data.data || []
@@ -213,7 +212,7 @@ export default function SaisonPage() {
   }
 
   useEffect(() => {
-    if (activeTab === 'classement' && selectedTeamId) loadChampData()
+    if (activeTab === 'match' && selectedTeamId) loadChampData()
   }, [activeChamp, selectedTeamId, activeTab, selectedSaison])
 
   const createSaison = () => {
@@ -359,14 +358,25 @@ export default function SaisonPage() {
               : (selectedTeam ? selectedTeam.nom : 'Sélectionnez une catégorie')}
           </p>
         </div>
-        {pageMode === 'equipe' && canManage && selectedTeamId && activeTab !== 'classement' && (
-          <button
-            onClick={() => { setForm({ ...BLANK_FORM, type: activeTab as TabKey }); setSaveError(null); setShowModal(true) }}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary/90 transition-colors shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            Ajouter un match
-          </button>
+        {pageMode === 'equipe' && canManage && selectedTeamId && (
+          <div className="flex flex-wrap gap-2">
+            {activeTab === 'match' && (
+              <button
+                onClick={() => { setNewSaisonName(''); setShowNewSaison(true) }}
+                className="flex items-center gap-2 border border-primary text-primary px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary/5 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">calendar_month</span>
+                Créer une saison
+              </button>
+            )}
+            <button
+              onClick={() => { setForm({ ...BLANK_FORM, type: activeTab }); setSaveError(null); setShowModal(true) }}
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary/90 transition-colors shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[20px]">add</span>
+              Ajouter un match
+            </button>
+          </div>
         )}
       </div>
 
@@ -476,20 +486,132 @@ export default function SaisonPage() {
                 {meta.label}
               </button>
             ))}
-            <button onClick={() => setActiveTab('classement')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-label-md transition-all whitespace-nowrap ${
-                activeTab === 'classement'
-                  ? 'bg-white text-on-surface shadow-sm font-medium'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">leaderboard</span>
-              Classement
-            </button>
           </div>
 
-          {/* ── Vue matchs ────────────────────────────────────────────────── */}
-          {activeTab !== 'classement' && (
+          {/* ── Vue matchs (+ classement en regard sur l'onglet Championnat) ── */}
+          {activeTab === 'match' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
+              <div className="lg:col-span-3">
+                <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
+                  {loadingMatchs ? (
+                    <div className="p-4 space-y-3">
+                      {[1,2,3].map(i => <div key={i} className="h-14 bg-surface-container-low rounded-lg animate-pulse" />)}
+                    </div>
+                  ) : matchs.length === 0 ? (
+                    <div className="py-16 text-center text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">
+                        {TAB_LABELS[activeTab].icon}
+                      </span>
+                      <p className="text-body-md font-medium">
+                        Aucun match de {TAB_LABELS[activeTab].label.toLowerCase()}
+                      </p>
+                      {canManage && (
+                        <button
+                          onClick={() => { setForm({ ...BLANK_FORM, type: activeTab }); setSaveError(null); setShowModal(true) }}
+                          className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-label-md mx-auto hover:bg-primary/90 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">add</span>
+                          Ajouter un match
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-[#e8e8f0] bg-surface-container-low/30">
+                            <th className="text-left px-4 py-3 text-label-md text-on-surface-variant w-12">J.</th>
+                            <th className="text-left px-4 py-3 text-label-md text-on-surface-variant">Date</th>
+                            <th className="text-left px-4 py-3 text-label-md text-on-surface-variant">Adversaire</th>
+                            <th className="text-left px-4 py-3 text-label-md text-on-surface-variant hidden sm:table-cell">Lieu</th>
+                            <th className="text-left px-4 py-3 text-label-md text-on-surface-variant">Score</th>
+                            <th className="text-left px-4 py-3 text-label-md text-on-surface-variant">Rés.</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#e8e8f0]">
+                          {matchs.map(m => {
+                            const res = getResultat(m)
+                            return (
+                              <tr key={m.id} className="hover:bg-surface-container-low/40 transition-colors">
+                                <td className="px-4 py-3 text-label-md text-on-surface-variant">
+                                  {m.journee ? `J${m.journee}` : '—'}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <p className="text-label-md text-on-surface">
+                                    {new Date(m.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                  </p>
+                                  {m.heure_rdv && <p className="text-body-sm text-on-surface-variant">Rdv {(() => { try { return new Date(m.heure_rdv).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) } catch { return m.heure_rdv.slice(0,5) } })()}</p>}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <p className="text-label-md text-on-surface">{m.adversaire || '—'}</p>
+                                  {m.championnat && (
+                                    <p className="text-body-sm text-on-surface-variant">{m.championnat}</p>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 hidden sm:table-cell">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-label-sm font-medium ${
+                                    m.domicile_exterieur === 'domicile' ? 'bg-blue-50 text-blue-700'
+                                      : m.domicile_exterieur === 'exterieur' ? 'bg-orange-50 text-orange-700'
+                                      : 'bg-gray-50 text-gray-700'
+                                  }`}>
+                                    {m.domicile_exterieur === 'domicile' ? 'Dom.' : m.domicile_exterieur === 'exterieur' ? 'Ext.' : 'Neut.'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {m.statut === 'termine' && m.score_equipe !== null ? (
+                                    <span className="text-label-lg font-bold text-on-surface">
+                                      {m.score_equipe} – {m.score_adversaire}
+                                    </span>
+                                  ) : (
+                                    <span className={`text-body-sm ${
+                                      m.statut === 'annule' || m.statut === 'reporte' ? 'text-error' : 'text-on-surface-variant'
+                                    }`}>
+                                      {m.statut === 'annule' ? 'Annulé' : m.statut === 'reporte' ? 'Reporté' : 'À venir'}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {res ? (
+                                    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-label-md font-black ${res.bg} ${res.text}`}>
+                                      {res.label}
+                                    </span>
+                                  ) : <span className="text-on-surface-variant">—</span>}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Classement — fixe à droite (desktop), sous les matchs sur mobile */}
+              <div className="lg:col-span-2 lg:sticky lg:top-20">
+                <ClassementView
+                  saisonsList={saisonsList}
+                  selectedSaison={selectedSaison}
+                  onSelectSaison={setSelectedSaison}
+                  onOpenNewSaison={() => { setNewSaisonName(''); setShowNewSaison(true) }}
+                  champList={champList}
+                  activeChamp={activeChamp}
+                  champData={champData}
+                  loadingChamp={loadingChamp}
+                  canManage={canManage}
+                  savingCh={savingCh}
+                  onSelectChamp={setActiveChamp}
+                  onOpenNewChamp={() => { setNewChampName(''); setShowNewChamp(true) }}
+                  onAddTeam={() => { setAddTeamNom(''); setAddTeamIsOwn(false); setShowAddTeam(true) }}
+                  onAddResult={() => { setResultForm(BLANK_RESULT); setEditingMatch(null); setShowAddResult(true) }}
+                  onEditResult={openEditResult}
+                  onDeleteResult={handleDeleteMatch}
+                  onDeleteTeam={handleDeleteTeam}
+                  onDeleteChamp={handleDeleteChamp}
+                />
+              </div>
+            </div>
+          ) : (
             <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
               {loadingMatchs ? (
                 <div className="p-4 space-y-3">
@@ -498,14 +620,14 @@ export default function SaisonPage() {
               ) : matchs.length === 0 ? (
                 <div className="py-16 text-center text-on-surface-variant">
                   <span className="material-symbols-outlined text-[48px] block mb-3 opacity-30">
-                    {TAB_LABELS[activeTab as TabKey].icon}
+                    {TAB_LABELS[activeTab].icon}
                   </span>
                   <p className="text-body-md font-medium">
-                    Aucun match de {TAB_LABELS[activeTab as TabKey].label.toLowerCase()}
+                    Aucun match de {TAB_LABELS[activeTab].label.toLowerCase()}
                   </p>
                   {canManage && (
                     <button
-                      onClick={() => { setForm({ ...BLANK_FORM, type: activeTab as TabKey }); setSaveError(null); setShowModal(true) }}
+                      onClick={() => { setForm({ ...BLANK_FORM, type: activeTab }); setSaveError(null); setShowModal(true) }}
                       className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-label-md mx-auto hover:bg-primary/90 transition-colors"
                     >
                       <span className="material-symbols-outlined text-[18px]">add</span>
@@ -518,7 +640,6 @@ export default function SaisonPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-[#e8e8f0] bg-surface-container-low/30">
-                        {activeTab === 'match' && <th className="text-left px-4 py-3 text-label-md text-on-surface-variant w-12">J.</th>}
                         <th className="text-left px-4 py-3 text-label-md text-on-surface-variant">Date</th>
                         <th className="text-left px-4 py-3 text-label-md text-on-surface-variant">Adversaire</th>
                         <th className="text-left px-4 py-3 text-label-md text-on-surface-variant hidden sm:table-cell">Lieu</th>
@@ -531,11 +652,6 @@ export default function SaisonPage() {
                         const res = getResultat(m)
                         return (
                           <tr key={m.id} className="hover:bg-surface-container-low/40 transition-colors">
-                            {activeTab === 'match' && (
-                              <td className="px-4 py-3 text-label-md text-on-surface-variant">
-                                {m.journee ? `J${m.journee}` : '—'}
-                              </td>
-                            )}
                             <td className="px-4 py-3">
                               <p className="text-label-md text-on-surface">
                                 {new Date(m.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -544,9 +660,6 @@ export default function SaisonPage() {
                             </td>
                             <td className="px-4 py-3">
                               <p className="text-label-md text-on-surface">{m.adversaire || '—'}</p>
-                              {activeTab === 'match' && m.championnat && (
-                                <p className="text-body-sm text-on-surface-variant">{m.championnat}</p>
-                              )}
                             </td>
                             <td className="px-4 py-3 hidden sm:table-cell">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded text-label-sm font-medium ${
@@ -585,30 +698,6 @@ export default function SaisonPage() {
                 </div>
               )}
             </div>
-          )}
-
-          {/* ── Vue classement ─────────────────────────────────────────────── */}
-          {activeTab === 'classement' && (
-            <ClassementView
-              saisonsList={saisonsList}
-              selectedSaison={selectedSaison}
-              onSelectSaison={setSelectedSaison}
-              onOpenNewSaison={() => { setNewSaisonName(''); setShowNewSaison(true) }}
-              champList={champList}
-              activeChamp={activeChamp}
-              champData={champData}
-              loadingChamp={loadingChamp}
-              canManage={canManage}
-              savingCh={savingCh}
-              onSelectChamp={setActiveChamp}
-              onOpenNewChamp={() => { setNewChampName(''); setShowNewChamp(true) }}
-              onAddTeam={() => { setAddTeamNom(''); setAddTeamIsOwn(false); setShowAddTeam(true) }}
-              onAddResult={() => { setResultForm(BLANK_RESULT); setEditingMatch(null); setShowAddResult(true) }}
-              onEditResult={openEditResult}
-              onDeleteResult={handleDeleteMatch}
-              onDeleteTeam={handleDeleteTeam}
-              onDeleteChamp={handleDeleteChamp}
-            />
           )}
         </>
       )}
