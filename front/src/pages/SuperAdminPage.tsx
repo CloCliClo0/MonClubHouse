@@ -326,6 +326,21 @@ export default function SuperAdminPage() {
     } finally { setCodeSaving(false) }
   }
 
+  const shareCode = (c: InviteCode) => {
+    const appUrl = window.location.origin
+    const label  = c.label || c.categorie || c.equipe?.nom || 'votre équipe'
+    const link   = `${appUrl}/register?code=${c.code}`
+    const text   = `🏆 Rejoignez ${label} sur MonClubHouse !\n\nCliquez sur ce lien pour vous inscrire directement (${c.role}) :\n${link}`
+
+    if (navigator.share) {
+      navigator.share({ title: 'Code MonClubHouse', text, url: link }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(text)
+      setCopied(c.id)
+      setTimeout(() => setCopied(null), 2000)
+    }
+  }
+
   const filteredMembres = membres.filter(u => {
     const matchSearch = `${u.prenom} ${u.nom} ${u.email}`.toLowerCase().includes(memSearch.toLowerCase())
     return matchSearch && (memRole === 'Tous' || u.role === memRole)
@@ -954,6 +969,10 @@ export default function SuperAdminPage() {
                     <button onClick={() => { navigator.clipboard.writeText(c.code); setCopied(c.id); setTimeout(() => setCopied(null), 2000) }}
                       className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low text-on-surface-variant transition-colors">
                       <span className="material-symbols-outlined text-[18px]">{copied === c.id ? 'check' : 'content_copy'}</span>
+                    </button>
+                    <button onClick={() => shareCode(c)} title="Partager via SMS / réseaux"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-green-50 text-green-600 transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">share</span>
                     </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">

@@ -3,21 +3,12 @@ const { InviteCode, User, Club, Equipe, Licencie } = require('../models');
 const { assignUserToEquipes, equipeIdsForCategory, equipeIdsForCategoryByName } = require('../services/rosterService');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-const VALID_ROLES = ['joueur', 'parent', 'coach', 'dirigeant'];
-
-/**
- * Génère un code aléatoire au format AAA-1234-AAA.
- */
-const generateCode = () => {
-  const letters = () =>
-    Array.from({ length: 3 }, () =>
-      String.fromCharCode(65 + Math.floor(Math.random() * 26))
-    ).join('');
-  const digits = () =>
-    String(Math.floor(1000 + Math.random() * 9000));
-  return `${letters()}-${digits()}-${letters()}`;
-};
+//
+// Ce contrôleur ne gère QUE la validation/rédemption d'un code par l'utilisateur
+// lui-même (auto-inscription : RegisterPage/JoinPage/GoogleCompletePage).
+// La création/liste/désactivation des codes, ainsi que le rattachement d'enfant
+// (lier un compte existant ou en créer un), vivent uniquement dans
+// `codesController.js` (mounté sur /api/codes) — ne pas dupliquer ici.
 
 /**
  * Recherche un InviteCode actif par son code, avec les associations Club et Equipe.
@@ -153,146 +144,4 @@ const joinByCode = async (req, res) => {
   }
 };
 
-/**
- * GET /clubs/codes  — admin/dirigeant
- * Liste tous les codes d'invitation du club de l'utilisateur connecté.
- */
-const listCodes = async (req, res) => {
-  try {
-    const { Category } = require('../models');
-    const codes = await InviteCode.findAll({
-      where: { club_id: req.user.club_id },
-      include: [
-        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
-          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] },
-        { model: User,   as: 'createur', attributes: ['id', 'prenom', 'nom', 'email'] }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
-
-    return res.json({ success: true, data: codes });
-  } catch (err) {
-    console.error('[listCodes]', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-};
-
-/**
- * POST /clubs/codes  — admin/dirigeant
- * Crée un nouveau code d'invitation pour le club de l'utilisateur connecté.
- */
-const createCode = async (req, res) => {
-  try {
-    const { equipe_id, role, label, max_uses, expires_at } = req.body;
-
-    if (!role || !VALID_ROLES.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: `Rôle invalide. Valeurs acceptées : ${VALID_ROLES.join(', ')}`
-      });
-    }
-
-    // equipe_id requis uniquement pour les rôles liés à une équipe
-    if (['joueur', 'parent', 'coach'].includes(role) && !equipe_id) {
-      return res.status(400).json({ success: false, message: 'equipe_id requis pour ce rôle' });
-    }
-
-    // Génération d'un code unique
-    let code;
-    let attempts = 0;
-    do {
-      code = generateCode();
-      attempts++;
-      if (attempts > 10) {
-        return res.status(500).json({ success: false, message: 'Impossible de générer un code unique' });
-      }
-    } while (await InviteCode.findOne({ where: { code } }));
-
-    const invite = await InviteCode.create({
-      code,
-      equipe_id,
-      club_id:    req.user.club_id,
-      role,
-      label:      label || null,
-      max_uses:   max_uses || 50,
-      expires_at: expires_at || null,
-      created_by: req.user.id
-    });
-
-    return res.status(201).json({ success: true, data: invite });
-  } catch (err) {
-    console.error('[createCode]', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-};
-
-/**
- * DELETE /clubs/codes/:id  — admin/dirigeant
- * Désactive (soft-delete) un code d'invitation appartenant au club de l'utilisateur.
- */
-const deleteCode = async (req, res) => {
-  try {
-    const invite = await InviteCode.findOne({
-      where: { id: req.params.id, club_id: req.user.club_id }
-    });
-
-    if (!invite) {
-      return res.status(404).json({ success: false, message: 'Code introuvable' });
-    }
-
-    await invite.update({ actif: false });
-
-    return res.json({ success: true, message: 'Code désactivé avec succès' });
-  } catch (err) {
-    console.error('[deleteCode]', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-};
-
-/**
- * GET /clubs/players  — authenticated (parent flow)
- * Retourne la liste des joueurs du même club, pour qu'un parent puisse lier son enfant.
- */
-const getClubPlayers = async (req, res) => {
-  try {
-    if (!req.user.club_id) {
-      return res.json({ success: true, data: [] });
-    }
-    const players = await User.findAll({
-      where: { club_id: req.user.club_id, role: 'joueur', actif: true },
-      attributes: ['id', 'nom', 'prenom', 'avatar'],
-      order: [['nom', 'ASC'], ['prenom', 'ASC']]
-    });
-    return res.json({ success: true, data: players });
-  } catch (err) {
-    console.error('[getClubPlayers]', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-};
-
-/**
- * POST /clubs/link-child  — authenticated (parent)
- * body: { child_user_id }
- * Met à jour parent_id du joueur enfant pour le rattacher au parent connecté.
- */
-const linkChild = async (req, res) => {
-  try {
-    const { child_user_id } = req.body;
-    if (!child_user_id) {
-      return res.status(400).json({ success: false, message: 'child_user_id requis' });
-    }
-    const child = await User.findOne({
-      where: { id: child_user_id, club_id: req.user.club_id, role: 'joueur' }
-    });
-    if (!child) {
-      return res.status(404).json({ success: false, message: 'Joueur introuvable dans ce club' });
-    }
-    await child.update({ parent_id: req.user.id });
-    return res.json({ success: true, message: 'Enfant rattaché avec succès' });
-  } catch (err) {
-    console.error('[linkChild]', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-};
-
-module.exports = { validateCode, joinByCode, listCodes, createCode, deleteCode, getClubPlayers, linkChild };
+module.exports = { validateCode, joinByCode };

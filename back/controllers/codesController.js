@@ -7,10 +7,28 @@ const { assignUserToEquipes, equipeIdsForCategory, equipeIdsForCategoryByName } 
 const makeCode = (prefix = 'MCH') =>
   `${prefix}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
+// Rôles qu'un code d'invitation peut cibler — jamais superadmin/admin (ces comptes ne se créent
+// pas par invitation), quel que soit le rôle du créateur. Un coach est en plus restreint à
+// joueur/parent (vérifié séparément dans createCode).
+const VALID_TARGET_ROLES = ['dirigeant', 'coach', 'joueur', 'parent'];
+const COACH_TARGET_ROLES = ['joueur', 'parent'];
+
 // IDs des équipes qu'un coach encadre lui-même (via EquipeCoach).
 const coachedEquipeIds = async (userId) => {
   const links = await EquipeCoach.findAll({ where: { user_id: userId }, attributes: ['equipe_id'] });
   return links.map(l => l.equipe_id);
+};
+
+// Noms des catégories qu'un coach encadre (au moins une équipe de la catégorie) — un code créé
+// par un coach cible toujours une catégorie entière, jamais une équipe précise de la catégorie.
+const coachedCategoryNames = async (userId, clubId) => {
+  const myEquipeIds = await coachedEquipeIds(userId);
+  if (myEquipeIds.length === 0) return [];
+  const myEquipes = await Equipe.findAll({
+    where: { id: { [Op.in]: myEquipeIds }, club_id: clubId },
+    include: [{ model: Category, as: 'categorie', attributes: ['nom'], required: true }],
+  });
+  return [...new Set(myEquipes.map(e => e.categorie.nom))];
 };
 
 // GET /api/codes — liste les codes (tous les clubs pour superadmin, seulement ses équipes pour un coach)
@@ -24,12 +42,14 @@ const listCodes = async (req, res) => {
     if (req.query.club_id) where.club_id = req.query.club_id;
 
     if (req.user.role === 'coach') {
-      // Un coach ne voit jamais les codes d'une équipe qu'il n'encadre pas, même en forçant
-      // ?equipe_id= dans la requête — l'intersection avec ses propres équipes fait toujours foi.
-      const myEquipeIds = await coachedEquipeIds(req.user.id);
-      where.equipe_id = req.query.equipe_id
-        ? { [Op.in]: myEquipeIds.filter(id => id === parseInt(req.query.equipe_id)) }
-        : { [Op.in]: myEquipeIds };
+      // Un coach ne voit jamais les codes d'une catégorie qu'il n'encadre pas, même en forçant
+      // ?categorie= dans la requête — l'intersection avec ses propres catégories fait toujours foi.
+      const myCategoryNames = await coachedCategoryNames(req.user.id, req.user.club_id);
+      where.categorie = req.query.categorie
+        ? { [Op.in]: myCategoryNames.filter(n => n === req.query.categorie) }
+        : { [Op.in]: myCategoryNames };
+    } else if (req.query.categorie) {
+      where.categorie = req.query.categorie;
     } else if (req.query.equipe_id) {
       where.equipe_id = req.query.equipe_id;
     }
@@ -49,8 +69,10 @@ const listCodes = async (req, res) => {
   }
 };
 
-// POST /api/codes — créer un code (admin/dirigeant : n'importe quelle équipe du club ;
-// coach : uniquement une équipe qu'il encadre lui-même, et seulement pour joueur/parent)
+// POST /api/codes — créer un code (superadmin/admin : n'importe quelle équipe du club, pour
+// dirigeant/coach/joueur/parent [jamais superadmin/admin] ; coach : uniquement une équipe qu'il
+// encadre lui-même, et seulement pour joueur/parent ; dirigeant/joueur/parent n'ont pas accès à
+// cette route du tout, voir routes/codes.js)
 const createCode = async (req, res) => {
   try {
     const { equipe_id, categorie, role = 'joueur', label, max_uses = 50, expires_at } = req.body;
@@ -58,18 +80,27 @@ const createCode = async (req, res) => {
 
     if (!club_id) return res.status(400).json({ success: false, message: 'club_id requis' });
 
+    if (!VALID_TARGET_ROLES.includes(role)) {
+      return res.status(400).json({ success: false, message: `Rôle invalide. Valeurs acceptées : ${VALID_TARGET_ROLES.join(', ')}` });
+    }
+
     // Pour les rôles liés, il faut soit equipe_id soit categorie
     if (['joueur', 'parent', 'coach'].includes(role) && !equipe_id && !categorie) {
       return res.status(400).json({ success: false, message: 'equipe_id ou categorie requis pour ce rôle' });
     }
 
     if (req.user.role === 'coach') {
-      if (!['joueur', 'parent'].includes(role)) {
+      if (!COACH_TARGET_ROLES.includes(role)) {
         return res.status(403).json({ success: false, message: 'Un coach ne peut générer que des codes joueur ou parent.' });
       }
-      const myEquipeIds = await coachedEquipeIds(req.user.id);
-      if (!equipe_id || !myEquipeIds.includes(parseInt(equipe_id))) {
-        return res.status(403).json({ success: false, message: 'Vous ne pouvez créer un code que pour une équipe que vous encadrez.' });
+      // Un coach invite toujours pour une CATÉGORIE entière (toutes ses équipes), jamais pour
+      // une équipe précise de la catégorie — pas d'equipe_id ici, seulement categorie.
+      if (!categorie) {
+        return res.status(400).json({ success: false, message: 'categorie requise : un coach ne peut générer un code que pour une catégorie entière.' });
+      }
+      const myCategoryNames = await coachedCategoryNames(req.user.id, club_id);
+      if (!myCategoryNames.includes(categorie)) {
+        return res.status(403).json({ success: false, message: 'Vous ne pouvez créer un code que pour une catégorie que vous encadrez.' });
       }
     }
 
@@ -112,7 +143,7 @@ const deleteCode = async (req, res) => {
   try {
     const where = { id: req.params.id };
     if (req.user.role !== 'superadmin' && req.user.club_id) where.club_id = req.user.club_id;
-    if (req.user.role === 'coach') where.equipe_id = { [Op.in]: await coachedEquipeIds(req.user.id) };
+    if (req.user.role === 'coach') where.categorie = { [Op.in]: await coachedCategoryNames(req.user.id, req.user.club_id) };
     const code = await InviteCode.findOne({ where });
     if (!code) return res.status(404).json({ success: false, message: 'Code introuvable' });
     await code.update({ actif: false });
@@ -249,10 +280,14 @@ const myChildren = async (req, res) => {
 // GET /api/codes/club-players — joueurs du club non encore rattachés (pour choix enfant)
 const clubPlayers = async (req, res) => {
   try {
+    // Sans club_id, `where: { club_id: null }` matcherait tous les comptes eux-mêmes sans club —
+    // renvoyer une liste vide explicitement plutôt que ce faux positif.
+    if (!req.user.club_id) return res.json({ success: true, data: [] });
     const players = await User.findAll({
-      where: { club_id: req.user.club_id, role: 'joueur' },
+      where: { club_id: req.user.club_id, role: 'joueur', actif: true },
       attributes: ['id', 'nom', 'prenom', 'avatar'],
       include: [{ model: Licencie, as: 'licence', attributes: ['equipe_id'] }],
+      order: [['nom', 'ASC'], ['prenom', 'ASC']],
     });
     return res.json({ success: true, data: players });
   } catch (err) {
@@ -302,7 +337,9 @@ const createChild = async (req, res) => {
 };
 
 // POST /api/codes/join-child — un parent rattache un de ses enfants à une catégorie/équipe via
-// un code d'invitation (le code n'est jamais appliqué au compte du parent lui-même ici).
+// un code d'invitation. Le parent lui-même est AUSSI rattaché à cette catégorie (additif —
+// assignUserToEquipes ne retire jamais une affectation existante) : un parent avec plusieurs
+// enfants dans des catégories différentes finit par appartenir à toutes ces catégories.
 const joinChildByCode = async (req, res) => {
   try {
     if (req.user.role !== 'parent') {
@@ -333,6 +370,8 @@ const joinChildByCode = async (req, res) => {
     }
 
     await child.update({ club_id: inviteCode.club_id });
+    // Le parent rejoint aussi ce club s'il n'en avait pas encore (ex: tout premier enfant).
+    if (!req.user.club_id) await req.user.update({ club_id: inviteCode.club_id });
 
     let equipeIds = [];
     if (inviteCode.equipe_id) {
@@ -345,6 +384,9 @@ const joinChildByCode = async (req, res) => {
 
     if (equipeIds.length > 0) {
       await assignUserToEquipes({ userId: child.id, clubId: inviteCode.club_id, equipeIds, role: 'joueur' });
+      // Le parent est rattaché à la même catégorie que son enfant (additif, jamais retiré des
+      // autres catégories déjà rejointes pour d'autres enfants).
+      await assignUserToEquipes({ userId: req.user.id, clubId: inviteCode.club_id, equipeIds, role: 'parent' });
     } else {
       await Licencie.findOrCreate({
         where: { user_id: child.id },

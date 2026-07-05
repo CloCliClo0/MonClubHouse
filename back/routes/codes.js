@@ -9,13 +9,15 @@ const {
 } = require('../controllers/codesController');
 
 const isAdmin = requireRole('superadmin', 'admin', 'dirigeant');
-// Un coach peut gérer des codes, mais uniquement pour ses propres équipes (scopé dans le contrôleur)
-const isAdminOrCoach = requireRole('superadmin', 'admin', 'dirigeant', 'coach');
+// Consultation/désactivation : admin/dirigeant/coach (un coach reste scopé à ses équipes dans le contrôleur)
+const canManageCodes = requireRole('superadmin', 'admin', 'dirigeant', 'coach');
+// Création : dirigeant exclu — seuls superadmin/admin/coach peuvent générer un nouveau code
+// (coach restreint aux rôles joueur/parent et à ses propres équipes, vérifié dans le contrôleur)
+const canCreateCodes = requireRole('superadmin', 'admin', 'coach');
 
-// Admin/dirigeant/coach : gestion des codes
-router.get('/',       authenticate, isAdminOrCoach, listCodes);
-router.post('/',      authenticate, isAdminOrCoach, createCode);
-router.patch('/:id/disable', authenticate, isAdminOrCoach, deleteCode);
+router.get('/',       authenticate, canManageCodes, listCodes);
+router.post('/',      authenticate, canCreateCodes, createCode);
+router.patch('/:id/disable', authenticate, canManageCodes, deleteCode);
 router.delete('/:id', authenticate, isAdmin, hardDeleteCode);
 
 // Utilisateur : rejoindre avec un code

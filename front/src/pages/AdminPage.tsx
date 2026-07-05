@@ -158,6 +158,22 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
     }
   }
 
+  const shareCode = (c: InviteCode) => {
+    const appUrl = window.location.origin
+    const label  = c.label || c.equipe?.nom || 'votre équipe'
+    const role   = ({ joueur: 'joueur', parent: 'parent', coach: 'coach', dirigeant: 'dirigeant' } as Record<string, string>)[c.role] ?? c.role
+    const link   = `${appUrl}/register?code=${c.code}`
+    const text   = `🏆 Rejoignez ${label} sur MonClubHouse !\n\nCliquez sur ce lien pour vous inscrire directement (${role}) :\n${link}`
+
+    if (navigator.share) {
+      navigator.share({ title: 'Code MonClubHouse', text, url: link }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(text)
+      setCopiedId(c.id)
+      setTimeout(() => setCopiedId(null), 2000)
+    }
+  }
+
   const filteredMembres = membres.filter(u => {
     const matchSearch = `${u.prenom} ${u.nom} ${u.email}`.toLowerCase().includes(memSearch.toLowerCase())
     const matchRole = memRoleFilter === 'Tous' || u.role === memRoleFilter
@@ -447,6 +463,10 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
                       className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low text-on-surface-variant">
                       <span className="material-symbols-outlined text-[18px]">{copiedId === c.id ? 'check' : 'content_copy'}</span>
                     </button>
+                    <button onClick={() => shareCode(c)} title="Partager via SMS / réseaux"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-green-50 text-green-600">
+                      <span className="material-symbols-outlined text-[18px]">share</span>
+                    </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2 py-0.5 rounded-full text-label-md bg-green-100 text-green-700">{c.role}</span>
@@ -478,6 +498,8 @@ function ClubManagePanel({ club, onBack, allClubs }: { club: Club; onBack: () =>
 
 export default function AdminPage() {
   const isSuperAdmin = localStorage.getItem('role') === 'superadmin'
+  // Un dirigeant peut consulter les codes existants mais pas en générer (réservé à admin/superadmin/coach)
+  const isDirigeant = localStorage.getItem('role') === 'dirigeant'
   // Seul un superadmin peut affecter le rôle admin ou superadmin à un utilisateur
   const assignableRoles: Role[] = isSuperAdmin ? ROLES : ROLES.filter(r => !['superadmin', 'admin'].includes(r))
   const [activeTab, setActiveTab] = useState<'users' | 'codes' | 'clubs'>('users')
@@ -724,7 +746,7 @@ export default function AdminPage() {
             <span className="sm:hidden">Ajouter</span>
           </button>
         )}
-        {activeTab === 'codes' && !isSuperAdmin && (
+        {activeTab === 'codes' && !isSuperAdmin && !isDirigeant && (
           <button onClick={() => setShowCodeForm(v => !v)}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
             <span className="material-symbols-outlined text-[20px]">add</span>
@@ -781,6 +803,12 @@ export default function AdminPage() {
       {/* ── ONGLET CODES ─────────────────────────────────────────── */}
       {activeTab === 'codes' && (
         <div className="space-y-5">
+          {isDirigeant && (
+            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 px-4 py-3 rounded-xl text-body-sm text-blue-800">
+              <span className="material-symbols-outlined text-blue-600">info</span>
+              La génération de codes est réservée à l'administrateur du club, aux coachs (pour leurs propres équipes) et au superadmin. Vous pouvez consulter les codes existants ci-dessous.
+            </div>
+          )}
           {/* Formulaire nouveau code */}
           {showCodeForm && (
             <div className="bg-white border border-[#e8e8f0] rounded-xl p-5">

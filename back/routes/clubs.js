@@ -3,7 +3,9 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { getAll, getById, create, update, uploadLogo, getStats, getTerrains, createTerrain, updateTerrain, deleteTerrain, deleteClub } = require('../controllers/clubController');
-const { validateCode, joinByCode, listCodes, createCode, deleteCode, getClubPlayers, linkChild } = require('../controllers/inviteCodeController');
+const { validateCode, joinByCode } = require('../controllers/inviteCodeController');
+// Rattachement enfant/liste joueurs : implémentation unique dans codesController.js (voir /api/codes/*)
+const { clubPlayers, linkChild } = require('../controllers/codesController');
 const { authenticate } = require('../middlewares/auth');
 const { requireMinRole } = require('../middlewares/rbac');
 const { validateClub } = require('../middlewares/validation');
@@ -30,13 +32,8 @@ router.get('/codes/validate/:code', validateCode);
 router.post('/join', authenticate, joinByCode);
 
 // Parent: list players to link child
-router.get('/players', authenticate, getClubPlayers);
+router.get('/players', authenticate, clubPlayers);
 router.post('/link-child', authenticate, linkChild);
-
-// Admin/Dirigeant: manage codes
-router.get('/codes', authenticate, listCodes);
-router.post('/codes', authenticate, requireMinRole('dirigeant'), createCode);
-router.patch('/codes/:id/disable', authenticate, requireMinRole('dirigeant'), deleteCode);
 
 // Stats et terrains (avant /:id pour éviter le conflit)
 router.get('/stats',               authenticate, getStats);

@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import api, { getApiErrorMessage } from '../services/api'
-
-type InviteCodeRow = {
-  id: number; code: string; role: string; label: string | null
-  max_uses: number; uses_count: number; actif: boolean
-}
+import api from '../services/api'
 
 type Licencie = {
   id: number
@@ -66,15 +61,6 @@ export default function TeamDetailPage() {
   const [licModal, setLicModal] = useState<Licencie | null>(null)
   const [licForm, setLicForm]   = useState<Record<string, any>>({})
   const [savingLic, setSavingLic] = useState(false)
-
-  // Modal codes d'invitation (gestion par le coach/manager de cette équipe)
-  const [showCodes, setShowCodes]     = useState(false)
-  const [codes, setCodes]             = useState<InviteCodeRow[]>([])
-  const [loadingCodes, setLoadingCodes] = useState(false)
-  const [codeForm, setCodeForm]       = useState({ role: 'joueur', label: '', max_uses: '50' })
-  const [codeSaving, setCodeSaving]   = useState(false)
-  const [codeError, setCodeError]     = useState('')
-  const [copiedCodeId, setCopiedCodeId] = useState<number | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -156,45 +142,6 @@ export default function TeamDetailPage() {
     }
   }
 
-  const loadCodes = () => {
-    setLoadingCodes(true)
-    api.get('/codes', { params: { equipe_id: id } })
-      .then(r => setCodes(r.data.data || []))
-      .catch(() => setCodes([]))
-      .finally(() => setLoadingCodes(false))
-  }
-
-  const openCodesModal = () => {
-    setShowCodes(true)
-    setCodeError('')
-    loadCodes()
-  }
-
-  const createCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCodeSaving(true)
-    setCodeError('')
-    try {
-      await api.post('/codes', {
-        equipe_id: parseInt(id!),
-        role: codeForm.role,
-        label: codeForm.label || undefined,
-        max_uses: parseInt(codeForm.max_uses),
-      })
-      setCodeForm({ role: 'joueur', label: '', max_uses: '50' })
-      loadCodes()
-    } catch (err: any) {
-      setCodeError(getApiErrorMessage(err))
-    } finally {
-      setCodeSaving(false)
-    }
-  }
-
-  const disableCode = async (codeId: number) => {
-    await api.patch(`/codes/${codeId}/disable`).catch(() => {})
-    loadCodes()
-  }
-
   const deleteTeam = async () => {
     if (!confirm(`Supprimer l'équipe "${team?.nom}" ? Elle sera désactivée et n'apparaîtra plus dans la liste des équipes (l'historique des joueurs/matchs est conservé).`)) return
     setDeleting(true)
@@ -239,20 +186,11 @@ export default function TeamDetailPage() {
   return (
     <div>
       {/* Retour */}
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <button onClick={() => navigate('/equipes')}
-          className="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface text-label-md transition-colors">
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          Retour aux équipes
-        </button>
-        {canManage && (
-          <button onClick={openCodesModal}
-            className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container-low transition-colors">
-            <span className="material-symbols-outlined text-[18px]">key</span>
-            Codes d'invitation
-          </button>
-        )}
-      </div>
+      <button onClick={() => navigate('/equipes')}
+        className="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface text-label-md mb-5 transition-colors">
+        <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+        Retour aux équipes
+      </button>
 
       {/* Header */}
       <div className="bg-white border border-[#e8e8f0] rounded-2xl overflow-hidden mb-6">
@@ -658,86 +596,6 @@ export default function TeamDetailPage() {
         </div>
       )}
 
-      {/* Modal codes d'invitation */}
-      {showCodes && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCodes(false)}>
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-[#e8e8f0] flex items-center justify-between shrink-0">
-              <div>
-                <h3 className="text-headline-md">Codes d'invitation — {team.nom}</h3>
-                <p className="text-body-sm text-on-surface-variant mt-0.5">Un code rattache directement le joueur/parent à cette équipe.</p>
-              </div>
-              <button onClick={() => setShowCodes(false)}><span className="material-symbols-outlined text-on-surface-variant">close</span></button>
-            </div>
-
-            <form onSubmit={createCode} className="p-5 border-b border-[#e8e8f0] space-y-3 shrink-0">
-              {codeError && (
-                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-body-sm">
-                  <span className="material-symbols-outlined text-[16px]">error</span>{codeError}
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">Rôle</label>
-                  <select value={codeForm.role} onChange={e => setCodeForm(f => ({ ...f, role: e.target.value }))}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary bg-white">
-                    <option value="joueur">Joueur</option>
-                    <option value="parent">Parent</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">Utilisations max</label>
-                  <input type="number" min="1" max="500" value={codeForm.max_uses}
-                    onChange={e => setCodeForm(f => ({ ...f, max_uses: e.target.value }))}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-label-md text-on-surface-variant">Libellé (optionnel)</label>
-                <input value={codeForm.label} onChange={e => setCodeForm(f => ({ ...f, label: e.target.value }))}
-                  placeholder="Ex : Saison 2025-26"
-                  className="w-full px-3 py-2 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
-              </div>
-              <button type="submit" disabled={codeSaving}
-                className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-50 transition-colors">
-                {codeSaving && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
-                <span className="material-symbols-outlined text-[18px]">add</span>
-                Générer un code
-              </button>
-            </form>
-
-            <div className="flex-1 overflow-y-auto divide-y divide-[#e8e8f0]">
-              {loadingCodes ? (
-                <div className="p-5 space-y-2">{[1, 2].map(i => <div key={i} className="h-12 bg-surface-container-low rounded-lg animate-pulse" />)}</div>
-              ) : codes.length === 0 ? (
-                <div className="py-10 text-center text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[36px] block mb-2 opacity-30">key_off</span>
-                  <p className="text-body-md">Aucun code pour cette équipe.</p>
-                </div>
-              ) : (
-                codes.map(c => (
-                  <div key={c.id} className={`px-5 py-3 flex items-center gap-3 flex-wrap ${!c.actif ? 'opacity-50' : ''}`}>
-                    <span className="font-mono font-bold tracking-widest bg-surface-container-low px-2.5 py-1 rounded-lg text-body-sm">{c.code}</span>
-                    <button onClick={() => { navigator.clipboard.writeText(c.code); setCopiedCodeId(c.id); setTimeout(() => setCopiedCodeId(null), 2000) }}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-container-low text-on-surface-variant transition-colors">
-                      <span className="material-symbols-outlined text-[16px]">{copiedCodeId === c.id ? 'check' : 'content_copy'}</span>
-                    </button>
-                    <span className="px-2 py-0.5 rounded-full text-label-md bg-green-100 text-green-700">{c.role}</span>
-                    {c.label && <span className="text-body-sm text-on-surface-variant italic">{c.label}</span>}
-                    <span className="text-[11px] text-on-surface-variant ml-auto">{c.uses_count}/{c.max_uses}</span>
-                    {c.actif && (
-                      <button onClick={() => disableCode(c.id)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-on-surface-variant hover:text-error transition-colors" title="Désactiver">
-                        <span className="material-symbols-outlined text-[16px]">block</span>
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
