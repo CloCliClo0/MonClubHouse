@@ -108,6 +108,7 @@ export default function SaisonPage() {
   const [matchs, setMatchs]               = useState<MatchItem[]>([])
   const [loadingMatchs, setLoadingMatchs] = useState(false)
   const [adversaireNames, setAdversaireNames] = useState<string[]>([])
+  const [adversaires, setAdversaires]     = useState<{ id: number; nom: string }[]>([])
   const [showModal, setShowModal]         = useState(false)
   const [form, setForm]                   = useState(BLANK_FORM)
   const [saving, setSaving]               = useState(false)
@@ -124,7 +125,7 @@ export default function SaisonPage() {
   const [newChampName, setNewChampName]   = useState('')
   const [showAddTeam, setShowAddTeam]     = useState(false)
   const [addTeamNom, setAddTeamNom]       = useState('')
-  const [addTeamClubEquipeId, setAddTeamClubEquipeId] = useState('')
+  const [addTeamAdversaireId, setAddTeamAdversaireId] = useState('')
   const [showAddResult, setShowAddResult] = useState(false)
   const [resultForm, setResultForm]       = useState(BLANK_RESULT)
   const [editingMatch, setEditingMatch]   = useState<ChMatchRow | null>(null)
@@ -145,7 +146,11 @@ export default function SaisonPage() {
 
   useEffect(() => {
     api.get('/adversaires')
-      .then(r => setAdversaireNames((r.data.data || []).map((a: any) => a.nom)))
+      .then(r => {
+        const data: { id: number; nom: string }[] = r.data.data || []
+        setAdversaireNames(data.map(a => a.nom))
+        setAdversaires(data)
+      })
       .catch(() => {})
   }, [])
 
@@ -290,17 +295,17 @@ export default function SaisonPage() {
   }
 
   const handleAddTeam = async () => {
-    const club_equipe = addTeamClubEquipeId ? equipes.find(e => e.id === Number(addTeamClubEquipeId)) : null
-    const nom = club_equipe ? club_equipe.nom : addTeamNom.trim()
+    const adversaire = addTeamAdversaireId ? adversaires.find(a => a.id === Number(addTeamAdversaireId)) : null
+    const nom = adversaire ? adversaire.nom : addTeamNom.trim()
     if (!nom || !selectedTeamId) return
     setSavingCh(true)
     try {
       await api.post('/championnat/equipes', {
         equipe_ref_id: selectedTeamId,
-        equipe_id: club_equipe ? club_equipe.id : null,
+        equipe_id: null,
         nom, saison: selectedSaison, championnat: activeChamp,
       })
-      setAddTeamNom(''); setAddTeamClubEquipeId(''); setShowAddTeam(false)
+      setAddTeamNom(''); setAddTeamAdversaireId(''); setShowAddTeam(false)
       await loadChampData()
     } catch { /* ignore */ } finally { setSavingCh(false) }
   }
@@ -616,7 +621,7 @@ export default function SaisonPage() {
                   savingCh={savingCh}
                   onSelectChamp={setActiveChamp}
                   onOpenNewChamp={() => { setNewChampName(''); setShowNewChamp(true) }}
-                  onAddTeam={() => { setAddTeamNom(''); setAddTeamClubEquipeId(''); setShowAddTeam(true) }}
+                  onAddTeam={() => { setAddTeamNom(''); setAddTeamAdversaireId(''); setShowAddTeam(true) }}
                   onAddResult={() => { setResultForm(BLANK_RESULT); setEditingMatch(null); setShowAddResult(true) }}
                   onEditResult={openEditResult}
                   onDeleteResult={handleDeleteMatch}
@@ -874,16 +879,16 @@ export default function SaisonPage() {
             <h3 className="text-headline-md mb-4">Ajouter une équipe</h3>
             <div className="space-y-4 mb-5">
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Équipe du club (optionnel)</label>
-                <select value={addTeamClubEquipeId}
-                  onChange={e => { setAddTeamClubEquipeId(e.target.value); if (e.target.value) setAddTeamNom('') }}
+                <label className="text-label-md text-on-surface-variant">Adversaire existant (optionnel)</label>
+                <select value={addTeamAdversaireId}
+                  onChange={e => { setAddTeamAdversaireId(e.target.value); if (e.target.value) setAddTeamNom('') }}
                   className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all bg-white">
-                  <option value="">— Équipe externe (autre club) —</option>
-                  {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.nom}{eq.categorie?.nom ? ` (${eq.categorie.nom})` : ''}</option>)}
+                  <option value="">— Nouvel adversaire (texte libre) —</option>
+                  {adversaires.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
                 </select>
-                <p className="text-body-sm text-on-surface-variant">Choisissez une équipe déjà existante du club (ex: une autre équipe de la même catégorie), ou laissez sur "externe" pour créer un adversaire libre.</p>
+                <p className="text-body-sm text-on-surface-variant">Choisissez un adversaire déjà créé dans la page "Adversaires", ou laissez sur "Nouvel adversaire" pour saisir un nom libre.</p>
               </div>
-              {!addTeamClubEquipeId && (
+              {!addTeamAdversaireId && (
                 <div className="space-y-1.5">
                   <label className="text-label-md text-on-surface-variant">Nom de l'équipe *</label>
                   <input autoFocus value={addTeamNom} onChange={e => setAddTeamNom(e.target.value)}
@@ -895,7 +900,7 @@ export default function SaisonPage() {
             </div>
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowAddTeam(false)} className="px-4 py-2.5 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low transition-colors">Annuler</button>
-              <button onClick={handleAddTeam} disabled={(!addTeamClubEquipeId && !addTeamNom.trim()) || savingCh}
+              <button onClick={handleAddTeam} disabled={(!addTeamAdversaireId && !addTeamNom.trim()) || savingCh}
                 className="px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary/90 disabled:opacity-40 transition-colors">
                 {savingCh ? 'Ajout…' : 'Ajouter'}
               </button>
