@@ -1,0 +1,34 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .htaccess — MonClubHouse (monclubhouse.fr, hébergement Hostinger / cPanel)
+#
+# Copie de référence, versionnée pour documentation et suivi des changements.
+# Les chemins ci-dessous sont spécifiques au compte Hostinger (u555371370) et
+# à ce fichier ne remplace PAS un déploiement automatique : toute modification
+# doit être recopiée manuellement dans public_html/.htaccess sur le serveur.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Application Node.js (Phusion Passenger / LiteSpeed Node App Manager) ──────
+PassengerAppRoot /home/u555371370/domains/monclubhouse.fr/nodejs
+PassengerAppType node
+PassengerNodejs /opt/alt/alt-nodejs22/root/bin/node
+PassengerStartupFile back/server.js
+PassengerBaseURI /
+PassengerRestartDir /home/u555371370/domains/monclubhouse.fr/nodejs/tmp
+
+# Préchargé avant le démarrage de l'app (--require) — attention : si ce fichier
+# est absent/corrompu, Node refuse de démarrer (échec de boot, pas une erreur
+# applicative). Fichier non versionné (vit uniquement sur le serveur).
+SetEnv NODE_OPTIONS "--require /home/u555371370/domains/monclubhouse.fr/public_html/.builds/config/preload-timestamp.js"
+
+# Variable spécifique LiteSpeed (LSNode) — à vérifier : attend normalement un
+# chemin de fichier de log, pas la chaîne littérale "console.log".
+SetEnv LSNODE_CONSOLE_LOG console.log
+
+# ── Sécurité ───────────────────────────────────────────────────────────────
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Bloque l'accès HTTP direct au dossier de build (contient le fichier préchargé
+  # ci-dessus, publiquement accessible sinon puisque servi sous public_html/).
+  RewriteRule ^\.builds - [F,L]
+</IfModule>

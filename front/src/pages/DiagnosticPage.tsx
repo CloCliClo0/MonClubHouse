@@ -85,9 +85,12 @@ const ENDPOINTS: Omit<EndpointResult, 'status' | 'ok' | 'ms' | 'msg' | 'body'>[]
 ]
 
 // ── Tests CRUD complets (GET + POST + UPDATE + DELETE) par ressource ────────
-// Limité aux ressources offrant un vrai cycle CRUD (création ET suppression définitive) —
-// équipes/matchs/clubs n'ont qu'une désactivation (pas de DELETE), et sont exclus pour ne pas
-// fausser le résultat "DELETE" avec une sémantique différente (soft-delete).
+// Couvre chaque contrôleur/ressource offrant un cycle create→read→update→delete sûr et jetable.
+// Exclus volontairement : Match/ChEquipe (nécessiteraient une vraie équipe existante comme FK —
+// même transitoire, un faux match/adversaire apparaîtrait sur le calendrier/classement d'une
+// vraie équipe) ; Licencié (pas de route DELETE, et nécessite un vrai user_id existant) ;
+// Club (entité trop lourde/sensible pour une création jetable automatique) ; Auth/Chat/Vote/
+// Arbitrage/Abonnement (pas de cycle CRUD complet ou intégration Stripe réelle).
 type CrudResource = {
   key: string; label: string
   needsClub?: boolean
@@ -97,7 +100,9 @@ type CrudResource = {
   updateMethod: 'put' | 'patch'
   updatePath: (id: number) => string
   buildUpdate: () => Record<string, any>
+  deleteMethod?: 'delete' | 'patch'
   deletePath: (id: number) => string
+  softDelete?: boolean
 }
 
 const CRUD_RESOURCES: CrudResource[] = [
@@ -130,6 +135,50 @@ const CRUD_RESOURCES: CrudResource[] = [
     updatePath: (id) => `/promo-codes/${id}`,
     buildUpdate: () => ({ description: 'Test diagnostic' }),
     deletePath: (id) => `/promo-codes/${id}`,
+  },
+  {
+    key: 'code_invitation', label: "Code d'invitation", needsClub: true,
+    createPath: '/codes',
+    buildCreate: (clubId) => ({ role: 'dirigeant', club_id: clubId, label: `__diag_test_${Date.now()}__`, max_uses: 1 }),
+    getPath: '/codes',
+    updateMethod: 'patch',
+    updatePath: (id) => `/codes/${id}/disable`,
+    buildUpdate: () => ({}),
+    deletePath: (id) => `/codes/${id}`,
+  },
+  {
+    key: 'equipe', label: 'Équipe', needsClub: true,
+    createPath: '/equipes',
+    buildCreate: (clubId) => ({ nom: `__diag_test_${Date.now()}__`, club_id: clubId }),
+    getPath: '/equipes',
+    updateMethod: 'put',
+    updatePath: (id) => `/equipes/${id}`,
+    buildUpdate: () => ({ nom: `__diag_test_updated__` }),
+    deleteMethod: 'patch',
+    deletePath: (id) => `/equipes/${id}/disable`,
+    softDelete: true,
+  },
+  {
+    key: 'terrain', label: 'Terrain', needsClub: true,
+    createPath: '/clubs/terrains',
+    buildCreate: (clubId) => ({ nom: `__diag_test_${Date.now()}__`, club_id: clubId }),
+    getPath: '/clubs/terrains',
+    updateMethod: 'put',
+    updatePath: (id) => `/clubs/terrains/${id}`,
+    buildUpdate: () => ({ nom: `__diag_test_updated__` }),
+    deleteMethod: 'patch',
+    deletePath: (id) => `/clubs/terrains/${id}/disable`,
+    softDelete: true,
+  },
+  {
+    key: 'ticket_support', label: 'Ticket support',
+    createPath: '/support',
+    buildCreate: () => ({ sujet: `__diag_test_${Date.now()}__`, message: 'Test diagnostic CRUD automatique.' }),
+    getPath: '/support',
+    updateMethod: 'patch',
+    updatePath: (id) => `/support/${id}`,
+    buildUpdate: () => ({ statut: 'resolu' }),
+    deletePath: (id) => `/support/${id}`,
   },
 ]
 
@@ -320,7 +369,7 @@ export default function DiagnosticPage() {
         state.update = await runCrudStep(() => api[res.updateMethod](res.updatePath(id), res.buildUpdate()))
         setCrudResults(prev => ({ ...prev, [res.key]: { ...state } }))
 
-        state.delete = await runCrudStep(() => api.delete(res.deletePath(id)))
+        state.delete = await runCrudStep(() => res.deleteMethod === 'patch' ? api.patch(res.deletePath(id), {}) : api.delete(res.deletePath(id)))
         setCrudResults(prev => ({ ...prev, [res.key]: { ...state } }))
       } else {
         const skipped: CrudStepResult = { ok: false, ms: null, status: null, error: 'Ignoré (POST a échoué)' }
@@ -944,7 +993,7 @@ export default function DiagnosticPage() {
                       <div className="flex flex-wrap gap-3">
                         {(['get', 'post', 'update', 'delete'] as const).map(step => {
                           const s = state[step]
-                          const label = step.toUpperCase()
+                          const label = step === 'delete' && res.softDelete ? 'DELETE (soft)' : step.toUpperCase()
                           if (!s) return (
                             <div key={step} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low">
                               <span className="inline-block w-3 h-3 rounded-full border-2 border-outline-variant border-t-transparent animate-spin" />
