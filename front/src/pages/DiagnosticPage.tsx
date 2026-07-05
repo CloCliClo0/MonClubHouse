@@ -138,6 +138,8 @@ export default function DiagnosticPage() {
 
   type DiagUser = { id: number; nom: string; prenom: string; email: string }
   type TestFnResult = { ok: boolean; ms: number | null; to: string; error: string | null } | null
+  type CrudStep = { ok: boolean; ms: number | null; error: string | null }
+  type CrudTestResult = { steps: { create: CrudStep; update: CrudStep; delete: CrudStep } } | null
   type DriveResult  = { ok: boolean; ms: number | null; fileId?: string; url?: string; name?: string; error: string | null } | null
   const [diagUsers, setDiagUsers]         = useState<DiagUser[]>([])
   const [testUserId, setTestUserId]       = useState<string>('')
@@ -153,6 +155,8 @@ export default function DiagnosticPage() {
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [convocEmailResult, setConvocEmailResult] = useState<TestFnResult>(null)
   const [convocEmailLoading, setConvocEmailLoading] = useState(false)
+  const [crudResult, setCrudResult] = useState<CrudTestResult>(null)
+  const [crudLoading, setCrudLoading] = useState(false)
 
   useEffect(() => {
     api.get('/admin/users').then(r => {
@@ -218,6 +222,17 @@ export default function DiagnosticPage() {
     } catch (err: any) {
       setConvocEmailResult({ ok: false, ms: null, to: '', error: err?.response?.data?.message || err?.message || 'Erreur réseau' })
     } finally { setConvocEmailLoading(false) }
+  }
+
+  const runTestCrud = async () => {
+    setCrudLoading(true); setCrudResult(null)
+    try {
+      const r = await api.post('/diagnostic/test-crud', {})
+      setCrudResult(r.data.data)
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Erreur réseau'
+      setCrudResult({ steps: { create: { ok: false, ms: null, error: msg }, update: { ok: false, ms: null, error: null }, delete: { ok: false, ms: null, error: null } } })
+    } finally { setCrudLoading(false) }
   }
 
   const runTestVerifyEmail = async () => {
@@ -801,6 +816,47 @@ export default function DiagnosticPage() {
               </div>
             ) : (
               <p className="px-4 py-3 text-body-sm text-on-surface-variant">Envoie un email de convocation test (match fictif) à l'utilisateur sélectionné depuis <strong>convocations@monclubhouse.fr</strong>.</p>
+            )}
+          </div>
+
+          {/* ── CRUD (POST/UPDATE/DELETE) ── */}
+          <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">sync_alt</span>
+                <span className="text-label-lg font-semibold">Test écriture DB (POST / UPDATE / DELETE)</span>
+              </div>
+              <button
+                onClick={runTestCrud}
+                disabled={crudLoading}
+                className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
+              >
+                {crudLoading
+                  ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  : <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+                }
+                {crudLoading ? 'Test en cours…' : 'Lancer le test'}
+              </button>
+            </div>
+            {crudResult ? (
+              <div className="px-4 py-3 flex flex-wrap gap-4">
+                {(['create', 'update', 'delete'] as const).map(step => {
+                  const s = crudResult.steps[step]
+                  const label = step === 'create' ? 'POST' : step === 'update' ? 'UPDATE' : 'DELETE'
+                  return (
+                    <div key={step} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${s.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                      <span className={`material-symbols-outlined text-[18px] ${s.ok ? 'text-green-500' : 'text-red-500'}`}>
+                        {s.ok ? 'check_circle' : 'error'}
+                      </span>
+                      <span className={`text-label-md font-bold ${s.ok ? 'text-green-700' : 'text-red-700'}`}>{label}</span>
+                      {s.ms !== null && <span className="text-body-sm text-on-surface-variant">{s.ms}ms</span>}
+                      {s.error && <span className="text-body-sm text-red-600 font-mono">{s.error}</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Crée, modifie puis supprime une catégorie jetable (<span className="font-mono">__diagnostic_test_*</span>) pour vérifier l'écriture DB de bout en bout. Aucune donnée réelle n'est affectée.</p>
             )}
           </div>
 

@@ -92,8 +92,12 @@ const getById = async (req, res) => {
 
 const TYPE_MAP = { plateau: 'autre', reunion: 'autre' };
 
-const ALLOWED_CREATE_FIELDS = ['equipe_id', 'date', 'heure', 'heure_rdv', 'type', 'adversaire', 'adversaire_id', 'lieu', 'terrain_id', 'domicile_exterieur', 'description', 'championnat', 'journee', 'besoin_arbitre'];
-const ALLOWED_UPDATE_FIELDS = ['date', 'heure', 'heure_rdv', 'type', 'adversaire', 'adversaire_id', 'lieu', 'terrain_id', 'domicile_exterieur', 'statut', 'description', 'championnat', 'journee', 'besoin_arbitre', 'rapport'];
+// Types pour lesquels une saison est obligatoire (compétitions suivies dans le temps) —
+// l'amical est volontairement exclu ("hors championnat"), comme l'entraînement/plateau/réunion/autre.
+const SEASON_REQUIRED_TYPES = ['match', 'coupe', 'tournoi'];
+
+const ALLOWED_CREATE_FIELDS = ['equipe_id', 'date', 'heure', 'heure_rdv', 'type', 'adversaire', 'adversaire_id', 'lieu', 'terrain_id', 'domicile_exterieur', 'description', 'championnat', 'saison', 'journee', 'besoin_arbitre'];
+const ALLOWED_UPDATE_FIELDS = ['date', 'heure', 'heure_rdv', 'type', 'adversaire', 'adversaire_id', 'lieu', 'terrain_id', 'domicile_exterieur', 'statut', 'description', 'championnat', 'saison', 'journee', 'besoin_arbitre', 'rapport'];
 
 const create = async (req, res) => {
   const errors = validationResult(req);
@@ -101,11 +105,19 @@ const create = async (req, res) => {
 
   try {
     const rawType = req.body.type;
+    const resolvedType = TYPE_MAP[rawType] ?? rawType;
+    if (SEASON_REQUIRED_TYPES.includes(resolvedType) && !req.body.saison) {
+      return res.status(400).json({ success: false, message: 'La saison est requise pour ce type d\'événement.' });
+    }
+    if (resolvedType === 'match' && !req.body.championnat) {
+      return res.status(400).json({ success: false, message: 'Le championnat est requis pour un match de championnat.' });
+    }
+
     const payload = {};
     for (const key of ALLOWED_CREATE_FIELDS) {
       if (req.body[key] !== undefined) payload[key] = req.body[key];
     }
-    payload.type = TYPE_MAP[rawType] ?? rawType;
+    payload.type = resolvedType;
     payload.besoin_arbitre = payload.besoin_arbitre ?? false;
     // Seul le superadmin peut spécifier un club_id différent du sien
     payload.club_id = req.user.role === 'superadmin'

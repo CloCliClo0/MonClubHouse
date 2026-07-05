@@ -27,6 +27,7 @@ const Match = sequelize.define('Match', {
     defaultValue: 'programme'
   },
   championnat: { type: DataTypes.STRING(100), allowNull: true },
+  saison:      { type: DataTypes.STRING(20), allowNull: true },
   journee:     { type: DataTypes.INTEGER, allowNull: true },
   description: { type: DataTypes.TEXT, allowNull: true },
   rapport:     { type: DataTypes.TEXT, allowNull: true },

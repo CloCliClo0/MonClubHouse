@@ -59,9 +59,15 @@ const remove = async (req, res) => {
 // POST /api/categories/:id/assign — affecte un utilisateur à TOUTES les équipes actives de la catégorie
 const assignMember = async (req, res) => {
   try {
-    const club_id = req.user.role === 'superadmin' ? req.body.club_id || req.user.club_id : req.user.club_id;
-    const cat = await Category.findOne({ where: { id: req.params.id, club_id } });
+    // Résout la catégorie par son id d'abord — son propre club_id fait foi, pas celui du requérant
+    // (un superadmin n'a pas de club_id propre ; se fier à req.body.club_id serait fragile si le
+    // frontend oublie de l'envoyer, comme ce fut le cas).
+    const cat = await Category.findByPk(req.params.id);
     if (!cat) return res.status(404).json({ success: false, message: 'Catégorie introuvable.' });
+    if (req.user.role !== 'superadmin' && cat.club_id !== req.user.club_id) {
+      return res.status(403).json({ success: false, message: 'Accès interdit à cette catégorie.' });
+    }
+    const club_id = cat.club_id;
 
     const { user_id, role } = req.body;
     if (!user_id || !ASSIGNABLE_ROLES.includes(role)) {

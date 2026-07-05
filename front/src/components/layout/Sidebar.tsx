@@ -67,8 +67,8 @@ export default function Sidebar({ open, onClose }: Props) {
       { label: 'Arbitrage',     items: [NAV.ARBITRAGE] },
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
-    joueur:   [{ label: 'Mon activité', items: [NAV.CALENDRIER, NAV.PRESENCES, NAV.ARBITRAGE, NAV.CONVOCS, NAV.STATS, NAV.MESSAGES] }],
-    parent:   [{ label: 'Mon enfant',   items: [NAV.CALENDRIER, NAV.PRESENCES, NAV.CONVOCS, NAV.STATS, NAV.MESSAGES] }],
+    joueur:   [{ label: 'Mon activité', items: [NAV.CALENDRIER, NAV.PRESENCES, NAV.ARBITRAGE, NAV.CONVOCS, NAV.SAISON, NAV.STATS, NAV.MESSAGES] }],
+    parent:   [{ label: 'Mon enfant',   items: [NAV.CALENDRIER, NAV.PRESENCES, NAV.CONVOCS, NAV.SAISON, NAV.STATS, NAV.MESSAGES] }],
     visiteur: [{ label: 'Public',       items: [NAV.RESULTATS] }],
   }
 

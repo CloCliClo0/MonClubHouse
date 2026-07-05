@@ -8,6 +8,16 @@ type Step = 1 | 2 | 3 | 4
 type Equipe  = { id: number; nom: string; categorie?: { id: number; nom: string } | null; coachs_extra?: { id: number }[] }
 type Terrain = { id: number; nom: string; type: string }
 
+// Types pour lesquels une saison est obligatoire (compétitions suivies dans le temps) —
+// l'amical est volontairement exclu ("hors championnat"), comme entraînement/plateau/réunion/autre.
+const SEASON_REQUIRED_TYPES: EventType[] = ['match', 'coupe', 'tournoi']
+const NEW_CHAMP_SENTINEL = '__nouveau__'
+
+function currentSeason(): string {
+  const now = new Date(); const y = now.getFullYear()
+  return now.getMonth() + 1 >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`
+}
+
 const EVENT_TYPES: { key: EventType; label: string; icon: string; color: string; desc: string }[] = [
   { key: 'match',        label: 'Match officiel', icon: 'sports_soccer',  color: 'border-green-500 bg-green-50',    desc: 'Match de championnat officiel' },
   { key: 'amical',       label: 'Match amical',   icon: 'handshake',      color: 'border-teal-500 bg-teal-50',      desc: 'Rencontre amicale hors championnat' },
@@ -32,8 +42,14 @@ export default function CreateEventPage() {
   const [heureRdv, setHeureRdv]     = useState('')
   const [terrainId, setTerrainId]   = useState('')
   const [adversaire, setAdversaire] = useState('')
-  const [competition, setCompetition] = useState('')
   const [domicile, setDomicile]     = useState(true)
+  // Saison (obligatoire pour match/coupe/tournoi) + championnat (obligatoire pour "match")
+  const [saison, setSaison]                 = useState(currentSeason())
+  const [saisonsExistantes, setSaisonsExistantes] = useState<string[]>([])
+  const [championnats, setChampionnats]     = useState<string[]>([])
+  const [champSelect, setChampSelect]       = useState('')
+  const [champNew, setChampNew]             = useState('')
+  const champName = champSelect === NEW_CHAMP_SENTINEL ? champNew : champSelect
   const [instructions, setInstructions] = useState('')
   const [sendEmail, setSendEmail]   = useState(true)
   const [submitted, setSubmitted]   = useState(false)
@@ -79,10 +95,38 @@ export default function CreateEventPage() {
     api.get('/adversaires').then(r => setAdversaires(r.data.data || [])).catch(() => {})
   }, [])
 
+  // Saisons déjà utilisées pour l'équipe sélectionnée (suggestions)
+  useEffect(() => {
+    if (!equipeId) { setSaisonsExistantes([]); return }
+    api.get('/championnat/saisons', { params: { equipe_ref_id: equipeId } })
+      .then(r => setSaisonsExistantes(r.data.data || []))
+      .catch(() => setSaisonsExistantes([]))
+  }, [equipeId])
+
+  // Championnats existants pour cette équipe + saison (uniquement pertinent pour un match de championnat)
+  useEffect(() => {
+    if (!equipeId || !saison.trim() || type !== 'match') { setChampionnats([]); return }
+    api.get('/championnat/list', { params: { equipe_ref_id: equipeId, saison: saison.trim() } })
+      .then(r => {
+        const list: string[] = r.data.data || []
+        setChampionnats(list)
+        setChampSelect(prev => {
+          if (prev && prev !== NEW_CHAMP_SENTINEL && list.includes(prev)) return prev
+          return list.length > 0 ? list[0] : NEW_CHAMP_SENTINEL
+        })
+      })
+      .catch(() => { setChampionnats([]); setChampSelect(NEW_CHAMP_SENTINEL) })
+  }, [equipeId, saison, type])
+
   const canNext = () => {
     if (step === 1) return !!type
     if (step === 2) return !!equipeId && !!date && !!heure
-    if (step === 3) return !(type === 'match' || type === 'coupe') || (!!adversaire && adversaire !== '__autre__')
+    if (step === 3) {
+      if ((type === 'match' || type === 'coupe') && (!adversaire || adversaire === '__autre__')) return false
+      if (type && SEASON_REQUIRED_TYPES.includes(type) && !saison.trim()) return false
+      if (type === 'match' && !champName.trim()) return false
+      return true
+    }
     return true
   }
 
@@ -109,7 +153,8 @@ export default function CreateEventPage() {
           heure_rdv:          heureRdv && date ? `${date}T${heureRdv}:00` : null,
           domicile_exterieur: domicile ? 'domicile' : 'exterieur',
           adversaire:         adversaire || null,
-          championnat:        competition || null,
+          championnat:        type === 'match' ? champName.trim() : null,
+          saison:             type && SEASON_REQUIRED_TYPES.includes(type) ? saison.trim() : null,
           statut:             'programme',
           description:        instructions || null,
           besoin_arbitre:     besoinArbitre || false,
@@ -383,13 +428,42 @@ export default function CreateEventPage() {
                   )}
                 </div>
 
+                {type && SEASON_REQUIRED_TYPES.includes(type) && (
+                  <div className="space-y-1.5">
+                    <label className="text-label-md text-on-surface-variant">Saison *</label>
+                    <input value={saison} onChange={e => setSaison(e.target.value)} list="saisons-datalist-event"
+                      placeholder={currentSeason()}
+                      className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                    <datalist id="saisons-datalist-event">{saisonsExistantes.map(s => <option key={s} value={s} />)}</datalist>
+                  </div>
+                )}
+
                 {type === 'match' && (
                   <>
                     <div className="space-y-1.5">
-                      <label className="text-label-md text-on-surface-variant">Compétition</label>
-                      <input type="text" value={competition} onChange={e => setCompetition(e.target.value)}
-                        placeholder="Ex : Division 3, Coupe Régionale…"
-                        className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                      <label className="text-label-md text-on-surface-variant">Championnat *</label>
+                      {championnats.length > 0 ? (
+                        <>
+                          <div className="relative">
+                            <select value={champSelect} onChange={e => setChampSelect(e.target.value)}
+                              className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10 bg-white">
+                              {championnats.map(c => <option key={c} value={c}>{c}</option>)}
+                              <option value={NEW_CHAMP_SENTINEL}>+ Créer un nouveau championnat</option>
+                            </select>
+                            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+                          </div>
+                          {champSelect === NEW_CHAMP_SENTINEL && (
+                            <input value={champNew} onChange={e => setChampNew(e.target.value)} autoFocus
+                              placeholder="Nom du nouveau championnat"
+                              className="w-full px-4 py-3 border border-primary rounded-lg text-body-md focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all mt-2" />
+                          )}
+                        </>
+                      ) : (
+                        <input value={champNew} onChange={e => setChampNew(e.target.value)}
+                          placeholder="Ex : Régional 2, Division 3…"
+                          className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                      )}
+                      <p className="text-[11px] text-on-surface-variant/60">Rattaché à la saison {saison || currentSeason()} — plusieurs championnats sont possibles au sein d'une même saison (ex: phases en jeunes).</p>
                     </div>
                     <div className="space-y-2">
                       <label className="text-label-md text-on-surface-variant">Lieu de réception</label>
@@ -455,7 +529,8 @@ export default function CreateEventPage() {
                 { icon: 'schedule', label: 'Heure', val: heure || '—' },
                 { icon: 'location_on', label: 'Terrain', val: terrains.find(t => String(t.id) === terrainId)?.nom || 'Non précisé' },
                 (adversaire && adversaire !== '__autre__') ? { icon: 'sports_soccer', label: 'Adversaire', val: `vs ${adversaire}` } : null,
-                competition ? { icon: 'emoji_events', label: 'Compétition', val: competition } : null,
+                (type && SEASON_REQUIRED_TYPES.includes(type)) ? { icon: 'calendar_month', label: 'Saison', val: saison || '—' } : null,
+                (type === 'match' && champName) ? { icon: 'emoji_events', label: 'Championnat', val: champName } : null,
               ].filter(Boolean).map((item: any, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">

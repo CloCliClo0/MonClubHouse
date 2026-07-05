@@ -333,6 +333,10 @@ const applyStartupMigrations = async () => {
       await sequelize.query("ALTER TABLE matchs ADD COLUMN besoin_arbitre TINYINT(1) NOT NULL DEFAULT 0");
       console.log('[DB] Colonne matchs.besoin_arbitre ajoutée');
     }
+    if (!mCols.includes('saison')) {
+      await sequelize.query("ALTER TABLE matchs ADD COLUMN saison VARCHAR(20) NULL");
+      console.log('[DB] Colonne matchs.saison ajoutée');
+    }
   } catch (e) {
     console.warn('[DB] Migration startup échouée (matchs) :', e.message);
   }

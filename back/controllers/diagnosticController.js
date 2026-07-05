@@ -342,4 +342,53 @@ const testConvocEmail = async (req, res) => {
   }
 };
 
-module.exports = { getServerDiagnostic, testGemini, testStripe, testDrive, testDiag2fa, testDiagEmailVerify, testEmail, testNotification, testConvocEmail };
+// Cycle complet POST → UPDATE → DELETE sur une catégorie jetable, pour vérifier
+// que l'écriture DB fonctionne de bout en bout (pas seulement la lecture, testée par getServerDiagnostic).
+// Nettoie systématiquement (finally) pour ne jamais laisser de résidu, même si une étape échoue.
+const testCrud = async (req, res) => {
+  const steps = { create: { ok: false, ms: null, error: null }, update: { ok: false, ms: null, error: null }, delete: { ok: false, ms: null, error: null } };
+  let record = null;
+
+  try {
+    let club_id = req.body.club_id || req.user.club_id;
+    if (!club_id) {
+      const club = await Club.findOne({ order: [['id', 'ASC']] });
+      if (!club) return res.status(400).json({ success: false, message: 'Aucun club disponible pour le test CRUD' });
+      club_id = club.id;
+    }
+
+    const testName = `__diagnostic_test_${Date.now()}__`;
+
+    try {
+      const t0 = Date.now();
+      record = await Category.create({ nom: testName, club_id });
+      steps.create = { ok: true, ms: Date.now() - t0, error: null };
+    } catch (err) {
+      steps.create = { ok: false, ms: null, error: err.message };
+    }
+
+    if (record) {
+      try {
+        const t0 = Date.now();
+        await record.update({ nom: `${testName}_updated` });
+        steps.update = { ok: true, ms: Date.now() - t0, error: null };
+      } catch (err) {
+        steps.update = { ok: false, ms: null, error: err.message };
+      }
+
+      try {
+        const t0 = Date.now();
+        await record.destroy();
+        steps.delete = { ok: true, ms: Date.now() - t0, error: null };
+      } catch (err) {
+        steps.delete = { ok: false, ms: null, error: err.message };
+      }
+    }
+
+    return res.json({ success: true, data: { steps } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getServerDiagnostic, testGemini, testStripe, testDrive, testDiag2fa, testDiagEmailVerify, testEmail, testNotification, testConvocEmail, testCrud };

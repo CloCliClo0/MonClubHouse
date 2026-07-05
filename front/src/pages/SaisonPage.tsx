@@ -56,6 +56,10 @@ const BLANK_FORM: MatchForm = {
 
 const BLANK_RESULT = { dom_id: '', ext_id: '', score_dom: '', score_ext: '', journee: '', date: '' }
 
+// Types pour lesquels une saison est obligatoire (compétitions suivies dans le temps) —
+// l'amical est volontairement exclu ("hors championnat"), miroir de matchController.js/CreateEventPage.tsx.
+const SEASON_REQUIRED_TYPES: TabKey[] = ['match', 'coupe', 'tournoi']
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getResultat(m: MatchItem) {
@@ -120,7 +124,7 @@ export default function SaisonPage() {
   const [newChampName, setNewChampName]   = useState('')
   const [showAddTeam, setShowAddTeam]     = useState(false)
   const [addTeamNom, setAddTeamNom]       = useState('')
-  const [addTeamIsOwn, setAddTeamIsOwn]   = useState(false)
+  const [addTeamClubEquipeId, setAddTeamClubEquipeId] = useState('')
   const [showAddResult, setShowAddResult] = useState(false)
   const [resultForm, setResultForm]       = useState(BLANK_RESULT)
   const [editingMatch, setEditingMatch]   = useState<ChMatchRow | null>(null)
@@ -240,8 +244,14 @@ export default function SaisonPage() {
 
   // ── Ajout match (onglets hors classement) ─────────────────────────────────
 
+  const formNeedsSaison = SEASON_REQUIRED_TYPES.includes(form.type)
+  const formNeedsChamp  = form.type === 'match'
+  const canSaveMatch = !!form.adversaire.trim() && !!form.date
+    && (!formNeedsSaison || !!selectedSaison)
+    && (!formNeedsChamp || !!form.championnat.trim())
+
   const handleSave = async () => {
-    if (!form.adversaire.trim() || !form.date || !selectedTeamId) return
+    if (!canSaveMatch || !selectedTeamId) return
     setSaving(true); setSaveError(null)
     try {
       await api.post('/matchs', {
@@ -249,7 +259,9 @@ export default function SaisonPage() {
         heure_rdv: form.heure_rdv && form.date ? `${form.date}T${form.heure_rdv}:00` : null, type: form.type,
         domicile_exterieur: form.domicile_exterieur,
         journee: form.journee ? Number(form.journee) : null,
-        championnat: form.championnat || null, statut: 'programme',
+        championnat: formNeedsChamp ? form.championnat.trim() : null,
+        saison: formNeedsSaison ? selectedSaison : null,
+        statut: 'programme',
       })
       setShowModal(false)
       const r = await api.get(`/matchs?equipe_id=${selectedTeamId}&type=${activeTab}`)
@@ -278,15 +290,17 @@ export default function SaisonPage() {
   }
 
   const handleAddTeam = async () => {
-    if (!addTeamNom.trim() || !selectedTeamId) return
+    const club_equipe = addTeamClubEquipeId ? equipes.find(e => e.id === Number(addTeamClubEquipeId)) : null
+    const nom = club_equipe ? club_equipe.nom : addTeamNom.trim()
+    if (!nom || !selectedTeamId) return
     setSavingCh(true)
     try {
       await api.post('/championnat/equipes', {
         equipe_ref_id: selectedTeamId,
-        equipe_id: addTeamIsOwn ? selectedTeamId : null,
-        nom: addTeamNom.trim(), saison: selectedSaison, championnat: activeChamp,
+        equipe_id: club_equipe ? club_equipe.id : null,
+        nom, saison: selectedSaison, championnat: activeChamp,
       })
-      setAddTeamNom(''); setAddTeamIsOwn(false); setShowAddTeam(false)
+      setAddTeamNom(''); setAddTeamClubEquipeId(''); setShowAddTeam(false)
       await loadChampData()
     } catch { /* ignore */ } finally { setSavingCh(false) }
   }
@@ -370,7 +384,7 @@ export default function SaisonPage() {
               </button>
             )}
             <button
-              onClick={() => { setForm({ ...BLANK_FORM, type: activeTab }); setSaveError(null); setShowModal(true) }}
+              onClick={() => { setForm({ ...BLANK_FORM, type: activeTab, championnat: activeTab === 'match' ? activeChamp : '' }); setSaveError(null); setShowModal(true) }}
               className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary/90 transition-colors shadow-sm"
             >
               <span className="material-symbols-outlined text-[20px]">add</span>
@@ -507,7 +521,7 @@ export default function SaisonPage() {
                       </p>
                       {canManage && (
                         <button
-                          onClick={() => { setForm({ ...BLANK_FORM, type: activeTab }); setSaveError(null); setShowModal(true) }}
+                          onClick={() => { setForm({ ...BLANK_FORM, type: activeTab, championnat: activeTab === 'match' ? activeChamp : '' }); setSaveError(null); setShowModal(true) }}
                           className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-label-md mx-auto hover:bg-primary/90 transition-colors"
                         >
                           <span className="material-symbols-outlined text-[18px]">add</span>
@@ -602,7 +616,7 @@ export default function SaisonPage() {
                   savingCh={savingCh}
                   onSelectChamp={setActiveChamp}
                   onOpenNewChamp={() => { setNewChampName(''); setShowNewChamp(true) }}
-                  onAddTeam={() => { setAddTeamNom(''); setAddTeamIsOwn(false); setShowAddTeam(true) }}
+                  onAddTeam={() => { setAddTeamNom(''); setAddTeamClubEquipeId(''); setShowAddTeam(true) }}
                   onAddResult={() => { setResultForm(BLANK_RESULT); setEditingMatch(null); setShowAddResult(true) }}
                   onEditResult={openEditResult}
                   onDeleteResult={handleDeleteMatch}
@@ -764,6 +778,12 @@ export default function SaisonPage() {
                   ))}
                 </div>
               </div>
+              {formNeedsSaison && (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-surface-container-low rounded-lg text-body-sm text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[16px]">calendar_month</span>
+                  Rattaché à la saison <strong className="text-on-surface">{selectedSaison}</strong>
+                </div>
+              )}
               {form.type === 'match' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -773,10 +793,11 @@ export default function SaisonPage() {
                       className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-label-md text-on-surface-variant">Division</label>
-                    <input type="text" value={form.championnat}
+                    <label className="text-label-md text-on-surface-variant">Championnat *</label>
+                    <input type="text" value={form.championnat} list="champs-modal-datalist"
                       onChange={e => setForm(f => ({ ...f, championnat: e.target.value }))} placeholder="Ex : Régional 2"
                       className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
+                    <datalist id="champs-modal-datalist">{champList.map(c => <option key={c} value={c} />)}</datalist>
                   </div>
                 </div>
               )}
@@ -787,7 +808,7 @@ export default function SaisonPage() {
                 className="px-4 py-2.5 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low transition-colors">
                 Annuler
               </button>
-              <button onClick={handleSave} disabled={saving || !form.adversaire.trim() || !form.date}
+              <button onClick={handleSave} disabled={saving || !canSaveMatch}
                 className="px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary/90 disabled:opacity-40 flex items-center gap-2 transition-colors">
                 {saving
                   ? <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
@@ -853,23 +874,28 @@ export default function SaisonPage() {
             <h3 className="text-headline-md mb-4">Ajouter une équipe</h3>
             <div className="space-y-4 mb-5">
               <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Nom de l'équipe *</label>
-                <input autoFocus value={addTeamNom} onChange={e => setAddTeamNom(e.target.value)}
-                  placeholder="Ex : FC Exemple"
-                  className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all"
-                />
+                <label className="text-label-md text-on-surface-variant">Équipe du club (optionnel)</label>
+                <select value={addTeamClubEquipeId}
+                  onChange={e => { setAddTeamClubEquipeId(e.target.value); if (e.target.value) setAddTeamNom('') }}
+                  className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all bg-white">
+                  <option value="">— Équipe externe (autre club) —</option>
+                  {equipes.map(eq => <option key={eq.id} value={eq.id}>{eq.nom}{eq.categorie?.nom ? ` (${eq.categorie.nom})` : ''}</option>)}
+                </select>
+                <p className="text-body-sm text-on-surface-variant">Choisissez une équipe déjà existante du club (ex: une autre équipe de la même catégorie), ou laissez sur "externe" pour créer un adversaire libre.</p>
               </div>
-              {canManage && (
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={addTeamIsOwn} onChange={e => setAddTeamIsOwn(e.target.checked)}
-                    className="w-4 h-4 accent-primary" />
-                  <span className="text-body-md text-on-surface">C'est notre propre équipe</span>
-                </label>
+              {!addTeamClubEquipeId && (
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Nom de l'équipe *</label>
+                  <input autoFocus value={addTeamNom} onChange={e => setAddTeamNom(e.target.value)}
+                    placeholder="Ex : FC Exemple"
+                    className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all"
+                  />
+                </div>
               )}
             </div>
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowAddTeam(false)} className="px-4 py-2.5 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low transition-colors">Annuler</button>
-              <button onClick={handleAddTeam} disabled={!addTeamNom.trim() || savingCh}
+              <button onClick={handleAddTeam} disabled={(!addTeamClubEquipeId && !addTeamNom.trim()) || savingCh}
                 className="px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary/90 disabled:opacity-40 transition-colors">
                 {savingCh ? 'Ajout…' : 'Ajouter'}
               </button>
