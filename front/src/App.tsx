@@ -39,6 +39,7 @@ const ResultsPage      = lazy(() => import('./pages/ResultsPage'))
 const MatchDetailPage  = lazy(() => import('./pages/MatchDetailPage'))
 const EventPage        = lazy(() => import('./pages/EventPage'))
 const ProfilePage      = lazy(() => import('./pages/ProfilePage'))
+const MesEnfantsPage   = lazy(() => import('./pages/MesEnfantsPage'))
 const AdminPage        = lazy(() => import('./pages/AdminPage'))
 const ClubPage         = lazy(() => import('./pages/ClubPage'))
 const CreateEventPage  = lazy(() => import('./pages/CreateEventPage'))
@@ -93,6 +94,7 @@ export default function App() {
               <Route path="/resultats/:matchId"     element={<MatchDetailPage />} />
               <Route path="/evenements/:id"         element={<EventPage />} />
               <Route path="/profil"                 element={<ProfilePage />} />
+              <Route path="/mes-enfants"            element={<MesEnfantsPage />} />
               <Route path="/admin"                  element={<AdminPage />} />
               <Route path="/mon-club"               element={<ClubPage />} />
               <Route path="/evenements/creer"       element={<CreateEventPage />} />

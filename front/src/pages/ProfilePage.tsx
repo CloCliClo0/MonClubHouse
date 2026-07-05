@@ -5,7 +5,7 @@ import BirthdateSelect from '../components/BirthdateSelect'
 import SubscriptionGate from '../components/SubscriptionGate'
 import api from '../services/api'
 
-type Tab = 'mon-profil' | 'securite' | 'notifications' | 'mes-enfants' | 'abonnement'
+type Tab = 'mon-profil' | 'securite' | 'notifications' | 'abonnement'
 
 type SubStatus = {
   enabled: boolean
@@ -14,7 +14,6 @@ type SubStatus = {
   club_subscription: { plan: string; current_period_end: string | null } | null
   user_subscription: { plan: string; current_period_end: string | null } | null
 }
-type Child = { id: number; nom: string; prenom: string; avatar?: string }
 type UserData = {
   id: number; nom: string; prenom: string; email: string
   telephone: string | null; date_naissance: string | null
@@ -85,13 +84,6 @@ export default function ProfilePage() {
   const [notifs, setNotifs]     = useState<Notif[]>([])
   const [notifsLoad, setNotifsLoad] = useState(false)
 
-  // Parent-enfants
-  const [children, setChildren]     = useState<Child[]>([])
-  const [allPlayers, setAllPlayers] = useState<Child[]>([])
-  const [selectedChild, setSelectedChild] = useState<number | null>(null)
-  const [linking, setLinking] = useState(false)
-  const [linkMsg, setLinkMsg] = useState('')
-
   // Feedback global
   const [success, setSuccess] = useState('')
   const [error, setError]     = useState('')
@@ -132,10 +124,6 @@ export default function ProfilePage() {
         })
         .catch(() => {})
         .finally(() => setNotifsLoad(false))
-    }
-    if (tab === 'mes-enfants' && role === 'parent') {
-      api.get('/codes/my-children').then(r => setChildren(r.data.data || [])).catch(() => {})
-      api.get('/codes/club-players').then(r => setAllPlayers(r.data.data || [])).catch(() => {})
     }
   }, [tab])
 
@@ -239,19 +227,6 @@ export default function ProfilePage() {
     } finally { setTwoFaDisabling(false) }
   }
 
-  const linkChild = async () => {
-    if (!selectedChild) return
-    setLinking(true); setLinkMsg('')
-    try {
-      const res = await api.post('/codes/link-child', { child_user_id: selectedChild })
-      setLinkMsg(res.data.message)
-      api.get('/codes/my-children').then(r => setChildren(r.data.data || [])).catch(() => {})
-      setSelectedChild(null)
-    } catch (e: any) {
-      setLinkMsg(e.response?.data?.message || 'Erreur')
-    } finally { setLinking(false) }
-  }
-
   const markAllRead = async () => {
     try {
       await api.patch('/profil/notifications/toutes-lues')
@@ -261,7 +236,6 @@ export default function ProfilePage() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'mon-profil', label: 'Mon Profil' },
-    ...(role === 'parent' ? [{ key: 'mes-enfants' as Tab, label: 'Mes enfants' }] : []),
     { key: 'securite', label: 'Sécurité' },
     { key: 'notifications', label: 'Notifications' },
     { key: 'abonnement', label: 'Abonnement' },
@@ -365,28 +339,33 @@ export default function ProfilePage() {
                       <BirthdateSelect value={dateNaiss} onChange={setDate}
                         className="w-full px-3 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-label-md text-on-surface-variant">Poste</label>
-                        <input value={poste} onChange={e => setPoste(e.target.value)} type="text" placeholder="Défenseur, Gardien…"
-                          className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-label-md text-on-surface-variant">Pied fort</label>
-                        <select value={piedFort} onChange={e => setPiedFort(e.target.value)}
-                          className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary transition-all text-body-md">
-                          <option value="">Non précisé</option>
-                          <option value="droit">Droit</option>
-                          <option value="gauche">Gauche</option>
-                          <option value="ambidextre">Ambidextre</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-label-md text-on-surface-variant">Taille (cm)</label>
-                      <input value={taille} onChange={e => setTaille(e.target.value)} type="number" min="100" max="230" placeholder="Ex : 178"
-                        className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
-                    </div>
+                    {/* Poste / pied fort / taille — uniquement pertinent pour un joueur */}
+                    {role === 'joueur' && (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-label-md text-on-surface-variant">Poste</label>
+                            <input value={poste} onChange={e => setPoste(e.target.value)} type="text" placeholder="Défenseur, Gardien…"
+                              className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-label-md text-on-surface-variant">Pied fort</label>
+                            <select value={piedFort} onChange={e => setPiedFort(e.target.value)}
+                              className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary transition-all text-body-md">
+                              <option value="">Non précisé</option>
+                              <option value="droit">Droit</option>
+                              <option value="gauche">Gauche</option>
+                              <option value="ambidextre">Ambidextre</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-label-md text-on-surface-variant">Taille (cm)</label>
+                          <input value={taille} onChange={e => setTaille(e.target.value)} type="number" min="100" max="230" placeholder="Ex : 178"
+                            className="w-full px-4 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
+                        </div>
+                      </>
+                    )}
                     <div className="pt-4 border-t border-[#e8e8f0] mt-2">
                       <h6 className="text-label-lg text-on-surface mb-3">Préférences de contact</h6>
                       <div className="space-y-2">
@@ -421,68 +400,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* ── Mes enfants (parents) ────────────────────────────────────────── */}
-      {tab === 'mes-enfants' && (
-        <div className="space-y-6 max-w-2xl">
-          <section className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#e8e8f0]">
-              <h5 className="text-headline-md">Mes enfants rattachés</h5>
-              <p className="text-body-sm text-on-surface-variant">Vous recevez leurs convocations et suivez leurs matchs.</p>
-            </div>
-            {children.length === 0 ? (
-              <div className="py-10 text-center text-on-surface-variant">
-                <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">child_care</span>
-                <p className="text-body-md">Aucun enfant rattaché pour le moment.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-[#e8e8f0]">
-                {children.map(c => (
-                  <div key={c.id} className="px-6 py-3 flex items-center gap-3">
-                    {c.avatar
-                      ? <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" alt="" />
-                      : <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center font-bold text-white text-sm">{c.prenom?.[0]}{c.nom?.[0]}</div>
-                    }
-                    <p className="text-label-lg text-on-surface">{c.prenom} {c.nom}</p>
-                    <span className="ml-auto px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-label-md">Joueur</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="bg-white border border-[#e8e8f0] rounded-xl p-6">
-            <h5 className="text-headline-md mb-1">Rattacher un enfant</h5>
-            <p className="text-body-sm text-on-surface-variant mb-4">Sélectionnez le joueur inscrit dans votre club.</p>
-            {linkMsg && (
-              <div className={`mb-4 px-4 py-3 rounded-lg text-body-sm flex items-center gap-2 ${linkMsg.toLowerCase().includes('erreur') ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'}`}>
-                <span className="material-symbols-outlined text-[16px]">{linkMsg.toLowerCase().includes('erreur') ? 'error' : 'check_circle'}</span>
-                {linkMsg}
-              </div>
-            )}
-            <div className="space-y-2 max-h-56 overflow-y-auto mb-4">
-              {allPlayers.filter(p => !children.find(c => c.id === p.id)).map(p => (
-                <button key={p.id} onClick={() => setSelectedChild(p.id)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
-                    selectedChild === p.id ? 'border-primary bg-primary/5' : 'border-[#e8e8f0] hover:border-primary/40'
-                  }`}>
-                  {p.avatar
-                    ? <img src={p.avatar} className="w-8 h-8 rounded-full object-cover" alt="" />
-                    : <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant text-xs font-bold">{p.prenom?.[0]}{p.nom?.[0]}</div>
-                  }
-                  <span className="text-label-lg text-on-surface">{p.prenom} {p.nom}</span>
-                  {selectedChild === p.id && <span className="ml-auto material-symbols-outlined text-primary text-[20px]">check_circle</span>}
-                </button>
-              ))}
-            </div>
-            <button onClick={linkChild} disabled={!selectedChild || linking}
-              className="px-6 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:brightness-110 disabled:opacity-50 flex items-center gap-2 transition-all">
-              {linking && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
-              <span className="material-symbols-outlined text-[18px]">link</span>
-              Rattacher cet enfant
-            </button>
-          </section>
-        </div>
-      )}
 
       {/* ── Sécurité ────────────────────────────────────────────────────── */}
       {tab === 'securite' && (

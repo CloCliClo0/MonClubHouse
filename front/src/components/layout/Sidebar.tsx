@@ -35,6 +35,7 @@ export default function Sidebar({ open, onClose }: Props) {
     ABONNEMENTS: { path: '/abonnements-admin', icon: 'workspace_premium', label: 'Abonnements'      },
     SCRAPER:     { path: '/scraper',      icon: 'code_blocks',          label: 'Import FFF'        },
     ARBITRAGE:   { path: '/arbitrage',   icon: 'sports_handball',       label: 'Arbitrage'         },
+    ENFANTS:     { path: '/mes-enfants', icon: 'family_restroom',       label: 'Mes enfants'       },
   }
 
   const roleLabel = t.roles[role as keyof typeof t.roles] ?? role
@@ -68,7 +69,7 @@ export default function Sidebar({ open, onClose }: Props) {
       { label: 'Communication', items: [NAV.MESSAGES] },
     ],
     joueur:   [{ label: 'Mon activité', items: [NAV.CALENDRIER, NAV.PRESENCES, NAV.ARBITRAGE, NAV.CONVOCS, NAV.SAISON, NAV.STATS, NAV.MESSAGES] }],
-    parent:   [{ label: 'Mon enfant',   items: [NAV.CALENDRIER, NAV.PRESENCES, NAV.CONVOCS, NAV.SAISON, NAV.STATS, NAV.MESSAGES] }],
+    parent:   [{ label: 'Mes enfants',  items: [NAV.CALENDRIER, NAV.PRESENCES, NAV.CONVOCS, NAV.SAISON, NAV.STATS, NAV.MESSAGES, NAV.ENFANTS] }],
     visiteur: [{ label: 'Public',       items: [NAV.RESULTATS] }],
   }
 

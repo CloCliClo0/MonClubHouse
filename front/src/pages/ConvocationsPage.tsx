@@ -90,6 +90,7 @@ export default function ConvocationsPage() {
   const [showSmsPanel, setShowSmsPanel]   = useState(false)
   const [smsLinks, setSmsLinks]           = useState<SmsLink[]>([])
   const [loadingSms, setLoadingSms]       = useState(false)
+  const [smsError, setSmsError]           = useState('')
 
   // Guard : joueur/parent → rediriger vers /mes-presences
   useEffect(() => {
@@ -124,22 +125,26 @@ export default function ConvocationsPage() {
         api.get(`/equipes/${match.equipe.id}`),
       ])
 
-      // Convocations existantes
+      // Convocations existantes — un compte parent ne doit jamais apparaître ici (peut arriver si
+      // une convocation a été créée avant le correctif du roster, cf. equipeController.getById)
       const convoList = convoRes.data.data || convoRes.data || []
-      const mapped: Player[] = convoList.map((c: any) => ({
-        id:          c.joueur?.id,
-        nom:         c.joueur?.nom,
-        prenom:      c.joueur?.prenom,
-        statut:      c.statut === 'convoque' ? 'sans_reponse' : c.statut,
-        notif_email: c.joueur?.notif_email ?? true,
-        licencie:    c.joueur?.licence,
-      }))
+      const mapped: Player[] = convoList
+        .filter((c: any) => !c.joueur?.role || c.joueur.role === 'joueur')
+        .map((c: any) => ({
+          id:          c.joueur?.id,
+          nom:         c.joueur?.nom,
+          prenom:      c.joueur?.prenom,
+          statut:      c.statut === 'convoque' ? 'sans_reponse' : c.statut,
+          notif_email: c.joueur?.notif_email ?? true,
+          licencie:    c.joueur?.licence,
+        }))
       setPlayers(mapped)
 
-      // Roster de l'équipe
+      // Roster de l'équipe — exclut les comptes parent : un `Licencie` est aussi créé pour un parent
+      // (visibilité de son équipe), mais un parent n'est jamais lui-même convocable à un match.
       const equipeData = teamRes.data.data || teamRes.data || {}
       const licencies: any[] = equipeData.licencies || []
-      const activeLicencies = licencies.filter((l: any) => l.statut === 'actif' && l.user)
+      const activeLicencies = licencies.filter((l: any) => l.statut === 'actif' && l.user && l.user.role === 'joueur')
 
       if (activeLicencies.length > 0) {
         setTeamPlayers(activeLicencies.map((l: any) => ({
@@ -155,7 +160,7 @@ export default function ConvocationsPage() {
           const usersRes = await api.get('/admin/users')
           const allUsers: any[] = usersRes.data.data || usersRes.data || []
           setTeamPlayers(allUsers
-            .filter((u: any) => ['joueur', 'parent'].includes(u.role))
+            .filter((u: any) => u.role === 'joueur')
             .map((u: any) => ({
               userId:         u.id,
               nom:            u.nom,
@@ -212,14 +217,16 @@ export default function ConvocationsPage() {
       // Recharger les convocations
       const r = await api.get(`/matchs/${selectedMatch.id}/convocations`)
       const list = r.data.data || r.data || []
-      setPlayers(list.map((c: any) => ({
-        id:          c.joueur?.id,
-        nom:         c.joueur?.nom,
-        prenom:      c.joueur?.prenom,
-        statut:      c.statut === 'convoque' ? 'sans_reponse' : c.statut,
-        notif_email: c.joueur?.notif_email ?? true,
-        licencie:    c.joueur?.licence,
-      })))
+      setPlayers(list
+        .filter((c: any) => !c.joueur?.role || c.joueur.role === 'joueur')
+        .map((c: any) => ({
+          id:          c.joueur?.id,
+          nom:         c.joueur?.nom,
+          prenom:      c.joueur?.prenom,
+          statut:      c.statut === 'convoque' ? 'sans_reponse' : c.statut,
+          notif_email: c.joueur?.notif_email ?? true,
+          licencie:    c.joueur?.licence,
+        })))
       setPendingAdd(new Set())
       setShowAddPanel(false)
     } catch {
@@ -252,11 +259,14 @@ export default function ConvocationsPage() {
   const loadSmsLinks = async () => {
     if (!selectedMatch) return
     setLoadingSms(true)
+    setSmsError('')
     try {
       const r = await api.get(`/matchs/${selectedMatch.id}/sms-links`)
       setSmsLinks(r.data.data || [])
       setShowSmsPanel(true)
-    } catch { /* ignore */ } finally {
+    } catch (err: any) {
+      setSmsError(err.response?.data?.message || 'Impossible de charger les liens de partage.')
+    } finally {
       setLoadingSms(false)
     }
   }
@@ -507,6 +517,13 @@ export default function ConvocationsPage() {
           </button>
         </div>
       </div>
+
+      {smsError && (
+        <div className="mb-5 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-body-sm">
+          <span className="material-symbols-outlined text-[18px]">error</span>
+          {smsError}
+        </div>
+      )}
 
       {/* Panneau SMS */}
       {showSmsPanel && (
@@ -806,7 +823,7 @@ export default function ConvocationsPage() {
                 </div>
                 <div>
                   <p className="text-label-lg text-on-surface">Envoi par email</p>
-                  <p className="text-body-sm text-on-surface-variant">Via Hostinger Mail</p>
+                  <p className="text-body-sm text-on-surface-variant">Via convocations@monclubhouse.fr</p>
                 </div>
               </div>
               <Toggle on={sendEmail} onChange={setSendEmail} />
@@ -879,7 +896,7 @@ export default function ConvocationsPage() {
                     <div className="flex justify-between text-body-md">
                       <span className="text-on-surface-variant flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-[16px] text-primary">mail</span>
-                        Emails Hostinger
+                        Emails convocations@monclubhouse.fr
                       </span>
                       <span className="font-semibold text-primary">{emailCount} emails</span>
                     </div>

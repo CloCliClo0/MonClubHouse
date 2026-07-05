@@ -24,8 +24,8 @@ const getByMatch = async (req, res) => {
 
     // Joueur/parent : pas besoin de l'email des coéquipiers
     const joueurAttributes = ['coach', 'dirigeant', 'admin', 'superadmin'].includes(req.user.role)
-      ? ['id', 'nom', 'prenom', 'email', 'avatar']
-      : ['id', 'nom', 'prenom', 'avatar'];
+      ? ['id', 'nom', 'prenom', 'email', 'avatar', 'role']
+      : ['id', 'nom', 'prenom', 'avatar', 'role'];
 
     const convocations = await Convocation.findAll({
       where: { match_id: req.params.matchId },
@@ -50,7 +50,8 @@ const getByMatch = async (req, res) => {
 
 const creerConvocations = async (req, res) => {
   try {
-    const { match_id, joueur_ids, envoyer_email = false } = req.body;
+    const { match_id, envoyer_email = false } = req.body;
+    let { joueur_ids } = req.body;
 
     const match = await Match.findByPk(match_id, {
       include: [
@@ -59,6 +60,15 @@ const creerConvocations = async (req, res) => {
       ],
     });
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
+
+    // Ne convoquer que des comptes joueur — un compte parent peut apparaître dans le roster de
+    // l'équipe (Licencie créé pour la visibilité du parent, cf. rosterService.assignUserToEquipes)
+    // sans jamais être lui-même convocable à un match.
+    const joueursValides = await User.findAll({
+      where: { id: { [Op.in]: joueur_ids }, role: 'joueur' },
+      attributes: ['id'],
+    });
+    joueur_ids = joueursValides.map(u => u.id);
 
     // 1. Requête unique : trouver les convocations déjà existantes
     const existing = await Convocation.findAll({
@@ -233,7 +243,7 @@ const getSmsLinks = async (req, res) => {
 
     const dateStr = match.date ? new Date(match.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '?';
     const heureStr = match.heure ? match.heure.substring(0, 5) : '?';
-    const heureRdvStr = match.heure_rdv ? ` (RDV ${match.heure_rdv.substring(0, 5)})` : '';
+    const heureRdvStr = match.heure_rdv ? ` (RDV ${new Date(match.heure_rdv).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })})` : '';
     const lieuStr = match.terrain?.nom || match.lieu || '?';
     const adversaireStr = match.adversaire ? ` contre ${match.adversaire}` : '';
     const typeLabel = match.type === 'entrainement' ? 'Entraînement' : 'Match';

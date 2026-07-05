@@ -203,6 +203,8 @@ export default function CompositionPage() {
   const [bench, setBench]               = useState<BenchPlayer[]>([])
   const [selected, setSelected]         = useState<Selection | null>(null)
   const [saved, setSaved]               = useState(false)
+  const [saving, setSaving]             = useState(false)
+  const [saveError, setSaveError]       = useState('')
 
   const [matches, setMatches]   = useState<MatchDisplay[]>([])
   const [loading, setLoading]   = useState(true)
@@ -234,9 +236,12 @@ export default function CompositionPage() {
     setFieldPlayers(emptyField(formation))
     setBench([])
 
-    api.get(`/matchs/${selectedMatchId}/convocations`)
-      .then(r => {
-        const list = Array.isArray(r.data) ? r.data : (r.data?.data ?? [])
+    Promise.all([
+      api.get(`/matchs/${selectedMatchId}/convocations`),
+      api.get(`/matchs/${selectedMatchId}/composition`).catch(() => null),
+    ])
+      .then(([convoRes, compoRes]) => {
+        const list = Array.isArray(convoRes.data) ? convoRes.data : (convoRes.data?.data ?? [])
         // Comptes bruts pour les stats
         const cnt = { present: 0, incertain: 0, convoque: 0, absent: 0, non_retenu: 0 }
         list.forEach((c: any) => { if (c.statut in cnt) cnt[c.statut as keyof typeof cnt]++ })
@@ -254,9 +259,19 @@ export default function CompositionPage() {
           }))
         setConvocations(eligible)
         setMode('pre')
-        const { field, bench } = buildTeam(eligible, formation, 'pre')
-        setFieldPlayers(field)
-        setBench(bench)
+
+        // Composition déjà enregistrée pour ce match → on la restaure telle quelle,
+        // sinon on reconstruit une proposition par défaut depuis les convocations.
+        const savedCompo = compoRes?.data?.data
+        if (savedCompo && (savedCompo.titulaires?.length > 0 || savedCompo.remplacants?.length > 0)) {
+          setFormation(savedCompo.formation || '4-3-3')
+          setFieldPlayers(savedCompo.titulaires || emptyField(savedCompo.formation || '4-3-3'))
+          setBench(savedCompo.remplacants || [])
+        } else {
+          const { field, bench } = buildTeam(eligible, formation, 'pre')
+          setFieldPlayers(field)
+          setBench(bench)
+        }
       })
       .catch(() => {})
       .finally(() => setLoadingConvocations(false))
@@ -280,9 +295,24 @@ export default function CompositionPage() {
     setSelected(null)
   }
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleSave = async () => {
+    if (!selectedMatchId) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      await api.post('/matchs/composition', {
+        match_id:    selectedMatchId,
+        formation,
+        titulaires:  fieldPlayers,
+        remplacants: bench,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err: any) {
+      setSaveError(err.response?.data?.message || "Erreur lors de l'enregistrement.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleReset = () => {
@@ -481,15 +511,24 @@ export default function CompositionPage() {
             <span className="material-symbols-outlined text-[20px]">restart_alt</span>
             <span className="hidden sm:inline">Réinitialiser</span>
           </button>
-          <button onClick={handleSave}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-label-lg transition-colors ${
+          <button onClick={handleSave} disabled={saving}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-label-lg transition-colors disabled:opacity-60 ${
               saved ? 'bg-green-500 text-white' : 'bg-primary text-white hover:bg-primary-container'
             }`}>
-            <span className="material-symbols-outlined text-[20px]">{saved ? 'check' : 'save'}</span>
-            {saved ? 'Enregistré !' : 'Enregistrer'}
+            <span className={`material-symbols-outlined text-[20px] ${saving ? 'animate-spin' : ''}`}>
+              {saving ? 'progress_activity' : saved ? 'check' : 'save'}
+            </span>
+            {saving ? 'Enregistrement…' : saved ? 'Enregistré !' : 'Enregistrer'}
           </button>
         </div>
       </div>
+
+      {saveError && (
+        <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-body-sm">
+          <span className="material-symbols-outlined text-[18px]">error</span>
+          {saveError}
+        </div>
+      )}
 
       {/* Chargement des convocations */}
       {loadingConvocations && (

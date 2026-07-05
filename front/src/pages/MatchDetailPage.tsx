@@ -155,6 +155,10 @@ export default function MatchDetailPage() {
       setChronoRunning(true)
       setTab('live')
       loadEvents()
+      // Le backend passe le match en 'en_cours' au premier événement — recharger pour que
+      // match.statut reflète ce changement, sinon le panneau d'ajout d'événement (conditionné
+      // sur match.statut === 'en_cours') reste caché malgré le chrono qui tourne déjà.
+      load()
     } catch { /* ignore */ }
   }
 

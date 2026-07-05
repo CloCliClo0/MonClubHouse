@@ -75,7 +75,7 @@ const getById = async (req, res) => {
         { model: Sport, as: 'sport', required: false },
         {
           model: Licencie, as: 'licencies',
-          include: [{ model: User, as: 'user', attributes: ['id', 'nom', 'prenom', 'avatar'] }]
+          include: [{ model: User, as: 'user', attributes: ['id', 'nom', 'prenom', 'avatar', 'role'] }]
         }
       ]
     });

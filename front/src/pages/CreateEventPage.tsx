@@ -12,6 +12,8 @@ type Terrain = { id: number; nom: string; type: string }
 // l'amical est volontairement exclu ("hors championnat"), comme entraînement/plateau/réunion/autre.
 const SEASON_REQUIRED_TYPES: EventType[] = ['match', 'coupe', 'tournoi']
 const NEW_CHAMP_SENTINEL = '__nouveau__'
+const NEW_ADV_SENTINEL = '__autre__'
+const NEW_SAISON_SENTINEL = '__nouvelle_saison__'
 
 function currentSeason(): string {
   const now = new Date(); const y = now.getFullYear()
@@ -42,6 +44,7 @@ export default function CreateEventPage() {
   const [heureRdv, setHeureRdv]     = useState('')
   const [terrainId, setTerrainId]   = useState('')
   const [adversaire, setAdversaire] = useState('')
+  const [advChoice, setAdvChoice]   = useState('')
   const [domicile, setDomicile]     = useState(true)
   // Saison (obligatoire pour match/coupe/tournoi) + championnat (obligatoire pour "match")
   const [saison, setSaison]                 = useState(currentSeason())
@@ -122,7 +125,7 @@ export default function CreateEventPage() {
     if (step === 1) return !!type
     if (step === 2) return !!equipeId && !!date && !!heure
     if (step === 3) {
-      if ((type === 'match' || type === 'coupe') && (!adversaire || adversaire === '__autre__')) return false
+      if ((type === 'match' || type === 'coupe') && !adversaire) return false
       if (type && SEASON_REQUIRED_TYPES.includes(type) && !saison.trim()) return false
       if (type === 'match' && !champName.trim()) return false
       return true
@@ -402,25 +405,32 @@ export default function CreateEventPage() {
                   {(type === 'match' || type === 'coupe') ? (
                     <div className="relative">
                       <select
-                        value={adversaire}
-                        onChange={e => setAdversaire(e.target.value)}
+                        value={advChoice}
+                        onChange={e => {
+                          const v = e.target.value
+                          setAdvChoice(v)
+                          setAdversaire(v === NEW_ADV_SENTINEL ? '' : v)
+                        }}
                         className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10 bg-white"
                       >
                         <option value="">Sélectionner un adversaire</option>
                         {adversaires.map(a => (
                           <option key={a.id} value={a.nom}>{a.nom}</option>
                         ))}
-                        <option value="__autre__">Autre (saisie libre)…</option>
+                        <option value={NEW_ADV_SENTINEL}>Autre (saisie libre)…</option>
                       </select>
                       <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
                     </div>
                   ) : null}
 
-                  {/* Si "Autre" sélectionné dans le select, ou amical/tournoi/plateau : texte libre */}
-                  {(type === 'amical' || type === 'tournoi' || type === 'plateau' || adversaire === '__autre__') && (
+                  {/* Si "Autre" sélectionné dans le select, ou amical/tournoi/plateau : texte libre.
+                      La visibilité dépend de advChoice (fige sur le sentinel), pas de la valeur tapée —
+                      sinon le champ se refermait dès la 1ère lettre saisie (adversaire n'égalait plus le sentinel). */}
+                  {(type === 'amical' || type === 'tournoi' || type === 'plateau' || advChoice === NEW_ADV_SENTINEL) && (
                     <input
                       type="text"
-                      value={adversaire === '__autre__' ? '' : adversaire}
+                      autoFocus={advChoice === NEW_ADV_SENTINEL}
+                      value={adversaire}
                       onChange={e => setAdversaire(e.target.value)}
                       placeholder="Ex : Red Star FC"
                       className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all mt-2"
@@ -431,10 +441,30 @@ export default function CreateEventPage() {
                 {type && SEASON_REQUIRED_TYPES.includes(type) && (
                   <div className="space-y-1.5">
                     <label className="text-label-md text-on-surface-variant">Saison *</label>
-                    <input value={saison} onChange={e => setSaison(e.target.value)} list="saisons-datalist-event"
-                      placeholder={currentSeason()}
-                      className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                    <datalist id="saisons-datalist-event">{saisonsExistantes.map(s => <option key={s} value={s} />)}</datalist>
+                    {saisonsExistantes.length > 0 ? (
+                      <>
+                        <div className="relative">
+                          <select
+                            value={saisonsExistantes.includes(saison) ? saison : NEW_SAISON_SENTINEL}
+                            onChange={e => setSaison(e.target.value === NEW_SAISON_SENTINEL ? '' : e.target.value)}
+                            className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10 bg-white"
+                          >
+                            {saisonsExistantes.map(s => <option key={s} value={s}>{s}</option>)}
+                            <option value={NEW_SAISON_SENTINEL}>+ Nouvelle saison</option>
+                          </select>
+                          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+                        </div>
+                        {!saisonsExistantes.includes(saison) && (
+                          <input value={saison} onChange={e => setSaison(e.target.value)} autoFocus
+                            placeholder={currentSeason()}
+                            className="w-full px-4 py-3 border border-primary rounded-lg text-body-md focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all mt-2" />
+                        )}
+                      </>
+                    ) : (
+                      <input value={saison} onChange={e => setSaison(e.target.value)}
+                        placeholder={currentSeason()}
+                        className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                    )}
                   </div>
                 )}
 
@@ -528,7 +558,7 @@ export default function CreateEventPage() {
                 { icon: 'calendar_today', label: 'Date', val: date ? new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—' },
                 { icon: 'schedule', label: 'Heure', val: heure || '—' },
                 { icon: 'location_on', label: 'Terrain', val: terrains.find(t => String(t.id) === terrainId)?.nom || 'Non précisé' },
-                (adversaire && adversaire !== '__autre__') ? { icon: 'sports_soccer', label: 'Adversaire', val: `vs ${adversaire}` } : null,
+                adversaire ? { icon: 'sports_soccer', label: 'Adversaire', val: `vs ${adversaire}` } : null,
                 (type && SEASON_REQUIRED_TYPES.includes(type)) ? { icon: 'calendar_month', label: 'Saison', val: saison || '—' } : null,
                 (type === 'match' && champName) ? { icon: 'emoji_events', label: 'Championnat', val: champName } : null,
               ].filter(Boolean).map((item: any, i) => (

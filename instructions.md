@@ -112,4 +112,4 @@ Ajouter dans : `./memory/decisions.md` toute décision importante :
 * Mettre à jour l'historique.
 * Mettre à jour la mémoire du projet si nécessaire.
 * Fournir un résumé des modifications effectuées avec les tokens utilisés (ou signaler l'état **"Dépassement de Token"** avec le plan de reprise si la règle des 1% a été déclenchée).
-* Dis moi dans le chat si il faut que je repousse les fichiers .env et .sql sur le server en cas de mise à jour de ces derniers.
+* Précise s'il est nécessaire de pousser à nouveau les fichiers .env et .sql sur le serveur en cas de modification.
