@@ -42,7 +42,7 @@ self.addEventListener('fetch', (e) => {
             caches.open(CACHE_NAME).then((c) => c.put(e.request, toCache));
           }
           return res;
-        });
+        }).catch(() => new Response('', { status: 504, statusText: 'Offline' }));
       })
     );
     return;
@@ -86,7 +86,7 @@ self.addEventListener('fetch', (e) => {
           } catch (_) {}
         }
         return res;
-      });
+      }).catch(() => new Response('', { status: 504, statusText: 'Offline' }));
     })
   );
 });

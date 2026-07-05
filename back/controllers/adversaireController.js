@@ -28,8 +28,11 @@ const create = async (req, res) => {
   try {
     const { nom, categorie, ville, contact, telephone, couleur } = req.body;
     if (!nom?.trim()) return res.status(400).json({ success: false, message: 'Nom requis' });
+    // Un superadmin n'a pas de club_id propre — il doit pouvoir en préciser un explicitement.
+    const club_id = req.user.role === 'superadmin' ? (req.body.club_id || req.user.club_id) : req.user.club_id;
+    if (!club_id) return res.status(400).json({ success: false, message: 'club_id requis' });
     const adv = await Adversaire.create({
-      club_id: req.user.club_id,
+      club_id,
       nom: nom.trim(),
       categorie: categorie || null,
       ville: ville || null,

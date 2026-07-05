@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import api from '../services/api'
+import api, { getApiErrorMessage } from '../services/api'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type EndpointResult = {
@@ -84,6 +84,58 @@ const ENDPOINTS: Omit<EndpointResult, 'status' | 'ok' | 'ms' | 'msg' | 'body'>[]
   { section: 'Abonnement',     method: 'GET', path: '/api/promo-codes',                label: 'Codes promo (superadmin)' },
 ]
 
+// ── Tests CRUD complets (GET + POST + UPDATE + DELETE) par ressource ────────
+// Limité aux ressources offrant un vrai cycle CRUD (création ET suppression définitive) —
+// équipes/matchs/clubs n'ont qu'une désactivation (pas de DELETE), et sont exclus pour ne pas
+// fausser le résultat "DELETE" avec une sémantique différente (soft-delete).
+type CrudResource = {
+  key: string; label: string
+  needsClub?: boolean
+  createPath: string
+  buildCreate: (clubId: number | null) => Record<string, any>
+  getPath: string
+  updateMethod: 'put' | 'patch'
+  updatePath: (id: number) => string
+  buildUpdate: () => Record<string, any>
+  deletePath: (id: number) => string
+}
+
+const CRUD_RESOURCES: CrudResource[] = [
+  {
+    key: 'categorie', label: 'Catégorie', needsClub: true,
+    createPath: '/categories',
+    buildCreate: (clubId) => ({ nom: `__diag_test_${Date.now()}__`, club_id: clubId }),
+    getPath: '/categories',
+    updateMethod: 'put',
+    updatePath: (id) => `/categories/${id}`,
+    buildUpdate: () => ({ nom: `__diag_test_updated__` }),
+    deletePath: (id) => `/categories/${id}`,
+  },
+  {
+    key: 'adversaire', label: 'Adversaire', needsClub: true,
+    createPath: '/adversaires',
+    buildCreate: (clubId) => ({ nom: `__diag_test_${Date.now()}__`, club_id: clubId }),
+    getPath: '/adversaires',
+    updateMethod: 'patch',
+    updatePath: (id) => `/adversaires/${id}`,
+    buildUpdate: () => ({ nom: `__diag_test_updated__` }),
+    deletePath: (id) => `/adversaires/${id}`,
+  },
+  {
+    key: 'promo', label: 'Code promo',
+    createPath: '/promo-codes',
+    buildCreate: () => ({ code: `DIAGTEST${Date.now()}`, type: 'percent', valeur: 1 }),
+    getPath: '/promo-codes',
+    updateMethod: 'patch',
+    updatePath: (id) => `/promo-codes/${id}`,
+    buildUpdate: () => ({ description: 'Test diagnostic' }),
+    deletePath: (id) => `/promo-codes/${id}`,
+  },
+]
+
+type CrudStepResult = { ok: boolean; ms: number | null; status: number | null; error: string | null }
+type CrudResourceState = { get: CrudStepResult | null; post: CrudStepResult | null; update: CrudStepResult | null; delete: CrudStepResult | null }
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function classify(status: number | null): 'ok' | 'warn' | 'err' | 'pending' {
   if (status === null) return 'pending'
@@ -138,8 +190,6 @@ export default function DiagnosticPage() {
 
   type DiagUser = { id: number; nom: string; prenom: string; email: string }
   type TestFnResult = { ok: boolean; ms: number | null; to: string; error: string | null } | null
-  type CrudStep = { ok: boolean; ms: number | null; error: string | null }
-  type CrudTestResult = { steps: { create: CrudStep; update: CrudStep; delete: CrudStep } } | null
   type DriveResult  = { ok: boolean; ms: number | null; fileId?: string; url?: string; name?: string; error: string | null } | null
   const [diagUsers, setDiagUsers]         = useState<DiagUser[]>([])
   const [testUserId, setTestUserId]       = useState<string>('')
@@ -155,8 +205,9 @@ export default function DiagnosticPage() {
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [convocEmailResult, setConvocEmailResult] = useState<TestFnResult>(null)
   const [convocEmailLoading, setConvocEmailLoading] = useState(false)
-  const [crudResult, setCrudResult] = useState<CrudTestResult>(null)
-  const [crudLoading, setCrudLoading] = useState(false)
+  const [crudResults, setCrudResults] = useState<Record<string, CrudResourceState>>({})
+  const [crudRunning, setCrudRunning] = useState(false)
+  const [crudClubId, setCrudClubId] = useState<number | null>(null)
 
   useEffect(() => {
     api.get('/admin/users').then(r => {
@@ -167,6 +218,13 @@ export default function DiagnosticPage() {
         const self = selfId ? users.find(u => String(u.id) === selfId) : null
         setTestUserId(self ? String(self.id) : String(users[0].id))
       }
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    api.get('/clubs').then(r => {
+      const list = r.data.data || []
+      if (list.length > 0) setCrudClubId(list[0].id)
     }).catch(() => {})
   }, [])
 
@@ -224,15 +282,53 @@ export default function DiagnosticPage() {
     } finally { setConvocEmailLoading(false) }
   }
 
-  const runTestCrud = async () => {
-    setCrudLoading(true); setCrudResult(null)
+  const runCrudStep = async (fn: () => Promise<any>): Promise<CrudStepResult> => {
+    const t0 = performance.now()
     try {
-      const r = await api.post('/diagnostic/test-crud', {})
-      setCrudResult(r.data.data)
+      const r = await fn()
+      return { ok: true, ms: Math.round(performance.now() - t0), status: r.status, error: null }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Erreur réseau'
-      setCrudResult({ steps: { create: { ok: false, ms: null, error: msg }, update: { ok: false, ms: null, error: null }, delete: { ok: false, ms: null, error: null } } })
-    } finally { setCrudLoading(false) }
+      return { ok: false, ms: Math.round(performance.now() - t0), status: err?.response?.status ?? null, error: getApiErrorMessage(err) }
+    }
+  }
+
+  const runCrudTests = async () => {
+    setCrudRunning(true)
+    for (const res of CRUD_RESOURCES) {
+      if (res.needsClub && !crudClubId) {
+        const skipped: CrudStepResult = { ok: false, ms: null, status: null, error: 'Aucun club disponible pour ce test' }
+        setCrudResults(prev => ({ ...prev, [res.key]: { get: skipped, post: skipped, update: skipped, delete: skipped } }))
+        continue
+      }
+
+      const state: CrudResourceState = { get: null, post: null, update: null, delete: null }
+      setCrudResults(prev => ({ ...prev, [res.key]: { ...state } }))
+
+      let createdId: number | null = null
+      state.post = await runCrudStep(async () => {
+        const r = await api.post(res.createPath, res.buildCreate(crudClubId))
+        createdId = r.data?.data?.id ?? null
+        return r
+      })
+      setCrudResults(prev => ({ ...prev, [res.key]: { ...state } }))
+
+      state.get = await runCrudStep(() => api.get(res.getPath))
+      setCrudResults(prev => ({ ...prev, [res.key]: { ...state } }))
+
+      if (createdId) {
+        const id = createdId as number
+        state.update = await runCrudStep(() => api[res.updateMethod](res.updatePath(id), res.buildUpdate()))
+        setCrudResults(prev => ({ ...prev, [res.key]: { ...state } }))
+
+        state.delete = await runCrudStep(() => api.delete(res.deletePath(id)))
+        setCrudResults(prev => ({ ...prev, [res.key]: { ...state } }))
+      } else {
+        const skipped: CrudStepResult = { ok: false, ms: null, status: null, error: 'Ignoré (POST a échoué)' }
+        state.update = skipped; state.delete = skipped
+        setCrudResults(prev => ({ ...prev, [res.key]: { ...state } }))
+      }
+    }
+    setCrudRunning(false)
   }
 
   const runTestVerifyEmail = async () => {
@@ -819,45 +915,63 @@ export default function DiagnosticPage() {
             )}
           </div>
 
-          {/* ── CRUD (POST/UPDATE/DELETE) ── */}
+          {/* ── CRUD complet (GET + POST + UPDATE + DELETE) par ressource ── */}
           <div className="rounded-xl border border-[#e8e8f0] bg-white overflow-hidden">
             <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px] text-on-surface-variant">sync_alt</span>
-                <span className="text-label-lg font-semibold">Test écriture DB (POST / UPDATE / DELETE)</span>
+                <span className="text-label-lg font-semibold">Tests CRUD (GET / POST / UPDATE / DELETE)</span>
               </div>
               <button
-                onClick={runTestCrud}
-                disabled={crudLoading}
+                onClick={runCrudTests}
+                disabled={crudRunning}
                 className="flex items-center gap-1.5 border border-outline-variant px-3 py-1.5 rounded-lg text-label-md hover:bg-surface-container transition-colors disabled:opacity-40"
               >
-                {crudLoading
+                {crudRunning
                   ? <span className="inline-block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                   : <span className="material-symbols-outlined text-[16px]">play_arrow</span>
                 }
-                {crudLoading ? 'Test en cours…' : 'Lancer le test'}
+                {crudRunning ? 'Test en cours…' : 'Lancer les tests'}
               </button>
             </div>
-            {crudResult ? (
-              <div className="px-4 py-3 flex flex-wrap gap-4">
-                {(['create', 'update', 'delete'] as const).map(step => {
-                  const s = crudResult.steps[step]
-                  const label = step === 'create' ? 'POST' : step === 'update' ? 'UPDATE' : 'DELETE'
-                  return (
-                    <div key={step} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${s.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
-                      <span className={`material-symbols-outlined text-[18px] ${s.ok ? 'text-green-500' : 'text-red-500'}`}>
-                        {s.ok ? 'check_circle' : 'error'}
-                      </span>
-                      <span className={`text-label-md font-bold ${s.ok ? 'text-green-700' : 'text-red-700'}`}>{label}</span>
-                      {s.ms !== null && <span className="text-body-sm text-on-surface-variant">{s.ms}ms</span>}
-                      {s.error && <span className="text-body-sm text-red-600 font-mono">{s.error}</span>}
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="px-4 py-3 text-body-sm text-on-surface-variant">Crée, modifie puis supprime une catégorie jetable (<span className="font-mono">__diagnostic_test_*</span>) pour vérifier l'écriture DB de bout en bout. Aucune donnée réelle n'est affectée.</p>
-            )}
+            <div className="divide-y divide-[#e8e8f0]">
+              {CRUD_RESOURCES.map(res => {
+                const state = crudResults[res.key]
+                return (
+                  <div key={res.key} className="px-4 py-3">
+                    <p className="text-label-md font-semibold mb-2">{res.label}</p>
+                    {state ? (
+                      <div className="flex flex-wrap gap-3">
+                        {(['get', 'post', 'update', 'delete'] as const).map(step => {
+                          const s = state[step]
+                          const label = step.toUpperCase()
+                          if (!s) return (
+                            <div key={step} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low">
+                              <span className="inline-block w-3 h-3 rounded-full border-2 border-outline-variant border-t-transparent animate-spin" />
+                              <span className="text-label-md font-bold text-on-surface-variant">{label}</span>
+                            </div>
+                          )
+                          return (
+                            <div key={step} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${s.ok ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                              <span className={`material-symbols-outlined text-[18px] ${s.ok ? 'text-green-500' : 'text-red-500'}`}>
+                                {s.ok ? 'check_circle' : 'error'}
+                              </span>
+                              <span className={`text-label-md font-bold ${s.ok ? 'text-green-700' : 'text-red-700'}`}>{label}</span>
+                              {s.status !== null && <span className="text-body-sm text-on-surface-variant">{s.status}</span>}
+                              {s.ms !== null && <span className="text-body-sm text-on-surface-variant">{s.ms}ms</span>}
+                              {s.error && <span className="text-body-sm text-red-600 font-mono">{s.error}</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-body-sm text-on-surface-variant">En attente du lancement du test.</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <p className="px-4 py-3 text-body-sm text-on-surface-variant border-t border-[#e8e8f0]">Chaque ressource est testée via ses vraies routes API (pas d'accès direct à la base) : création d'un enregistrement jetable (<span className="font-mono">__diag_test_*</span>), lecture de la liste, modification, puis suppression définitive. Aucune donnée réelle n'est affectée.</p>
           </div>
 
           {/* Test Google Drive */}

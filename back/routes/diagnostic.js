@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
 const { requireRole } = require('../middlewares/rbac');
-const { getServerDiagnostic, testGemini, testStripe, testDrive, testDiag2fa, testDiagEmailVerify, testEmail, testNotification, testConvocEmail, testCrud } = require('../controllers/diagnosticController');
+const { getServerDiagnostic, testGemini, testStripe, testDrive, testDiag2fa, testDiagEmailVerify, testEmail, testNotification, testConvocEmail } = require('../controllers/diagnosticController');
 
 router.get('/',                    authenticate, requireRole('superadmin'), getServerDiagnostic);
 router.get('/gemini',              authenticate, requireRole('superadmin'), testGemini);
@@ -13,6 +13,5 @@ router.post('/test-notification',  authenticate, requireRole('superadmin'), test
 router.post('/test-2fa',           authenticate, requireRole('superadmin'), testDiag2fa);
 router.post('/test-email-verify',  authenticate, requireRole('superadmin'), testDiagEmailVerify);
 router.post('/test-convoc-email',  authenticate, requireRole('superadmin'), testConvocEmail);
-router.post('/test-crud',          authenticate, requireRole('superadmin'), testCrud);
 
 module.exports = router;

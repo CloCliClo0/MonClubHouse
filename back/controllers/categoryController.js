@@ -30,9 +30,12 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    const club_id = req.user.club_id;
-    const cat = await Category.findOne({ where: { id: req.params.id, club_id } });
+    // Résolue par son id d'abord — voir assignMember : req.user.club_id est null pour un superadmin.
+    const cat = await Category.findByPk(req.params.id);
     if (!cat) return res.status(404).json({ success: false, message: 'Catégorie introuvable.' });
+    if (req.user.role !== 'superadmin' && cat.club_id !== req.user.club_id) {
+      return res.status(403).json({ success: false, message: 'Accès interdit à cette catégorie.' });
+    }
     const { nom, couleur, actif } = req.body;
     if (nom !== undefined) cat.nom = nom.trim();
     if (couleur !== undefined) cat.couleur = couleur;
@@ -46,9 +49,11 @@ const update = async (req, res) => {
 
 const remove = async (req, res) => {
   try {
-    const club_id = req.user.club_id;
-    const cat = await Category.findOne({ where: { id: req.params.id, club_id } });
+    const cat = await Category.findByPk(req.params.id);
     if (!cat) return res.status(404).json({ success: false, message: 'Catégorie introuvable.' });
+    if (req.user.role !== 'superadmin' && cat.club_id !== req.user.club_id) {
+      return res.status(403).json({ success: false, message: 'Accès interdit à cette catégorie.' });
+    }
     await cat.destroy();
     res.json({ success: true });
   } catch (err) {

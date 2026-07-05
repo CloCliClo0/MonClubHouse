@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import api from '../services/api'
+import api, { getApiErrorMessage } from '../services/api'
 import PhotoUpload from '../components/PhotoUpload'
 
 type Club = {
@@ -101,6 +101,7 @@ export default function SuperAdminPage() {
   const [showCodeForm, setShowCodeForm] = useState(false)
   const [codeForm, setCodeForm] = useState({ role: 'joueur', categorie: '', label: '', max_uses: '50' })
   const [codeSaving, setCodeSaving] = useState(false)
+  const [codeError, setCodeError] = useState<string | null>(null)
   const [copied, setCopied] = useState<number | null>(null)
 
   useEffect(() => {
@@ -306,7 +307,13 @@ export default function SuperAdminPage() {
   }
 
   const createCode = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!selectedClub) return; setCodeSaving(true)
+    e.preventDefault(); if (!selectedClub) return
+    setCodeError(null)
+    if (['joueur', 'parent', 'coach'].includes(codeForm.role) && !codeForm.categorie) {
+      setCodeError('Choisissez une catégorie pour ce rôle.')
+      return
+    }
+    setCodeSaving(true)
     try {
       const payload: Record<string, any> = { role: codeForm.role, label: codeForm.label || undefined, max_uses: parseInt(codeForm.max_uses), club_id: selectedClub.id }
       if (codeForm.categorie) payload.categorie = codeForm.categorie
@@ -314,8 +321,9 @@ export default function SuperAdminPage() {
       const r = await api.get(`/codes?club_id=${selectedClub.id}`)
       setCodes(r.data.data || [])
       setShowCodeForm(false); setCodeForm({ role: 'joueur', categorie: '', label: '', max_uses: '50' })
-    } catch {}
-    finally { setCodeSaving(false) }
+    } catch (err) {
+      setCodeError(getApiErrorMessage(err, 'Impossible de générer le code'))
+    } finally { setCodeSaving(false) }
   }
 
   const filteredMembres = membres.filter(u => {
@@ -871,7 +879,7 @@ export default function SuperAdminPage() {
       {tab === 'codes' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button onClick={() => setShowCodeForm(v => !v)}
+            <button onClick={() => { setCodeError(null); setShowCodeForm(v => !v) }}
               className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
               <span className="material-symbols-outlined text-[20px]">add</span>
               Générer un code
@@ -881,6 +889,9 @@ export default function SuperAdminPage() {
           {showCodeForm && (
             <form onSubmit={createCode} className="bg-white border border-[#e8e8f0] rounded-xl p-5">
               <h3 className="text-headline-md mb-4">Nouveau code d'invitation</h3>
+              {codeError && (
+                <div className="mb-4 px-4 py-2.5 rounded-lg bg-red-50 text-error text-body-sm">{codeError}</div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-label-md text-on-surface-variant">Rôle</label>
@@ -894,12 +905,15 @@ export default function SuperAdminPage() {
                 </div>
                 {['joueur', 'parent', 'coach'].includes(codeForm.role) && (
                   <div className="space-y-1">
-                    <label className="text-label-md text-on-surface-variant">Catégorie</label>
-                    <select value={codeForm.categorie} onChange={e => setCodeForm(f => ({ ...f, categorie: e.target.value }))}
+                    <label className="text-label-md text-on-surface-variant">Catégorie *</label>
+                    <select required value={codeForm.categorie} onChange={e => setCodeForm(f => ({ ...f, categorie: e.target.value }))}
                       className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
-                      <option value="">— Aucune —</option>
+                      <option value="">Choisir une catégorie</option>
                       {clubCategories.map(cat => <option key={cat.id} value={cat.nom}>{cat.nom}</option>)}
                     </select>
+                    {clubCategories.length === 0 && (
+                      <p className="text-body-sm text-error">Ce club n'a aucune catégorie — créez-en une dans l'onglet "Équipes" avant de générer ce code.</p>
+                    )}
                   </div>
                 )}
                 <div className="space-y-1">
@@ -918,7 +932,7 @@ export default function SuperAdminPage() {
               <div className="flex justify-end gap-3 mt-4">
                 <button type="button" onClick={() => setShowCodeForm(false)}
                   className="px-4 py-2 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
-                <button type="submit" disabled={codeSaving}
+                <button type="submit" disabled={codeSaving || (['joueur', 'parent', 'coach'].includes(codeForm.role) && !codeForm.categorie)}
                   className="px-5 py-2 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40">Générer</button>
               </div>
             </form>
