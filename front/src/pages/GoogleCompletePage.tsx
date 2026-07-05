@@ -5,19 +5,11 @@ import api from '../services/api'
 type UserInfo = { id: number; prenom: string; nom: string; email: string; avatar?: string; role: string }
 type Player   = { id: number; nom: string; prenom: string; avatar?: string }
 
-const ROLES = [
-  { value: 'joueur',    label: 'Joueur',    icon: 'sports_soccer' },
-  { value: 'coach',     label: 'Coach',     icon: 'sports'        },
-  { value: 'parent',    label: 'Parent',    icon: 'family_restroom' },
-  { value: 'dirigeant', label: 'Dirigeant', icon: 'manage_accounts' },
-]
-
 export default function GoogleCompletePage() {
   const navigate = useNavigate()
 
   const [user, setUser]           = useState<UserInfo | null>(null)
   const [loadingUser, setLoadingUser] = useState(true)
-  const [selectedRole, setSelectedRole] = useState('joueur')
   const [code, setCode]           = useState('')
   const [step, setStep]           = useState<'form' | 'child' | 'done'>('form')
   const [loading, setLoading]     = useState(false)
@@ -27,7 +19,6 @@ export default function GoogleCompletePage() {
   // Editable profile fields
   const [editPrenom, setEditPrenom] = useState('')
   const [editNom, setEditNom]       = useState('')
-  const [editTel, setEditTel]       = useState('')
   const [editPassword, setEditPassword] = useState('')
 
   const [players, setPlayers]         = useState<Player[]>([])
@@ -88,11 +79,10 @@ export default function GoogleCompletePage() {
     setError('')
     setLoading(true)
     try {
-      // 1. Update profile info (name, phone)
+      // 1. Update profile info (name) — le téléphone est demandé plus tard dans la modale de complément de profil
       await api.put('/profil', {
         prenom: editPrenom.trim() || undefined,
         nom:    editNom.trim()    || undefined,
-        telephone: editTel.trim() || undefined,
       })
 
       // 2. Set password if provided
@@ -234,39 +224,11 @@ export default function GoogleCompletePage() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-label-sm text-on-surface-variant">Téléphone (optionnel)</label>
-                  <input value={editTel} onChange={e => setEditTel(e.target.value)}
-                    type="tel" placeholder="06 12 34 56 78"
-                    className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
-                </div>
-                <div className="space-y-1">
                   <label className="text-label-sm text-on-surface-variant">Mot de passe (optionnel)</label>
                   <input value={editPassword} onChange={e => setEditPassword(e.target.value)}
                     type="password" placeholder="Pour se connecter sans Google…"
                     className="w-full px-3 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
                   <p className="text-body-sm text-on-surface-variant/70">Laissez vide pour utiliser uniquement Google.</p>
-                </div>
-              </div>
-
-              {/* Sélecteur de rôle */}
-              <div className="space-y-2">
-                <label className="text-label-md text-on-surface-variant">Je suis…</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {ROLES.map(r => (
-                    <button
-                      key={r.value}
-                      type="button"
-                      onClick={() => setSelectedRole(r.value)}
-                      className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 transition-all text-left ${
-                        selectedRole === r.value
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">{r.icon}</span>
-                      <span className="text-label-lg">{r.label}</span>
-                    </button>
-                  ))}
                 </div>
               </div>
 
