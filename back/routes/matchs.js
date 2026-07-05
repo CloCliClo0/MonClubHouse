@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAll, getById, create, update, saisirScore, remove, createRecurring } = require('../controllers/matchController');
+const { getAll, getById, create, update, saisirScore, remove, createRecurring, getPendingResults } = require('../controllers/matchController');
 const { getByMatch, creerConvocations, repondre, repondreParent, renvoyerEmail, getSmsLinks } = require('../controllers/convocationController');
 const { getByMatch: getCompo, upsert: upsertCompo, getFormations } = require('../controllers/compositionController');
 const { getByMatch: getEvents, addEvent, deleteEvent, endMatch } = require('../controllers/matchEventController');
@@ -10,6 +10,7 @@ const { validateMatch } = require('../middlewares/validation');
 
 router.get('/', authenticate, getAll);
 router.get('/formations', authenticate, getFormations);
+router.get('/a-saisir', authenticate, requireMinRole('dirigeant'), getPendingResults);
 router.post('/recurring', authenticate, requireMinRole('coach'), createRecurring);
 router.get('/:id', authenticate, getById);
 router.post('/', authenticate, requireMinRole('coach'), validateMatch, create);

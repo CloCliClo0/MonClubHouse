@@ -9,6 +9,10 @@ const Equipe = sequelize.define('Equipe', {
   categorie_id:{ type: DataTypes.INTEGER, allowNull: true },
   niveau:      { type: DataTypes.STRING(50), allowNull: true },
   couleur:  { type: DataTypes.STRING(7), defaultValue: '#1b4332' },
+  genre:           { type: DataTypes.ENUM('masculin', 'feminin', 'mixte', 'handisport'), defaultValue: 'masculin' },
+  format:          { type: DataTypes.STRING(10), defaultValue: '11' },
+  couleur_maillot: { type: DataTypes.STRING(7), defaultValue: '#0f5238' },
+  description:     { type: DataTypes.TEXT, allowNull: true },
   actif:    { type: DataTypes.BOOLEAN, defaultValue: true },
 }, {
   tableName: 'equipes',

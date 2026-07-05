@@ -3,7 +3,7 @@ import api from '../services/api'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Equipe = { id: number; nom: string; categorie?: { id: number; nom: string } | null; coach_id: number | null }
+type Equipe = { id: number; nom: string; categorie?: { id: number; nom: string } | null }
 
 type MatchItem = {
   id: number
@@ -80,9 +80,13 @@ function fmtDate(dateStr: string | null): string {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SaisonPage() {
-  const role      = localStorage.getItem('role') || 'joueur'
-  const canManage = ['superadmin', 'admin', 'dirigeant', 'coach'].includes(role)
-  const season    = currentSeason()
+  const role       = localStorage.getItem('role') || 'joueur'
+  const canManage  = ['superadmin', 'admin', 'dirigeant', 'coach'].includes(role)
+  const isClubAdmin = ['superadmin', 'admin', 'dirigeant'].includes(role)
+  const defaultSeason = currentSeason()
+
+  // ── Mode de page : vue équipe (par défaut) ou résultats à saisir (club admin) ──
+  const [pageMode, setPageMode] = useState<'equipe' | 'a-saisir'>('equipe')
 
   // ── State équipes ─────────────────────────────────────────────────────────
   const [equipes, setEquipes]               = useState<Equipe[]>([])
@@ -90,6 +94,12 @@ export default function SaisonPage() {
   const [selectedCat, setSelectedCat]       = useState<string>('')
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null)
   const [activeTab, setActiveTab]           = useState<AllTab>('match')
+
+  // ── State saison (classement) — plusieurs championnats possibles par saison ──
+  const [saisonsList, setSaisonsList]   = useState<string[]>([])
+  const [selectedSaison, setSelectedSaison] = useState<string>(defaultSeason)
+  const [showNewSaison, setShowNewSaison]   = useState(false)
+  const [newSaisonName, setNewSaisonName]   = useState('')
 
   // ── State matchs ──────────────────────────────────────────────────────────
   const [matchs, setMatchs]               = useState<MatchItem[]>([])
@@ -159,25 +169,40 @@ export default function SaisonPage() {
       .finally(() => setLoadingMatchs(false))
   }, [selectedTeamId, activeTab])
 
+  // ── Chargement des saisons disponibles pour l'équipe ──────────────────────
+
+  useEffect(() => {
+    if (!selectedTeamId) { setSaisonsList([]); return }
+    api.get(`/championnat/saisons?equipe_ref_id=${selectedTeamId}`)
+      .then(r => {
+        const list: string[] = r.data.data || []
+        setSaisonsList(list)
+        // Reste sur la saison courante si déjà utilisée, sinon repasse sur la saison en cours par défaut
+        setSelectedSaison(prev => list.includes(prev) ? prev : defaultSeason)
+      })
+      .catch(() => setSaisonsList([]))
+  }, [selectedTeamId])
+
   // ── Chargement classement ─────────────────────────────────────────────────
 
   useEffect(() => {
     if (!selectedTeamId || activeTab !== 'classement') return
-    api.get(`/championnat/list?equipe_ref_id=${selectedTeamId}&saison=${season}`)
+    api.get(`/championnat/list?equipe_ref_id=${selectedTeamId}&saison=${selectedSaison}`)
       .then(r => {
         const list: string[] = r.data.data || []
         setChampList(list)
         if (list.length > 0 && !list.includes(activeChamp)) setActiveChamp(list[0])
+        else if (list.length === 0) setActiveChamp('')
       })
       .catch(() => setChampList([]))
-  }, [selectedTeamId, activeTab])
+  }, [selectedTeamId, activeTab, selectedSaison])
 
   const loadChampData = async () => {
     if (!selectedTeamId) return
     setLoadingChamp(true)
     try {
       const r = await api.get(
-        `/championnat?equipe_ref_id=${selectedTeamId}&saison=${season}&championnat=${encodeURIComponent(activeChamp)}`
+        `/championnat?equipe_ref_id=${selectedTeamId}&saison=${selectedSaison}&championnat=${encodeURIComponent(activeChamp)}`
       )
       setChampData(r.data.data)
     } catch {
@@ -189,7 +214,16 @@ export default function SaisonPage() {
 
   useEffect(() => {
     if (activeTab === 'classement' && selectedTeamId) loadChampData()
-  }, [activeChamp, selectedTeamId, activeTab])
+  }, [activeChamp, selectedTeamId, activeTab, selectedSaison])
+
+  const createSaison = () => {
+    const n = newSaisonName.trim()
+    if (!n) return
+    setSaisonsList(prev => prev.includes(n) ? prev : [n, ...prev])
+    setSelectedSaison(n)
+    setChampList([]); setActiveChamp(''); setChampData(null)
+    setNewSaisonName(''); setShowNewSaison(false)
+  }
 
   // ── Stats ─────────────────────────────────────────────────────────────────
 
@@ -235,10 +269,11 @@ export default function SaisonPage() {
     await api.post('/championnat/equipes', {
       equipe_ref_id: selectedTeamId, equipe_id: selectedTeamId,
       nom: equipes.find(e => e.id === selectedTeamId)?.nom || 'Mon équipe',
-      saison: season, championnat: n, couleur: '#1b4332',
+      saison: selectedSaison, championnat: n, couleur: '#1b4332',
     })
     setChampList(prev => [...prev, n])
     setActiveChamp(n)
+    setSaisonsList(prev => prev.includes(selectedSaison) ? prev : [selectedSaison, ...prev])
     setNewChampName(''); setShowNewChamp(false)
     await loadChampData()
   }
@@ -250,7 +285,7 @@ export default function SaisonPage() {
       await api.post('/championnat/equipes', {
         equipe_ref_id: selectedTeamId,
         equipe_id: addTeamIsOwn ? selectedTeamId : null,
-        nom: addTeamNom.trim(), saison: season, championnat: activeChamp,
+        nom: addTeamNom.trim(), saison: selectedSaison, championnat: activeChamp,
       })
       setAddTeamNom(''); setAddTeamIsOwn(false); setShowAddTeam(false)
       await loadChampData()
@@ -265,7 +300,7 @@ export default function SaisonPage() {
         await api.patch(`/championnat/matchs/${editingMatch.id}`, resultForm)
       } else {
         await api.post('/championnat/matchs', {
-          equipe_ref_id: selectedTeamId, saison: season, championnat: activeChamp, ...resultForm,
+          equipe_ref_id: selectedTeamId, saison: selectedSaison, championnat: activeChamp, ...resultForm,
         })
       }
       setShowAddResult(false); setResultForm(BLANK_RESULT); setEditingMatch(null)
@@ -300,7 +335,7 @@ export default function SaisonPage() {
   const handleDeleteChamp = async () => {
     if (!selectedTeamId || !activeChamp) return
     if (!confirm(`Supprimer le championnat "${activeChamp}" et toutes ses données ?`)) return
-    await api.delete(`/championnat/complet?equipe_ref_id=${selectedTeamId}&saison=${season}&championnat=${encodeURIComponent(activeChamp)}`)
+    await api.delete(`/championnat/complet?equipe_ref_id=${selectedTeamId}&saison=${selectedSaison}&championnat=${encodeURIComponent(activeChamp)}`)
     setChampList(prev => prev.filter(c => c !== activeChamp))
     setActiveChamp('')
     setChampData(null)
@@ -315,12 +350,16 @@ export default function SaisonPage() {
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
-          <h2 className="text-headline-lg text-on-surface">Saison {season}</h2>
+          <h2 className="text-headline-lg text-on-surface">
+            {pageMode === 'a-saisir' ? 'Résultats à saisir' : `Saison ${selectedSaison}`}
+          </h2>
           <p className="text-body-md text-on-surface-variant">
-            {selectedTeam ? selectedTeam.nom : 'Sélectionnez une catégorie'}
+            {pageMode === 'a-saisir'
+              ? 'Matchs des 10 derniers jours en attente de résultat, toutes équipes du club'
+              : (selectedTeam ? selectedTeam.nom : 'Sélectionnez une catégorie')}
           </p>
         </div>
-        {canManage && selectedTeamId && activeTab !== 'classement' && (
+        {pageMode === 'equipe' && canManage && selectedTeamId && activeTab !== 'classement' && (
           <button
             onClick={() => { setForm({ ...BLANK_FORM, type: activeTab as TabKey }); setSaveError(null); setShowModal(true) }}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary/90 transition-colors shadow-sm"
@@ -331,6 +370,30 @@ export default function SaisonPage() {
         )}
       </div>
 
+      {/* Bascule Vue équipe / Résultats à saisir (admin club) */}
+      {isClubAdmin && (
+        <div className="flex gap-1 bg-surface-container-low p-1 rounded-xl mb-5 w-fit overflow-x-auto">
+          <button onClick={() => setPageMode('equipe')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-label-md whitespace-nowrap transition-all ${
+              pageMode === 'equipe' ? 'bg-white text-on-surface shadow-sm font-medium' : 'text-on-surface-variant hover:text-on-surface'
+            }`}>
+            <span className="material-symbols-outlined text-[16px]">groups</span>
+            Vue par équipe
+          </button>
+          <button onClick={() => setPageMode('a-saisir')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-label-md whitespace-nowrap transition-all ${
+              pageMode === 'a-saisir' ? 'bg-white text-on-surface shadow-sm font-medium' : 'text-on-surface-variant hover:text-on-surface'
+            }`}>
+            <span className="material-symbols-outlined text-[16px]">assignment_late</span>
+            Résultats à saisir
+          </button>
+        </div>
+      )}
+
+      {pageMode === 'a-saisir' ? (
+        <PendingResultsView />
+      ) : (
+      <>
       {/* Sélecteur catégorie */}
       {loadingEquipes ? (
         <div className="flex gap-2 mb-4">
@@ -527,6 +590,10 @@ export default function SaisonPage() {
           {/* ── Vue classement ─────────────────────────────────────────────── */}
           {activeTab === 'classement' && (
             <ClassementView
+              saisonsList={saisonsList}
+              selectedSaison={selectedSaison}
+              onSelectSaison={setSelectedSaison}
+              onOpenNewSaison={() => { setNewSaisonName(''); setShowNewSaison(true) }}
               champList={champList}
               activeChamp={activeChamp}
               champData={champData}
@@ -637,6 +704,30 @@ export default function SaisonPage() {
                   ? <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
                   : <span className="material-symbols-outlined text-[18px]">add</span>}
                 {saving ? 'Création…' : 'Créer le match'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal nouvelle saison ──────────────────────────────────────────── */}
+      {showNewSaison && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNewSaison(false)}>
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-headline-md mb-4">Nouvelle saison</h3>
+            <div className="space-y-1.5 mb-5">
+              <label className="text-label-md text-on-surface-variant">Nom de la saison *</label>
+              <input autoFocus value={newSaisonName} onChange={e => setNewSaisonName(e.target.value)}
+                placeholder="Ex : 2026-2027"
+                className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all"
+              />
+              <p className="text-body-sm text-on-surface-variant">Vous pourrez y créer plusieurs championnats (ex: phase 1, phase 2, coupe…).</p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowNewSaison(false)} className="px-4 py-2.5 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low transition-colors">Annuler</button>
+              <button onClick={createSaison} disabled={!newSaisonName.trim()}
+                className="px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary/90 disabled:opacity-40 transition-colors">
+                Créer
               </button>
             </div>
           </div>
@@ -760,6 +851,118 @@ export default function SaisonPage() {
           </div>
         </div>
       )}
+      </>
+      )}
+    </div>
+  )
+}
+
+// ── Composant Résultats à saisir (club, toutes équipes) ───────────────────────
+
+type PendingMatch = {
+  id: number
+  adversaire: string | null
+  date: string
+  type: string
+  domicile_exterieur: string
+  equipe?: { id: number; nom: string; categorie?: { id: number; nom: string } | null }
+}
+
+function PendingResultsView() {
+  const [pending, setPending]     = useState<PendingMatch[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [scores, setScores]       = useState<Record<number, { score_equipe: string; score_adversaire: string }>>({})
+  const [savingId, setSavingId]   = useState<number | null>(null)
+  const [savedIds, setSavedIds]   = useState<Set<number>>(new Set())
+
+  const load = () => {
+    setLoading(true)
+    api.get('/matchs/a-saisir')
+      .then(r => setPending(r.data.data || []))
+      .catch(() => setPending([]))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const setScore = (id: number, field: 'score_equipe' | 'score_adversaire', value: string) => {
+    setScores(prev => {
+      const current = prev[id] || { score_equipe: '', score_adversaire: '' }
+      return { ...prev, [id]: { ...current, [field]: value } }
+    })
+  }
+
+  const saveScore = async (m: PendingMatch) => {
+    const s = scores[m.id]
+    if (!s || s.score_equipe === '' || s.score_adversaire === '') return
+    setSavingId(m.id)
+    try {
+      await api.patch(`/matchs/${m.id}/score`, {
+        score_equipe: Number(s.score_equipe), score_adversaire: Number(s.score_adversaire), statut: 'termine',
+      })
+      setSavedIds(prev => new Set(prev).add(m.id))
+      setPending(prev => prev.filter(p => p.id !== m.id))
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Erreur lors de la saisie du résultat')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1,2,3].map(i => <div key={i} className="h-20 bg-white border border-[#e8e8f0] rounded-xl animate-pulse" />)}
+      </div>
+    )
+  }
+
+  if (pending.length === 0) {
+    return (
+      <div className="py-20 text-center bg-white border border-[#e8e8f0] rounded-xl text-on-surface-variant">
+        <span className="material-symbols-outlined text-[56px] block mb-4 opacity-30">task_alt</span>
+        <p className="text-headline-md text-on-surface mb-2">Tout est à jour</p>
+        <p className="text-body-md">Aucun match des 10 derniers jours n'attend de résultat.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {pending.map(m => {
+        const s = scores[m.id] || { score_equipe: '', score_adversaire: '' }
+        return (
+          <div key={m.id} className="bg-white border border-[#e8e8f0] rounded-xl p-4 flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-label-lg text-on-surface truncate">
+                {m.equipe?.nom || '—'} {m.equipe?.categorie?.nom ? `(${m.equipe.categorie.nom})` : ''}
+              </p>
+              <p className="text-body-sm text-on-surface-variant">
+                {new Date(m.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {' · '}{m.adversaire || 'Adversaire inconnu'}
+                {' · '}{m.domicile_exterieur === 'domicile' ? 'Domicile' : m.domicile_exterieur === 'exterieur' ? 'Extérieur' : 'Neutre'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <input type="number" min="0" placeholder="0" value={s.score_equipe}
+                onChange={e => setScore(m.id, 'score_equipe', e.target.value)}
+                className="w-14 px-2 py-2 border border-outline-variant rounded-lg text-body-md text-center focus:outline-none focus:border-primary" />
+              <span className="text-on-surface-variant">–</span>
+              <input type="number" min="0" placeholder="0" value={s.score_adversaire}
+                onChange={e => setScore(m.id, 'score_adversaire', e.target.value)}
+                className="w-14 px-2 py-2 border border-outline-variant rounded-lg text-body-md text-center focus:outline-none focus:border-primary" />
+              <button onClick={() => saveScore(m)}
+                disabled={savingId === m.id || s.score_equipe === '' || s.score_adversaire === ''}
+                className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-lg text-label-md hover:bg-primary/90 disabled:opacity-40 transition-colors">
+                {savingId === m.id
+                  ? <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                  : <span className="material-symbols-outlined text-[16px]">check</span>}
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -767,6 +970,10 @@ export default function SaisonPage() {
 // ── Composant Classement ───────────────────────────────────────────────────────
 
 interface ClassementProps {
+  saisonsList: string[]
+  selectedSaison: string
+  onSelectSaison: (s: string) => void
+  onOpenNewSaison: () => void
   champList: string[]
   activeChamp: string
   champData: ChampData | null
@@ -784,6 +991,7 @@ interface ClassementProps {
 }
 
 function ClassementView({
+  saisonsList, selectedSaison, onSelectSaison, onOpenNewSaison,
   champList, activeChamp, champData, loadingChamp, canManage,
   onSelectChamp, onOpenNewChamp, onAddTeam, onAddResult, onEditResult, onDeleteResult, onDeleteTeam, onDeleteChamp,
 }: ClassementProps) {
@@ -794,6 +1002,30 @@ function ClassementView({
 
   return (
     <div className="space-y-5">
+      {/* Barre sélecteur saison */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-label-md text-on-surface-variant mr-1">Saison :</span>
+        {saisonsList.map(s => (
+          <button key={s} onClick={() => onSelectSaison(s)}
+            className={`px-3 py-1.5 rounded-full text-label-md transition-all font-medium ${
+              selectedSaison === s
+                ? 'bg-on-surface text-surface'
+                : 'bg-white border border-[#e8e8f0] text-on-surface-variant hover:border-on-surface/40'
+            }`}
+          >{s}</button>
+        ))}
+        {!saisonsList.includes(selectedSaison) && (
+          <span className="px-3 py-1.5 rounded-full text-label-md bg-on-surface text-surface font-medium">{selectedSaison}</span>
+        )}
+        {canManage && (
+          <button onClick={onOpenNewSaison}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-label-md border border-dashed border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-all">
+            <span className="material-symbols-outlined text-[14px]">add</span>
+            Nouvelle saison
+          </button>
+        )}
+      </div>
+
       {/* Barre sélecteur championnat */}
       <div className="flex items-center gap-3 flex-wrap">
         {champList.length > 0 && champList.map(c => (

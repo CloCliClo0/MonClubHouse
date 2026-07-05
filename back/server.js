@@ -299,6 +299,32 @@ const applyStartupMigrations = async () => {
     console.warn('[DB] Migration startup échouée (users) :', e.message);
   }
 
+  // Migrations equipes — genre/format/couleur_maillot/description envoyés par le frontend depuis
+  // toujours mais jamais déclarés sur le modèle Sequelize ni la table : silencieusement ignorés
+  // à l'écriture, toujours `undefined` à la lecture (ex: "undefinedvundefined" affiché à la place du format).
+  try {
+    const [eqRows] = await sequelize.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='equipes' AND TABLE_SCHEMA=DATABASE()");
+    const eqCols = eqRows.map(r => r.COLUMN_NAME);
+    if (!eqCols.includes('genre')) {
+      await sequelize.query("ALTER TABLE equipes ADD COLUMN genre ENUM('masculin','feminin','mixte','handisport') NOT NULL DEFAULT 'masculin'");
+      console.log('[DB] Colonne equipes.genre ajoutée');
+    }
+    if (!eqCols.includes('format')) {
+      await sequelize.query("ALTER TABLE equipes ADD COLUMN format VARCHAR(10) NOT NULL DEFAULT '11'");
+      console.log('[DB] Colonne equipes.format ajoutée');
+    }
+    if (!eqCols.includes('couleur_maillot')) {
+      await sequelize.query("ALTER TABLE equipes ADD COLUMN couleur_maillot VARCHAR(7) NOT NULL DEFAULT '#0f5238'");
+      console.log('[DB] Colonne equipes.couleur_maillot ajoutée');
+    }
+    if (!eqCols.includes('description')) {
+      await sequelize.query("ALTER TABLE equipes ADD COLUMN description TEXT NULL");
+      console.log('[DB] Colonne equipes.description ajoutée');
+    }
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée (equipes) :', e.message);
+  }
+
   // Migrations matchs
   try {
     const [mRows] = await sequelize.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='matchs' AND TABLE_SCHEMA=DATABASE()");

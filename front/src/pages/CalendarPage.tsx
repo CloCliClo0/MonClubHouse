@@ -12,7 +12,7 @@ type CalEvent = {
   terrain?: { nom: string }
   statut_convoc?: string
 }
-type Equipe = { id: number; nom: string; categorie?: { id: number; nom: string } | null; coach_id?: number }
+type Equipe = { id: number; nom: string; categorie?: { id: number; nom: string } | null; coachs_extra?: { id: number }[] }
 type ViewMode = 'mois' | 'semaine' | 'jour'
 
 const DAYS_SHORT = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM']
@@ -47,7 +47,7 @@ export default function CalendarPage() {
       const list: Equipe[] = r.data.data || []
       setEquipes(list)
       if (role === 'coach' && userId) {
-        const mine = list.find(e => e.coach_id === userId)
+        const mine = list.find(e => e.coachs_extra?.some(c => c.id === userId))
         if (mine) setSelectedEquipe(String(mine.id))
       }
     }).catch(() => {})

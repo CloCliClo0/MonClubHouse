@@ -115,12 +115,6 @@ const register = async (req, res) => {
             defaults: { user_id: user.id, equipe_id: null, club_id: invite.club_id, statut: 'actif' },
           });
         }
-
-        // Coach : conserve aussi le FK direct historique `coach_id` sur l'équipe précise du code,
-        // uniquement si elle n'a pas déjà de coach titulaire (ne jamais écraser une affectation existante).
-        if (invite.role === 'coach' && invite.equipe_id) {
-          await Equipe.update({ coach_id: user.id }, { where: { id: invite.equipe_id, coach_id: null } });
-        }
       }
 
       // Incrément atomique (optimistic locking) — évite la race condition entre requêtes concurrentes

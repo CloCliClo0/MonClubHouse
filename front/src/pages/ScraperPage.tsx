@@ -32,6 +32,7 @@ export default function ScraperPage() {
   // champNew = texte saisi quand "Créer un nouveau" est sélectionné
   const [champNew, setChampNew]         = useState('')
   const [saisonName, setSaisonName]     = useState(season)
+  const [saisonsExistantes, setSaisonsExistantes] = useState<string[]>([])
 
   // Le nom final du championnat à utiliser
   const champName = champSelect === NEW_CHAMP_SENTINEL ? champNew : champSelect
@@ -78,6 +79,14 @@ export default function ScraperPage() {
     }).catch(() => {})
     api.get('/ai-scraper/quota').then(r => setQuota(r.data.data)).catch(() => {})
   }, [])
+
+  /* ── Saisons déjà utilisées pour cette équipe (suggestions) ── */
+  useEffect(() => {
+    if (!selectedEqId) { setSaisonsExistantes([]); return }
+    api.get('/championnat/saisons', { params: { equipe_ref_id: selectedEqId } })
+      .then(r => setSaisonsExistantes(r.data.data || []))
+      .catch(() => setSaisonsExistantes([]))
+  }, [selectedEqId])
 
   /* ── Championnats existants : recharge quand équipe ou saison change ── */
   useEffect(() => {
@@ -310,8 +319,9 @@ export default function ScraperPage() {
           <div className="space-y-1.5">
             <label className="text-label-md text-on-surface-variant">Saison</label>
             <input value={saisonName} onChange={e => setSaisonName(e.target.value)}
-              placeholder={season}
+              placeholder={season} list="saisons-datalist"
               className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all" />
+            <datalist id="saisons-datalist">{saisonsExistantes.map(s => <option key={s} value={s} />)}</datalist>
           </div>
         </div>
         <p className="text-body-sm text-on-surface-variant">
@@ -321,10 +331,10 @@ export default function ScraperPage() {
 
       {/* Source */}
       <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
-        <div className="flex border-b border-[#e8e8f0]">
+        <div className="flex border-b border-[#e8e8f0] overflow-x-auto">
           {([['file', 'photo_library', 'Photo / PDF'], ['html', 'code', 'HTML / Texte']] as const).map(([mode, icon, label]) => (
             <button key={mode} onClick={() => { setSourceMode(mode); setError(null) }}
-              className={`flex items-center gap-2 px-5 py-3.5 text-label-lg border-b-2 transition-colors
+              className={`flex items-center gap-2 px-5 py-3.5 text-label-lg whitespace-nowrap border-b-2 transition-colors
                 ${sourceMode === mode
                   ? 'border-primary text-primary bg-primary/5'
                   : 'border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/40'}`}>

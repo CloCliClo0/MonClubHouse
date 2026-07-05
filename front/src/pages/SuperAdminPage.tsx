@@ -14,6 +14,12 @@ type User = { id: number; nom: string; prenom: string; email: string; role: Role
 type InviteCode = { id: number; code: string; role: string; label?: string; uses_count: number; max_uses: number; actif: boolean; categorie?: string; equipe?: { id: number; nom: string } }
 type Terrain = { id: number; nom: string; type: string; capacite: number | null; adresse: string | null }
 type Subscription = { id: number; owner_type: string; plan: string; statut: string; current_period_end: string | null; promo_code: string | null }
+type Licencie = {
+  id: number; equipe_id: number | null; statut: string
+  poste?: string | null; numero_maillot?: number | null; numero_licence?: string | null
+  user?: { id: number; nom: string; prenom: string }
+  equipe?: { nom: string }
+}
 
 const ROLE_COLORS: Record<string, string> = {
   superadmin: 'bg-red-100 text-red-700', admin: 'bg-purple-100 text-purple-700',
@@ -70,7 +76,18 @@ export default function SuperAdminPage() {
   const [eqSaving, setEqSaving] = useState(false)
   // Joueurs par catégorie (expanded)
   const [expandedCat, setExpandedCat] = useState<number | null>(null)
-  const [catJoueurs, setCatJoueurs] = useState<Record<number, User[]>>({})
+  const [catJoueurs, setCatJoueurs] = useState<Record<number, Licencie[]>>({})
+
+  // Ajout d'un membre à une catégorie (joueur/parent/coach → cascade sur toutes ses équipes)
+  const [assignableUsers, setAssignableUsers] = useState<User[]>([])
+  const [memberModal, setMemberModal] = useState<{ open: false } | { open: true; categoryId: number }>({ open: false })
+  const [memberSearch, setMemberSearch] = useState('')
+  const [addingMemberId, setAddingMemberId] = useState<number | null>(null)
+
+  // Modification d'une licence (poste, n° maillot, statut, n° licence)
+  const [licModal, setLicModal] = useState<Licencie | null>(null)
+  const [licForm, setLicForm] = useState<Record<string, any>>({})
+  const [savingLic, setSavingLic] = useState(false)
 
   // Membres
   const [membres, setMembres] = useState<User[]>([])
@@ -114,9 +131,11 @@ export default function SuperAdminPage() {
       Promise.all([
         api.get(`/equipes?club_id=${selectedClub.id}`).catch(() => null),
         api.get(`/categories?club_id=${selectedClub.id}`).catch(() => null),
-      ]).then(([eRes, catRes]) => {
+        api.get(`/admin/users?club_id=${selectedClub.id}`).catch(() => null),
+      ]).then(([eRes, catRes, uRes]) => {
         setEquipes(eRes?.data?.data || [])
         setClubCategories(catRes?.data?.data || [])
+        setAssignableUsers(uRes?.data?.data || [])
       }).finally(() => setEqLoading(false))
     }
     if (tab === 'membres') {
@@ -206,18 +225,78 @@ export default function SuperAdminPage() {
     finally { setEqSaving(false) }
   }
 
+  const fetchJoueursCat = async (catId: number) => {
+    const equipeIds = equipes.filter(e => e.categorie?.id === catId).map(e => e.id)
+    const results = await Promise.all(equipeIds.map(id => api.get(`/licencies?equipe_id=${id}`).catch(() => ({ data: { data: [] } }))))
+    const joueurs: Licencie[] = results.flatMap(r => r.data.data || [])
+    return joueurs.filter((j: any, i, arr) => arr.findIndex((x: any) => x.user_id === (j as any).user_id) === i)
+  }
+
   const loadJoueursCat = async (catId: number) => {
     if (!selectedClub) return
     if (expandedCat === catId) { setExpandedCat(null); return }
     setExpandedCat(catId)
     if (catJoueurs[catId]) return
     try {
-      const equipeIds = equipes.filter(e => e.categorie?.id === catId).map(e => e.id)
-      const results = await Promise.all(equipeIds.map(id => api.get(`/licencies?equipe_id=${id}`).catch(() => ({ data: { data: [] } }))))
-      const joueurs = results.flatMap(r => r.data.data || [])
-      const unique = joueurs.filter((j, i, arr) => arr.findIndex(x => x.user_id === j.user_id) === i)
-      setCatJoueurs(prev => ({ ...prev, [catId]: unique }))
+      const joueurs = await fetchJoueursCat(catId)
+      setCatJoueurs(prev => ({ ...prev, [catId]: joueurs }))
     } catch {}
+  }
+
+  const reloadJoueursCat = async (catId: number) => {
+    try {
+      const joueurs = await fetchJoueursCat(catId)
+      setCatJoueurs(prev => ({ ...prev, [catId]: joueurs }))
+    } catch {}
+  }
+
+  // ── Ajout d'un membre à une catégorie ──────────────────────────
+  const openMemberModal = (categoryId: number) => {
+    setMemberSearch('')
+    setMemberModal({ open: true, categoryId })
+  }
+  const addMember = async (user: User) => {
+    if (!memberModal.open) return
+    setAddingMemberId(user.id)
+    try {
+      await api.post(`/categories/${memberModal.categoryId}/assign`, { user_id: user.id, role: user.role })
+      await reloadEquipes()
+      if (expandedCat === memberModal.categoryId) await reloadJoueursCat(memberModal.categoryId)
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Erreur lors de l'ajout")
+    } finally {
+      setAddingMemberId(null)
+    }
+  }
+  const memberModalCategoryId = memberModal.open ? memberModal.categoryId : null
+  const filteredMemberUsers = assignableUsers.filter(u =>
+    ['joueur', 'parent', 'coach'].includes(u.role) &&
+    `${u.prenom} ${u.nom} ${u.email || ''}`.toLowerCase().includes(memberSearch.toLowerCase())
+  )
+
+  // ── Modification d'une licence ──────────────────────────────────
+  const openLicModal = (lic: Licencie) => {
+    setLicModal(lic)
+    setLicForm({ poste: lic.poste || '', numero_maillot: lic.numero_maillot ?? '', statut: lic.statut, numero_licence: lic.numero_licence || '' })
+  }
+  const saveLicence = async () => {
+    if (!licModal) return
+    setSavingLic(true)
+    try {
+      await api.put(`/licencies/${licModal.id}`, {
+        poste: licForm.poste || null,
+        numero_maillot: licForm.numero_maillot !== '' ? Number(licForm.numero_maillot) : null,
+        statut: licForm.statut,
+        numero_licence: licForm.numero_licence || null,
+      })
+      const catId = expandedCat
+      setLicModal(null)
+      if (catId !== null) await reloadJoueursCat(catId)
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur')
+    } finally {
+      setSavingLic(false)
+    }
   }
 
   const deleteEquipe = async (id: number) => {
@@ -630,6 +709,11 @@ export default function SuperAdminPage() {
                         Joueurs
                         <span className="material-symbols-outlined text-[14px]">{expandedCat === cat.id ? 'expand_less' : 'expand_more'}</span>
                       </button>
+                      <button onClick={() => openMemberModal(cat.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-primary text-primary rounded-lg text-label-md hover:bg-primary/5 transition-colors">
+                        <span className="material-symbols-outlined text-[16px]">person_add</span>
+                        Membre
+                      </button>
                       <button onClick={() => { setAddEqInCat(addEqInCat === cat.id ? null : cat.id); setEqForm({ nom: '', niveau: '' }); setShowCatForm(false) }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-label-md hover:bg-primary-container transition-colors">
                         <span className="material-symbols-outlined text-[16px]">add</span>
@@ -688,7 +772,7 @@ export default function SuperAdminPage() {
                           <p className="px-5 py-4 text-body-sm text-on-surface-variant">Aucun joueur dans cette catégorie.</p>
                         ) : (
                           <div className="divide-y divide-[#e8e8f0]">
-                            {joueursCat.map((j: any) => (
+                            {joueursCat.map(j => (
                               <div key={j.id} className="px-5 py-3 flex items-center gap-3">
                                 <div className="w-7 h-7 rounded-full bg-primary-container flex items-center justify-center text-white text-xs font-bold shrink-0">
                                   {j.user?.prenom?.[0]}{j.user?.nom?.[0]}
@@ -700,6 +784,10 @@ export default function SuperAdminPage() {
                                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${j.statut === 'actif' ? 'bg-green-100 text-green-700' : 'bg-surface-container text-on-surface-variant'}`}>
                                   {j.statut}
                                 </span>
+                                <button onClick={() => openLicModal(j)}
+                                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-container text-on-surface-variant transition-colors">
+                                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -875,6 +963,130 @@ export default function SuperAdminPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════ Modal Ajouter un membre à la catégorie ═════ */}
+      {memberModal.open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setMemberModal({ open: false })}>
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-[#e8e8f0] flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-headline-md">Ajouter un membre</h3>
+                <p className="text-body-sm text-on-surface-variant mt-0.5">
+                  Catégorie « {clubCategories.find(c => c.id === memberModalCategoryId)?.nom} » — affecte automatiquement à toutes ses équipes.
+                </p>
+              </div>
+              <button onClick={() => setMemberModal({ open: false })}><span className="material-symbols-outlined text-on-surface-variant">close</span></button>
+            </div>
+            <div className="p-4 shrink-0">
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+                <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)} autoFocus
+                  placeholder="Rechercher un joueur, parent ou coach du club…"
+                  className="w-full pl-10 pr-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y divide-[#e8e8f0]">
+              {filteredMemberUsers.length === 0 ? (
+                <div className="py-10 text-center text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[36px] block mb-2 opacity-30">person_search</span>
+                  <p className="text-body-md">{memberSearch ? 'Aucun résultat' : 'Aucun joueur/parent/coach dans ce club'}</p>
+                </div>
+              ) : (
+                filteredMemberUsers.map(u => (
+                  <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors">
+                    <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      {u.prenom?.[0]}{u.nom?.[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-label-lg text-on-surface">{u.prenom} {u.nom}</p>
+                      <p className="text-body-sm text-on-surface-variant truncate capitalize">{u.role} — {u.email}</p>
+                    </div>
+                    <button
+                      onClick={() => addMember(u)}
+                      disabled={addingMemberId === u.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-label-md hover:bg-primary-container disabled:opacity-50 transition-colors shrink-0"
+                    >
+                      {addingMemberId === u.id
+                        ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        : <span className="material-symbols-outlined text-[16px]">add</span>
+                      }
+                      Ajouter
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════ Modal Modifier une licence ═══════════════════ */}
+      {licModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Modifier la licence — {licModal.user?.prenom} {licModal.user?.nom}</h3>
+              <button onClick={() => setLicModal(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Poste</label>
+                  <input
+                    type="text"
+                    value={licForm.poste || ''}
+                    onChange={e => setLicForm(f => ({ ...f, poste: e.target.value }))}
+                    placeholder="Gardien, Défenseur…"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">N° maillot</label>
+                  <input
+                    type="number"
+                    min={1} max={99}
+                    value={licForm.numero_maillot ?? ''}
+                    onChange={e => setLicForm(f => ({ ...f, numero_maillot: e.target.value }))}
+                    placeholder="10"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">N° de licence</label>
+                <input
+                  type="text"
+                  value={licForm.numero_licence || ''}
+                  onChange={e => setLicForm(f => ({ ...f, numero_licence: e.target.value }))}
+                  placeholder="Ex : 123456789"
+                  maxLength={50}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Statut</label>
+                <select
+                  value={licForm.statut || 'actif'}
+                  onChange={e => setLicForm(f => ({ ...f, statut: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="actif">Actif</option>
+                  <option value="inactif">Inactif</option>
+                  <option value="suspendu">Suspendu</option>
+                  <option value="blesse">Blessé</option>
+                </select>
+              </div>
+              <button
+                onClick={saveLicence}
+                disabled={savingLic}
+                className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-xl disabled:opacity-50 hover:bg-blue-700 transition"
+              >
+                {savingLic ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
           </div>
         </div>
       )}

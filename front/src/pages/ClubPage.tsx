@@ -18,8 +18,7 @@ type Category = { id: number; nom: string; couleur?: string }
 
 type Equipe = {
   id: number; nom: string; categorie?: Category | null; genre: string; format: string
-  couleur_maillot: string | null; coach_id: number | null; description: string | null
-  coach?: { id: number; nom: string; prenom: string }
+  couleur_maillot: string | null; description: string | null
   coachs_extra?: { id: number; nom: string; prenom: string }[]
 }
 
@@ -88,9 +87,7 @@ function EquipeRow({
             {eq.format !== 'autre' ? `${eq.format}v${eq.format}` : 'Format libre'}
           </span>
           {(() => {
-            const all = eq.coachs_extra && eq.coachs_extra.length > 0
-              ? eq.coachs_extra
-              : eq.coach ? [eq.coach] : []
+            const all = eq.coachs_extra || []
             if (!all.length) return null
             return (
               <>
@@ -280,10 +277,7 @@ export default function ClubPage() {
       description: e.description || '',
     })
     setEquipeModalCatId(e.categorie?.id || 0)
-    const ids = e.coachs_extra && e.coachs_extra.length > 0
-      ? e.coachs_extra.map(c => c.id)
-      : e.coach_id ? [e.coach_id] : []
-    setSelectedCoachIds(ids)
+    setSelectedCoachIds((e.coachs_extra || []).map(c => c.id))
     setEquipeError(null)
     setEquipeModal({ open: true, editing: e })
   }
@@ -305,7 +299,6 @@ export default function ClubPage() {
         format:          equipeForm.format,
         couleur_maillot: equipeForm.couleur_maillot,
         description:     equipeForm.description || null,
-        coach_id:        selectedCoachIds[0] || null,
       }
       let equipeId: number
       if (equipeModal.open && equipeModal.editing) {

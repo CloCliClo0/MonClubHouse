@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { InviteCode, User, Club, Equipe, Licencie } = require('../models');
+const { assignUserToEquipes, equipeIdsForCategory, equipeIdsForCategoryByName } = require('../services/rosterService');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -111,22 +112,27 @@ const joinByCode = async (req, res) => {
     // Mise à jour du rôle et du club de l'utilisateur
     await req.user.update({ club_id: invite.club_id, role: invite.role });
 
-    // Création / mise à jour du licencié pour joueur ou parent
-    if (invite.role === 'joueur' || invite.role === 'parent') {
-      await Licencie.upsert({
-        user_id:          req.user.id,
-        equipe_id:        invite.equipe_id,
-        statut:           'actif',
-        date_inscription: new Date().toISOString().slice(0, 10)
-      }, { conflictFields: ['user_id'] });
-    }
+    // Affectation à la catégorie (toutes les équipes actives) ou, à défaut, à l'équipe précise du
+    // code — pour joueur, parent ET coach (un code catégorie stocke le nom en texte libre).
+    if (['joueur', 'parent', 'coach'].includes(invite.role)) {
+      let equipeIds = [];
+      if (invite.equipe_id) {
+        equipeIds = invite.equipe?.categorie_id
+          ? await equipeIdsForCategory({ clubId: invite.club_id, categorieId: invite.equipe.categorie_id })
+          : [invite.equipe_id];
+      } else if (invite.categorie) {
+        equipeIds = await equipeIdsForCategoryByName({ clubId: invite.club_id, categorieName: invite.categorie });
+      }
 
-    // Affectation du coach à l'équipe
-    if (invite.role === 'coach' && invite.equipe_id) {
-      await Equipe.update(
-        { coach_id: req.user.id },
-        { where: { id: invite.equipe_id } }
-      );
+      if (equipeIds.length > 0) {
+        await assignUserToEquipes({ userId: req.user.id, clubId: invite.club_id, equipeIds, role: invite.role });
+      } else if (invite.role !== 'coach') {
+        // Ni équipe ni catégorie résolue : licencié rattaché au club sans équipe
+        await Licencie.findOrCreate({
+          where: { user_id: req.user.id },
+          defaults: { user_id: req.user.id, equipe_id: null, club_id: invite.club_id, statut: 'actif' },
+        });
+      }
     }
 
     // Incrémentation du compteur d'utilisations

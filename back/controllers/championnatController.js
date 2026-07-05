@@ -29,6 +29,33 @@ function computeStandings(chEquipes, chMatchs) {
 
 // ── Contrôleurs ───────────────────────────────────────────────────────────────
 
+// GET /championnat/saisons?equipe_ref_id=X — saisons déjà utilisées pour cette équipe (classement)
+const getSaisons = async (req, res) => {
+  try {
+    const { equipe_ref_id } = req.query;
+    if (!equipe_ref_id) return res.json({ success: true, data: [] });
+
+    let club_id = req.user.club_id;
+    if (!club_id) {
+      const { Equipe } = require('../models');
+      const eq = await Equipe.findByPk(equipe_ref_id, { attributes: ['club_id'] });
+      club_id = eq?.club_id || null;
+    }
+    if (!club_id) return res.json({ success: true, data: [] });
+
+    const rows = await ChEquipe.findAll({
+      where: { club_id, equipe_ref_id },
+      attributes: ['saison'],
+      group: ['saison'],
+      raw: true,
+    });
+    const list = [...new Set(rows.map(r => r.saison || '').filter(Boolean))].sort().reverse();
+    return res.json({ success: true, data: list });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 // GET /championnat/list?equipe_ref_id=X&saison=Y
 const getChampionnats = async (req, res) => {
   try {
@@ -252,7 +279,7 @@ const removeCoach = async (req, res) => {
 };
 
 module.exports = {
-  getClassement, getChampionnats, deleteChampionnat,
+  getClassement, getChampionnats, getSaisons, deleteChampionnat,
   addEquipe, updateEquipe, removeEquipe,
   addMatch, updateMatch, deleteMatch,
   getCoachs, addCoach, removeCoach,

@@ -5,7 +5,7 @@ import api from '../services/api'
 type EventType = 'match' | 'amical' | 'coupe' | 'entrainement' | 'tournoi' | 'plateau' | 'reunion' | 'autre'
 type Step = 1 | 2 | 3 | 4
 
-type Equipe  = { id: number; nom: string; categorie?: { id: number; nom: string } | null }
+type Equipe  = { id: number; nom: string; categorie?: { id: number; nom: string } | null; coachs_extra?: { id: number }[] }
 type Terrain = { id: number; nom: string; type: string }
 
 const EVENT_TYPES: { key: EventType; label: string; icon: string; color: string; desc: string }[] = [
@@ -69,7 +69,7 @@ export default function CreateEventPage() {
     api.get('/equipes').then(r => {
       const list: Equipe[] = r.data.data || []
       if (role === 'coach' && userId) {
-        const mine = list.find((e: any) => e.coach_id === userId)
+        const mine = list.find(e => e.coachs_extra?.some(c => c.id === userId))
         if (mine) setEquipeId(String(mine.id))
       }
       setEquipes(list)

@@ -275,10 +275,10 @@ export default function ProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center border-b border-outline-variant mb-6">
+      <div className="flex items-center border-b border-outline-variant mb-6 overflow-x-auto">
         {tabs.map(({ key, label }) => (
           <button key={key} onClick={() => { setTab(key); setError(''); setSuccess('') }}
-            className={`px-6 py-4 text-label-lg transition-all ${
+            className={`px-6 py-4 text-label-lg whitespace-nowrap transition-all ${
               tab === key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
             }`}>
             {label}
@@ -365,7 +365,7 @@ export default function ProfilePage() {
                       <BirthdateSelect value={dateNaiss} onChange={setDate}
                         className="w-full px-3 py-3 bg-white border border-[#e8e8f0] rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-body-md" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-label-md text-on-surface-variant">Poste</label>
                         <input value={poste} onChange={e => setPoste(e.target.value)} type="text" placeholder="Défenseur, Gardien…"
@@ -565,13 +565,13 @@ export default function ProfilePage() {
             ) : (
               <form onSubmit={handleEnable2fa} className="space-y-3">
                 <p className="text-body-sm text-on-surface-variant">Un code a été envoyé à <strong>{user?.email}</strong>. Saisissez-le pour confirmer l'activation.</p>
-                <div className="flex gap-3 items-center">
+                <div className="flex flex-wrap gap-3 items-center">
                   <input
                     type="text" inputMode="numeric" maxLength={6}
                     value={twoFaCodeInput}
                     onChange={e => setTwoFaCodeInput(e.target.value.replace(/\D/g, ''))}
                     placeholder="• • • • • •"
-                    className="w-40 px-4 py-3 bg-white border border-outline-variant rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-center text-xl font-mono tracking-[0.4em]"
+                    className="w-full sm:w-40 px-4 py-3 bg-white border border-outline-variant rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-center text-xl font-mono tracking-[0.4em]"
                     required autoFocus
                   />
                   <button type="submit" disabled={twoFaEnabling || twoFaCodeInput.length < 6}

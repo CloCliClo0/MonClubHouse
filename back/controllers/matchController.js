@@ -43,6 +43,33 @@ const getAll = async (req, res) => {
   }
 };
 
+// GET /matchs/a-saisir — matchs/coupes/tournois des 10 derniers jours sans score, toutes équipes du club
+const getPendingResults = async (req, res) => {
+  try {
+    const where = {
+      type: { [Op.in]: ['match', 'coupe', 'tournoi', 'amical'] },
+      statut: { [Op.in]: ['programme', 'en_cours'] },
+      date: { [Op.between]: [new Date(Date.now() - 10 * 86400000), new Date()] },
+    };
+    if (req.user.role !== 'superadmin' && req.user.club_id) {
+      where.club_id = req.user.club_id;
+    }
+
+    const matchs = await Match.findAll({
+      where,
+      include: [
+        { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
+          include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] },
+      ],
+      order: [['date', 'DESC']],
+    });
+    return res.json({ success: true, data: matchs });
+  } catch (err) {
+    console.error('[match.getPendingResults]', err.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 const getById = async (req, res) => {
   try {
     const match = await Match.findByPk(req.params.id, {
@@ -191,4 +218,4 @@ const createRecurring = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, update, saisirScore, remove, createRecurring };
+module.exports = { getAll, getById, create, update, saisirScore, remove, createRecurring, getPendingResults };

@@ -154,12 +154,6 @@ const validateCode = async (req, res) => {
           defaults: { user_id: req.user.id, equipe_id: null, club_id: inviteCode.club_id, statut: 'actif' },
         });
       }
-
-      // Coach : conserve le FK direct historique `coach_id` sur l'équipe précise du code,
-      // uniquement si elle n'a pas déjà de coach titulaire.
-      if (inviteCode.role === 'coach' && inviteCode.equipe_id) {
-        await Equipe.update({ coach_id: req.user.id }, { where: { id: inviteCode.equipe_id, coach_id: null } });
-      }
     }
 
     // Incrément du compteur

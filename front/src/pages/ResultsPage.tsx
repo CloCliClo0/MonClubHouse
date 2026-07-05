@@ -153,10 +153,10 @@ export default function ResultsPage() {
 
       <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
         {/* Tabs */}
-        <div className="flex border-b border-[#e8e8f0]">
+        <div className="flex border-b border-[#e8e8f0] overflow-x-auto">
           {(['resultats', 'classement'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-6 py-4 text-label-lg transition-all ${
+              className={`px-6 py-4 text-label-lg whitespace-nowrap transition-all ${
                 tab === t ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
               }`}>
               {t === 'resultats' ? '⚽ Résultats' : '🏆 Classement'}
