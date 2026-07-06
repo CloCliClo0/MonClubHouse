@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { getAll, getById, create, update, uploadLogo, getStats, getTerrains, createTerrain, updateTerrain, deleteTerrain, deleteClub } = require('../controllers/clubController');
+const { getAll, getById, getPublicClub, create, update, uploadLogo, getStats, getTerrains, createTerrain, updateTerrain, deleteTerrain, deleteClub } = require('../controllers/clubController');
 const { validateCode, joinByCode } = require('../controllers/inviteCodeController');
 // Rattachement enfant/liste joueurs : implémentation unique dans codesController.js (voir /api/codes/*)
 const { clubPlayers, linkChild } = require('../controllers/codesController');
@@ -34,6 +34,9 @@ router.post('/join', authenticate, joinByCode);
 // Parent: list players to link child
 router.get('/players', authenticate, clubPlayers);
 router.post('/link-child', authenticate, linkChild);
+
+// Page publique (visiteur non connecté) — avant /:id pour éviter le conflit
+router.get('/public/:idOrSlug', getPublicClub);
 
 // Stats et terrains (avant /:id pour éviter le conflit)
 router.get('/stats',               authenticate, getStats);

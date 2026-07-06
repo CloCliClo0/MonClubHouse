@@ -4,7 +4,7 @@ import api from '../services/api'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type ClubSummary = { id: number; nom: string; logo?: string | null; ville?: string | null; couleur_primaire?: string | null; actif: boolean }
+type ClubSummary = { id: number; slug?: string | null; nom: string; logo?: string | null; ville?: string | null; couleur_primaire?: string | null; actif: boolean }
 
 type Category = { id: number; nom: string; couleur?: string }
 type Sport = { id: number; nom: string }
@@ -141,7 +141,7 @@ function ClubPicker() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map(c => (
-                <Link key={c.id} to={`/resultats-club/${c.id}`}
+                <Link key={c.id} to={`/resultats-club/${c.slug || c.id}`}
                   className="flex items-center gap-3 p-4 border border-[#e8e8f0] rounded-xl hover:border-primary/40 hover:shadow-sm transition-all">
                   <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center text-white font-black text-sm shrink-0"
                     style={{ backgroundColor: c.couleur_primaire || '#0f5238' }}>
@@ -166,7 +166,7 @@ function ClubPicker() {
 
 type Tab = 'infos' | 'equipes' | 'resultats'
 
-function ClubPublicPage({ clubId }: { clubId: string }) {
+function ClubPublicPage({ idOrSlug }: { idOrSlug: string }) {
   const [tab, setTab]         = useState<Tab>('infos')
   const [club, setClub]       = useState<ClubDetail | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
@@ -177,15 +177,21 @@ function ClubPublicPage({ clubId }: { clubId: string }) {
 
   useEffect(() => {
     setLoading(true)
-    Promise.all([
-      api.get(`/clubs/${clubId}`).catch(() => null),
-      fetch(`/api/resultats?club_id=${clubId}&limit=100`).then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
-    ]).then(([cRes, rRes]) => {
-      if (!cRes?.data?.data) { setNotFound(true); return }
-      setClub(cRes.data.data)
-      setMatches((rRes.data || []).filter((m: Match) => m.statut === 'termine'))
-    }).finally(() => setLoading(false))
-  }, [clubId])
+    setNotFound(false)
+    // Résout d'abord le club (par slug ou id numérique — compat liens déjà partagés), puis charge
+    // ses résultats avec son id numérique réel : /api/resultats exige club_id, jamais de fuite
+    // inter-clubs possible ici (fix 2026-07-06).
+    api.get(`/clubs/public/${idOrSlug}`).catch(() => null).then(cRes => {
+      const clubData = cRes?.data?.data
+      if (!clubData) { setNotFound(true); setLoading(false); return }
+      setClub(clubData)
+      fetch(`/api/resultats?club_id=${clubData.id}&limit=100`)
+        .then(r => r.ok ? r.json() : { data: [] })
+        .catch(() => ({ data: [] }))
+        .then(rRes => setMatches((rRes.data || []).filter((m: Match) => m.statut === 'termine')))
+        .finally(() => setLoading(false))
+    })
+  }, [idOrSlug])
 
   const wins   = matches.filter(m => getResult(m) === 'Victoire').length
   const draws  = matches.filter(m => getResult(m) === 'Nul').length
@@ -465,6 +471,8 @@ function ClubPublicPage({ clubId }: { clubId: string }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PublicResultsPage() {
-  const { clubId } = useParams<{ clubId?: string }>()
-  return clubId ? <ClubPublicPage clubId={clubId} /> : <ClubPicker />
+  // Le paramètre de route s'appelle historiquement `clubId` mais porte désormais un slug
+  // (ex: fc-le-doulieu) ou, pour compat avec d'anciens liens partagés, un id numérique.
+  const { clubId: idOrSlug } = useParams<{ clubId?: string }>()
+  return idOrSlug ? <ClubPublicPage idOrSlug={idOrSlug} /> : <ClubPicker />
 }

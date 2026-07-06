@@ -1,12 +1,25 @@
 const { Club, Terrain, User, Equipe, Sport, Category } = require('../models');
 const { validationResult } = require('express-validator');
+const { slugify } = require('../utils/slugify');
+
+// Génère un slug unique à partir du nom du club (ajoute -2, -3… en cas de collision).
+async function uniqueClubSlug(nom) {
+  const base = slugify(nom) || 'club';
+  let slug = base;
+  let n = 2;
+  while (await Club.findOne({ where: { slug } })) {
+    slug = `${base}-${n}`;
+    n++;
+  }
+  return slug;
+}
 
 const getAll = async (req, res) => {
   try {
     const where = req.user?.role === 'superadmin' ? {} : { actif: true };
     const clubs = await Club.findAll({
       where,
-      attributes: ['id', 'nom', 'logo', 'ville', 'couleur_primaire', 'actif']
+      attributes: ['id', 'slug', 'nom', 'logo', 'ville', 'couleur_primaire', 'actif']
     });
     return res.json({ success: true, data: clubs });
   } catch (err) {
@@ -34,12 +47,39 @@ const getById = async (req, res) => {
   }
 };
 
+// GET /clubs/public/:idOrSlug — page publique (visiteur non connecté) : par slug (ex: fc-le-doulieu)
+// ou, pour compatibilité avec les liens déjà partagés, par id numérique. Contrairement à getById
+// (usage admin), un club désactivé n'est jamais accessible ici.
+const getPublicClub = async (req, res) => {
+  try {
+    const { idOrSlug } = req.params;
+    const isNumeric = /^\d+$/.test(idOrSlug);
+    const club = await Club.findOne({
+      where: isNumeric ? { id: idOrSlug, actif: true } : { slug: idOrSlug, actif: true },
+      include: [
+        { model: Terrain, as: 'terrains', where: { actif: true }, required: false },
+        { model: Equipe, as: 'equipes', where: { actif: true }, required: false,
+          include: [
+            { model: Sport, as: 'sport' },
+            { model: Category, as: 'categorie', attributes: ['id', 'nom', 'couleur'], required: false },
+          ]
+        }
+      ]
+    });
+    if (!club) return res.status(404).json({ success: false, message: 'Club introuvable' });
+    return res.json({ success: true, data: club });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 const create = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
   try {
-    const club = await Club.create(req.body);
+    const slug = await uniqueClubSlug(req.body.nom);
+    const club = await Club.create({ ...req.body, slug });
     if (req.user.role !== 'superadmin') {
       await req.user.update({ club_id: club.id, role: 'admin' });
     }
@@ -154,4 +194,4 @@ const deleteClub = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, update, uploadLogo, getStats, getTerrains, createTerrain, updateTerrain, deleteTerrain, deleteClub };
+module.exports = { getAll, getById, getPublicClub, create, update, uploadLogo, getStats, getTerrains, createTerrain, updateTerrain, deleteTerrain, deleteClub };

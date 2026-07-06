@@ -256,6 +256,11 @@ server.listen(PORT, () => {
 });
 
 const applyStartupMigrations = async () => {
+  // Chaque bloc pousse ici son erreur en plus du console.warn existant — un résumé structuré est
+  // loggé et une alerte email envoyée en fin de fonction si au moins un bloc a échoué (avant, un
+  // console.warn isolé pouvait passer complètement inaperçu en production).
+  const migrationIssues = [];
+
   try {
     const [rows] = await sequelize.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='users' AND TABLE_SCHEMA=DATABASE()");
     const cols = rows.map(r => r.COLUMN_NAME);
@@ -297,6 +302,7 @@ const applyStartupMigrations = async () => {
     }
   } catch (e) {
     console.warn('[DB] Migration startup échouée (users) :', e.message);
+    migrationIssues.push({ block: 'users', error: e.message });
   }
 
   // Migrations equipes — genre/format/couleur_maillot/description envoyés par le frontend depuis
@@ -323,6 +329,7 @@ const applyStartupMigrations = async () => {
     }
   } catch (e) {
     console.warn('[DB] Migration startup échouée (equipes) :', e.message);
+    migrationIssues.push({ block: 'equipes', error: e.message });
   }
 
   // Migrations matchs
@@ -339,6 +346,7 @@ const applyStartupMigrations = async () => {
     }
   } catch (e) {
     console.warn('[DB] Migration startup échouée (matchs) :', e.message);
+    migrationIssues.push({ block: 'matchs', error: e.message });
   }
 
   // Migrations match_events
@@ -351,6 +359,7 @@ const applyStartupMigrations = async () => {
     }
   } catch (e) {
     console.warn('[DB] Migration startup échouée (match_events) :', e.message);
+    migrationIssues.push({ block: 'match_events', error: e.message });
   }
 
   // Migrations arbitrage_presences
@@ -363,6 +372,7 @@ const applyStartupMigrations = async () => {
     }
   } catch (e) {
     console.warn('[DB] Migration startup échouée (arbitrage_presences) :', e.message);
+    migrationIssues.push({ block: 'arbitrage_presences', error: e.message });
   }
 
   // Création table support_tickets si absente
@@ -388,6 +398,7 @@ const applyStartupMigrations = async () => {
     console.log('[DB] Table support_tickets OK');
   } catch (e) {
     console.warn('[DB] Migration startup échouée (support_tickets) :', e.message);
+    migrationIssues.push({ block: 'support_tickets', error: e.message });
   }
 
   // Création table promo_codes si absente
@@ -418,6 +429,7 @@ const applyStartupMigrations = async () => {
     `);
   } catch (e) {
     console.warn('[DB] Migration startup échouée (promo_codes) :', e.message);
+    migrationIssues.push({ block: 'promo_codes', error: e.message });
   }
 
   // Création table subscriptions si absente
@@ -444,6 +456,7 @@ const applyStartupMigrations = async () => {
     console.log('[DB] Table subscriptions OK');
   } catch (e) {
     console.warn('[DB] Migration startup échouée (subscriptions) :', e.message);
+    migrationIssues.push({ block: 'subscriptions', error: e.message });
   }
 
   // Réécrit les anciennes URLs Drive `uc?export=view` (de plus en plus bloquées par Google en cross-origin)
@@ -464,8 +477,56 @@ const applyStartupMigrations = async () => {
     }
   } catch (e) {
     console.warn('[DB] Migration startup échouée (URLs Drive) :', e.message);
+    migrationIssues.push({ block: 'URLs Drive', error: e.message });
   }
 
+  // Migration clubs.slug — identifiant lisible pour les URLs publiques (/resultats-club/:slug),
+  // évite d'exposer l'id numérique séquentiel (énumérable) sur une page non authentifiée.
+  try {
+    const [clRows] = await sequelize.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='clubs' AND TABLE_SCHEMA=DATABASE()");
+    const clCols = clRows.map(r => r.COLUMN_NAME);
+    if (!clCols.includes('slug')) {
+      await sequelize.query("ALTER TABLE clubs ADD COLUMN slug VARCHAR(220) NULL UNIQUE");
+      console.log('[DB] Colonne clubs.slug ajoutée');
+    }
+    const { Club } = require('./models');
+    const { slugify } = require('./utils/slugify');
+    const clubsSansSlug = await Club.findAll({ where: { slug: null } });
+    for (const club of clubsSansSlug) {
+      const base = slugify(club.nom) || `club-${club.id}`;
+      let slug = base, n = 2;
+      while (await Club.findOne({ where: { slug } })) { slug = `${base}-${n}`; n++; }
+      await club.update({ slug });
+      console.log(`[DB] Slug généré pour le club #${club.id} : ${slug}`);
+    }
+  } catch (e) {
+    console.warn('[DB] Migration startup échouée (clubs.slug) :', e.message);
+    migrationIssues.push({ block: 'clubs.slug', error: e.message });
+  }
+
+  // ── Résumé structuré + alerte ────────────────────────────────────────────
+  if (migrationIssues.length > 0) {
+    console.error(JSON.stringify({
+      level: 'error',
+      event: 'startup_migrations_failed',
+      count: migrationIssues.length,
+      issues: migrationIssues,
+      timestamp: new Date().toISOString(),
+    }));
+    const { sendAdminAlert } = require('./services/emailService');
+    const summary = migrationIssues.map(i => `- ${i.block} : ${i.error}`).join('\n');
+    // Fire-and-forget : un échec d'envoi d'alerte ne doit jamais retarder/bloquer le démarrage.
+    sendAdminAlert({
+      subject: `${migrationIssues.length} migration(s) de démarrage en échec`,
+      message: `Le serveur MonClubHouse a démarré le ${new Date().toISOString()}, mais ${migrationIssues.length} migration(s) automatique(s) ont échoué :\n\n${summary}\n\nDes colonnes ou tables peuvent être manquantes — vérifier manuellement la base de données.`,
+    }).catch(() => {});
+  } else {
+    console.log(JSON.stringify({
+      level: 'info',
+      event: 'startup_migrations_complete',
+      timestamp: new Date().toISOString(),
+    }));
+  }
 };
 
 const connectDB = async (retries = 10, delay = 5000) => {

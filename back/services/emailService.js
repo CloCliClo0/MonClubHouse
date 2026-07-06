@@ -445,4 +445,23 @@ async function sendTestConvocEmail({ user }) {
   }
 }
 
-module.exports = { sendConvocationEmail, sendBulkConvocationEmails, sendTestEmail, sendTestConvocEmail, send2faEmail, sendVerifyEmail, verifyConnection, isEmailConfigured };
+// Alerte générique (texte brut) vers l'adresse de supervision — ex: échec de migration au
+// démarrage. Best-effort : n'importe quelle erreur d'envoi est avalée, jamais remontée à
+// l'appelant (une alerte cassée ne doit jamais faire planter le processus qui l'a déclenchée).
+async function sendAdminAlert({ subject, message }) {
+  if (!isEmailConfigured()) return { sent: false, reason: 'SMTP non configuré' };
+  const to = process.env.ALERT_EMAIL || process.env.SMTP_USER_CONV;
+  try {
+    await getTransporter().sendMail({
+      from: `"MonClubHouse — Alertes" <${process.env.SMTP_USER_CONV}>`,
+      to,
+      subject: `[MonClubHouse] ${subject}`,
+      text: message,
+    });
+    return { sent: true };
+  } catch (err) {
+    return { sent: false, reason: err.message };
+  }
+}
+
+module.exports = { sendConvocationEmail, sendBulkConvocationEmails, sendTestEmail, sendTestConvocEmail, send2faEmail, sendVerifyEmail, verifyConnection, isEmailConfigured, sendAdminAlert };

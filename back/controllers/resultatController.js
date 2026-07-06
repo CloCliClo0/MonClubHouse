@@ -6,9 +6,21 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const getResultatsLocaux = async (req, res) => {
   try {
     const where = { statut: 'termine' };
-    if (req.query.equipe_id) where.equipe_id = req.query.equipe_id;
-    if (req.query.club_id) {
-      const equipes = await Equipe.findAll({ where: { club_id: req.query.club_id, actif: true } });
+
+    if (req.query.equipe_id) {
+      where.equipe_id = req.query.equipe_id;
+    } else {
+      // club_id est obligatoire dès qu'on ne cible pas une équipe précise — la query param
+      // (page publique, qui porte toujours son propre clubId dans l'URL) ou, à défaut, le club
+      // de l'utilisateur connecté (page résultats authentifiée). Sans ce garde-fou, une requête
+      // sans aucun des deux renvoyait les résultats de TOUS les clubs mélangés (fuite de données
+      // inter-clubs, y compris pour un utilisateur connecté puisque son club n'était jamais utilisé).
+      const club_id = req.query.club_id || req.user?.club_id;
+      if (!club_id) {
+        return res.status(400).json({ success: false, message: 'club_id requis' });
+      }
+      const equipes = await Equipe.findAll({ where: { club_id, actif: true }, attributes: ['id'] });
+      if (equipes.length === 0) return res.json({ success: true, data: [] });
       where.equipe_id = equipes.map(e => e.id);
     }
 

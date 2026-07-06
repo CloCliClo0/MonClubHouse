@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import api, { getApiErrorMessage } from '../services/api'
+import api from '../services/api'
 import PhotoUpload from '../components/PhotoUpload'
+import InviteCodeManager from '../components/InviteCodeManager'
 
 type Club = {
   id: number; nom: string; logo?: string; ville?: string; email?: string
@@ -11,7 +12,6 @@ type Category = { id: number; nom: string; couleur?: string }
 type Equipe = { id: number; nom: string; categorie?: Category | null; niveau?: string; couleur?: string; actif: boolean }
 type Role = 'superadmin' | 'admin' | 'dirigeant' | 'coach' | 'joueur' | 'parent' | 'visiteur'
 type User = { id: number; nom: string; prenom: string; email: string; role: Role; actif: boolean; derniere_connexion: string | null }
-type InviteCode = { id: number; code: string; role: string; label?: string; uses_count: number; max_uses: number; actif: boolean; categorie?: string; equipe?: { id: number; nom: string } }
 type Terrain = { id: number; nom: string; type: string; capacite: number | null; adresse: string | null }
 type Subscription = { id: number; owner_type: string; plan: string; statut: string; current_period_end: string | null; promo_code: string | null }
 type Licencie = {
@@ -95,14 +95,9 @@ export default function SuperAdminPage() {
   const [memSearch, setMemSearch] = useState('')
   const [memRole, setMemRole] = useState('Tous')
 
-  // Codes
-  const [codes, setCodes] = useState<InviteCode[]>([])
-  const [codesLoading, setCodesLoading] = useState(false)
+  // Codes — liste/création/partage/désactivation vivent dans <InviteCodeManager>, partagé
+  // avec TeamsPage/AdminPage ; cette page ne garde que le toggle d'affichage du formulaire.
   const [showCodeForm, setShowCodeForm] = useState(false)
-  const [codeForm, setCodeForm] = useState({ role: 'joueur', categorie: '', label: '', max_uses: '50' })
-  const [codeSaving, setCodeSaving] = useState(false)
-  const [codeError, setCodeError] = useState<string | null>(null)
-  const [copied, setCopied] = useState<number | null>(null)
 
   useEffect(() => {
     api.get('/clubs').then(r => setClubs(r.data.data || [])).catch(() => setClubs([])).finally(() => setClubsLoading(false))
@@ -144,9 +139,6 @@ export default function SuperAdminPage() {
       api.get(`/admin/users?club_id=${selectedClub.id}`).then(r => setMembres(r.data.data || [])).catch(() => setMembres([])).finally(() => setMemLoading(false))
     }
     if (tab === 'codes') {
-      setCodesLoading(true)
-      api.get(`/codes?club_id=${selectedClub.id}`).then(r => setCodes(r.data.data || [])).catch(() => setCodes([])).finally(() => setCodesLoading(false))
-      api.get(`/equipes?club_id=${selectedClub.id}`).then(r => setEquipes(r.data.data || [])).catch(() => {})
       api.get(`/categories?club_id=${selectedClub.id}`).then(r => setClubCategories(r.data.data || [])).catch(() => {})
     }
     if (tab === 'terrains') {
@@ -304,41 +296,6 @@ export default function SuperAdminPage() {
     if (!confirm('Désactiver cette équipe ?')) return
     await api.patch(`/equipes/${id}/disable`).catch(() => {})
     setEquipes(prev => prev.filter(e => e.id !== id))
-  }
-
-  const createCode = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!selectedClub) return
-    setCodeError(null)
-    if (['joueur', 'parent', 'coach'].includes(codeForm.role) && !codeForm.categorie) {
-      setCodeError('Choisissez une catégorie pour ce rôle.')
-      return
-    }
-    setCodeSaving(true)
-    try {
-      const payload: Record<string, any> = { role: codeForm.role, label: codeForm.label || undefined, max_uses: parseInt(codeForm.max_uses), club_id: selectedClub.id }
-      if (codeForm.categorie) payload.categorie = codeForm.categorie
-      await api.post('/codes', payload)
-      const r = await api.get(`/codes?club_id=${selectedClub.id}`)
-      setCodes(r.data.data || [])
-      setShowCodeForm(false); setCodeForm({ role: 'joueur', categorie: '', label: '', max_uses: '50' })
-    } catch (err) {
-      setCodeError(getApiErrorMessage(err, 'Impossible de générer le code'))
-    } finally { setCodeSaving(false) }
-  }
-
-  const shareCode = (c: InviteCode) => {
-    const appUrl = window.location.origin
-    const label  = c.label || c.categorie || c.equipe?.nom || 'votre équipe'
-    const link   = `${appUrl}/register?code=${c.code}`
-    const text   = `🏆 Rejoignez ${label} sur MonClubHouse !\n\nCliquez sur ce lien pour vous inscrire directement (${c.role}) :\n${link}`
-
-    if (navigator.share) {
-      navigator.share({ title: 'Code MonClubHouse', text, url: link }).catch(() => {})
-    } else {
-      navigator.clipboard.writeText(text)
-      setCopied(c.id)
-      setTimeout(() => setCopied(null), 2000)
-    }
   }
 
   const filteredMembres = membres.filter(u => {
@@ -891,112 +848,33 @@ export default function SuperAdminPage() {
       )}
 
       {/* ── Codes d'accès ── */}
-      {tab === 'codes' && (
+      {tab === 'codes' && selectedClub && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <button onClick={() => { setCodeError(null); setShowCodeForm(v => !v) }}
+            <button onClick={() => setShowCodeForm(v => !v)}
               className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-lg text-label-lg hover:bg-primary-container transition-colors">
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Générer un code
+              <span className="material-symbols-outlined text-[20px]">{showCodeForm ? 'close' : 'add'}</span>
+              {showCodeForm ? 'Fermer' : 'Générer un code'}
             </button>
           </div>
 
-          {showCodeForm && (
-            <form onSubmit={createCode} className="bg-white border border-[#e8e8f0] rounded-xl p-5">
-              <h3 className="text-headline-md mb-4">Nouveau code d'invitation</h3>
-              {codeError && (
-                <div className="mb-4 px-4 py-2.5 rounded-lg bg-red-50 text-error text-body-sm">{codeError}</div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">Rôle</label>
-                  <select value={codeForm.role} onChange={e => setCodeForm(f => ({ ...f, role: e.target.value, categorie: '' }))}
-                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
-                    <option value="joueur">Joueur</option>
-                    <option value="parent">Parent</option>
-                    <option value="coach">Coach</option>
-                    <option value="dirigeant">Dirigeant</option>
-                  </select>
-                </div>
-                {['joueur', 'parent', 'coach'].includes(codeForm.role) && (
-                  <div className="space-y-1">
-                    <label className="text-label-md text-on-surface-variant">Catégorie *</label>
-                    <select required value={codeForm.categorie} onChange={e => setCodeForm(f => ({ ...f, categorie: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary">
-                      <option value="">Choisir une catégorie</option>
-                      {clubCategories.map(cat => <option key={cat.id} value={cat.nom}>{cat.nom}</option>)}
-                    </select>
-                    {clubCategories.length === 0 && (
-                      <p className="text-body-sm text-error">Ce club n'a aucune catégorie — créez-en une dans l'onglet "Équipes" avant de générer ce code.</p>
-                    )}
-                  </div>
-                )}
-                <div className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">Libellé (optionnel)</label>
-                  <input value={codeForm.label} onChange={e => setCodeForm(f => ({ ...f, label: e.target.value }))}
-                    placeholder="Ex : Saison 2025-26 U15"
-                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-label-md text-on-surface-variant">Utilisations max</label>
-                  <input type="number" value={codeForm.max_uses} min="1" max="500"
-                    onChange={e => setCodeForm(f => ({ ...f, max_uses: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-4">
-                <button type="button" onClick={() => setShowCodeForm(false)}
-                  className="px-4 py-2 border border-outline-variant rounded-lg text-label-lg hover:bg-surface-container-low">Annuler</button>
-                <button type="submit" disabled={codeSaving || (['joueur', 'parent', 'coach'].includes(codeForm.role) && !codeForm.categorie)}
-                  className="px-5 py-2 bg-primary text-white rounded-lg text-label-lg hover:bg-primary-container disabled:opacity-40">Générer</button>
-              </div>
-            </form>
-          )}
-
-          <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
-            {codesLoading ? (
-              <div className="p-6 space-y-3">{[1,2,3].map(i => <div key={i} className="h-14 bg-surface-container-low rounded animate-pulse" />)}</div>
-            ) : codes.length === 0 ? (
-              <div className="py-12 text-center text-on-surface-variant">
-                <span className="material-symbols-outlined text-[40px] block mb-2 opacity-30">key_off</span>
-                <p>Aucun code pour ce club</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-[#e8e8f0]">
-                {codes.map(c => (
-                  <div key={c.id} className={`px-5 py-4 flex items-center gap-4 flex-wrap ${!c.actif ? 'opacity-50' : ''}`}>
-                    <span className="font-mono font-bold text-lg tracking-widest bg-surface-container-low px-3 py-1.5 rounded-lg">{c.code}</span>
-                    <button onClick={() => { navigator.clipboard.writeText(c.code); setCopied(c.id); setTimeout(() => setCopied(null), 2000) }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low text-on-surface-variant transition-colors">
-                      <span className="material-symbols-outlined text-[18px]">{copied === c.id ? 'check' : 'content_copy'}</span>
-                    </button>
-                    <button onClick={() => shareCode(c)} title="Partager via SMS / réseaux"
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-green-50 text-green-600 transition-colors">
-                      <span className="material-symbols-outlined text-[18px]">share</span>
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded-full text-label-md bg-green-100 text-green-700">{c.role}</span>
-                        {c.categorie && <span className="px-2 py-0.5 rounded-full text-label-md bg-blue-100 text-blue-700">{c.categorie}</span>}
-                        {c.equipe && !c.categorie && <span className="text-body-sm text-on-surface-variant">{c.equipe.nom}</span>}
-                        {c.label && <span className="text-body-sm text-on-surface-variant italic">• {c.label}</span>}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <p className="text-[11px] text-on-surface-variant">{c.uses_count}/{c.max_uses} utilisations</p>
-                        <div className="w-20 h-1 bg-surface-container-low rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (c.uses_count / c.max_uses) * 100)}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                    <button onClick={async () => { await api.patch(`/codes/${c.id}/disable`).catch(() => {}); setCodes(prev => prev.filter(x => x.id !== c.id)) }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-error transition-colors">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <InviteCodeManager
+            scopeParams={{ club_id: selectedClub.id }}
+            roleOptions={[
+              { value: 'joueur', label: 'Joueur' }, { value: 'parent', label: 'Parent' },
+              { value: 'coach', label: 'Coach' }, { value: 'dirigeant', label: 'Dirigeant' },
+            ]}
+            showForm={showCodeForm}
+            emptyMessage="Aucun code pour ce club."
+            targetField={{
+              label: 'Catégorie *',
+              paramName: 'categorie',
+              options: clubCategories.map(c => ({ value: c.nom, label: c.nom })),
+              requiredForRoles: ['joueur', 'parent', 'coach'],
+              placeholder: 'Choisir une catégorie',
+              helperWhenEmpty: 'Ce club n\'a aucune catégorie — créez-en une dans l\'onglet "Équipes" avant de générer ce code.',
+            }}
+          />
         </div>
       )}
 

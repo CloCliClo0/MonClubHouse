@@ -4,6 +4,9 @@ const sequelize = require('../config/db');
 const Club = sequelize.define('Club', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   nom: { type: DataTypes.STRING(200), allowNull: false },
+  // Identifiant lisible pour les URLs publiques (ex: /resultats-club/fc-le-doulieu) — évite
+  // d'exposer un id numérique séquentiel trivialement énumérable.
+  slug: { type: DataTypes.STRING(220), allowNull: true, unique: true },
   logo: { type: DataTypes.STRING(500), allowNull: true },
   description: { type: DataTypes.TEXT, allowNull: true },
   adresse: { type: DataTypes.STRING(500), allowNull: true },
