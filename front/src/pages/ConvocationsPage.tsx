@@ -38,6 +38,15 @@ type SendStep = 'idle' | 'preview' | 'sending' | 'done'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
+const TYPE_FILTERS: { key: string; label: string }[] = [
+  { key: 'match',        label: 'Match officiel' },
+  { key: 'amical',       label: 'Match amical' },
+  { key: 'coupe',        label: 'Coupe' },
+  { key: 'entrainement', label: 'Entraînement' },
+  { key: 'tournoi',      label: 'Tournoi' },
+  { key: 'autre',        label: 'Autre' },
+]
+
 const BADGE: Record<PlayerStatut, { label: string; bg: string; text: string; icon: string }> = {
   present:      { label: 'Présent',    bg: 'bg-green-100',  text: 'text-green-700',  icon: 'check_circle' },
   absent:       { label: 'Absent',     bg: 'bg-red-100',    text: 'text-red-700',    icon: 'cancel'       },
@@ -70,6 +79,7 @@ export default function ConvocationsPage() {
   const [players, setPlayers]             = useState<Player[]>([])
   const [teamPlayers, setTeamPlayers]     = useState<TeamPlayer[]>([])
   const [loadingMatches, setLoadingMatches] = useState(true)
+  const [typeFilter, setTypeFilter]       = useState('')
   const [loadingPlayers, setLoadingPlayers] = useState(false)
   const [isClubFallback, setIsClubFallback] = useState(false)
   const [exportingAll, setExportingAll] = useState(false)
@@ -413,6 +423,8 @@ export default function ConvocationsPage() {
     setSendStep('done')
   }
 
+  const filteredMatches = typeFilter ? matches.filter(m => m.type === typeFilter) : matches
+
   // ── Sélection du match ─────────────────────────────────────────────────────
 
   if (!selectedMatch) {
@@ -420,7 +432,7 @@ export default function ConvocationsPage() {
       <div>
         <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="text-headline-lg text-on-surface">Convocations</h2>
+            <h2 className="text-headline-lg text-on-surface">Convocations et présences</h2>
             <p className="text-body-md text-on-surface-variant">Sélectionnez un match pour gérer les convocations</p>
           </div>
           <button
@@ -433,6 +445,26 @@ export default function ConvocationsPage() {
           </button>
         </div>
 
+        {!loadingMatches && matches.length > 0 && (
+          <div className="mb-4 flex items-center gap-2 flex-wrap">
+            <span className="text-label-md text-on-surface-variant">Type :</span>
+            <button onClick={() => setTypeFilter('')}
+              className={`px-3 py-1.5 rounded-full text-label-md font-semibold border-2 transition-all ${
+                typeFilter === '' ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+              }`}>
+              Tous
+            </button>
+            {TYPE_FILTERS.map(f => (
+              <button key={f.key} onClick={() => setTypeFilter(f.key)}
+                className={`px-3 py-1.5 rounded-full text-label-md font-semibold border-2 transition-all ${
+                  typeFilter === f.key ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+                }`}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loadingMatches ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1,2,3].map(i => <div key={i} className="h-24 bg-white border border-[#e8e8f0] rounded-xl animate-pulse" />)}
@@ -443,9 +475,15 @@ export default function ConvocationsPage() {
             <p className="text-headline-md text-on-surface mb-2">Aucun match à venir</p>
             <p className="text-body-md text-on-surface-variant">Créez d'abord un match dans le calendrier.</p>
           </div>
+        ) : filteredMatches.length === 0 ? (
+          <div className="py-20 text-center bg-white border border-[#e8e8f0] rounded-xl">
+            <span className="material-symbols-outlined text-[56px] text-on-surface-variant/30 block mb-4">filter_alt_off</span>
+            <p className="text-headline-md text-on-surface mb-2">Aucun événement de ce type</p>
+            <p className="text-body-md text-on-surface-variant">Essayez un autre filtre.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {matches.map(m => (
+            {filteredMatches.map(m => (
               <button key={m.id} onClick={() => loadMatch(m)}
                 className="bg-white border border-[#e8e8f0] rounded-xl p-5 text-left hover:border-primary/50 hover:shadow-md transition-all group">
                 <div className="flex items-start gap-4">
@@ -484,7 +522,7 @@ export default function ConvocationsPage() {
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             Choisir un autre match
           </button>
-          <h2 className="text-headline-lg text-on-surface">Convocations</h2>
+          <h2 className="text-headline-lg text-on-surface">Convocations et présences</h2>
           <p className="text-body-md text-on-surface-variant">
             {selectedMatch.equipe?.nom}{selectedMatch.adversaire ? ` vs ${selectedMatch.adversaire}` : ''}
           </p>

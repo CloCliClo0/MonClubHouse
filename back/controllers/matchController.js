@@ -188,7 +188,7 @@ const remove = async (req, res) => {
 // POST /matchs/recurring — crée des entraînements récurrents (coach+)
 const createRecurring = async (req, res) => {
   try {
-    const { equipe_id, day_of_week, heure, heure_rdv, terrain_id, description, date_debut, date_fin } = req.body;
+    const { equipe_id, day_of_week, heure, heure_rdv, terrain_id, description, date_debut, date_fin, domicile_exterieur, lieu } = req.body;
     if (!equipe_id || day_of_week === undefined || !heure || !date_debut || !date_fin) {
       return res.status(400).json({ success: false, message: 'equipe_id, day_of_week, heure, date_debut, date_fin requis' });
     }
@@ -216,6 +216,8 @@ const createRecurring = async (req, res) => {
         heure, heure_rdv: heure_rdv || null,
         terrain_id: terrain_id || null,
         description: description || null,
+        domicile_exterieur: domicile_exterieur === 'exterieur' ? 'exterieur' : 'domicile',
+        lieu: lieu || null,
         club_id: equipe.club_id,
       });
       current.setDate(current.getDate() + 7);

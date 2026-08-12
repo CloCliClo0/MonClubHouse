@@ -39,6 +39,9 @@ export default function CreateEventPage() {
   const [step, setStep]             = useState<Step>(1)
   const [type, setType]             = useState<EventType | null>(null)
   const [equipeId, setEquipeId]     = useState('')
+  // Entraînement : plusieurs équipes peuvent partager la même séance
+  const [equipeIds, setEquipeIds]   = useState<string[]>([])
+  const toggleEquipeId = (id: string) => setEquipeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   const [date, setDate]             = useState('')
   const [heure, setHeure]           = useState('')
   const [heureRdv, setHeureRdv]     = useState('')
@@ -46,6 +49,7 @@ export default function CreateEventPage() {
   const [adversaire, setAdversaire] = useState('')
   const [advChoice, setAdvChoice]   = useState('')
   const [domicile, setDomicile]     = useState(true)
+  const [adresse, setAdresse]       = useState('')
   // Saison (obligatoire pour match/coupe/tournoi) + championnat (obligatoire pour "match")
   const [saison, setSaison]                 = useState(currentSeason())
   const [saisonsExistantes, setSaisonsExistantes] = useState<string[]>([])
@@ -89,7 +93,7 @@ export default function CreateEventPage() {
       const list: Equipe[] = r.data.data || []
       if (role === 'coach' && userId) {
         const mine = list.find(e => e.coachs_extra?.some(c => c.id === userId))
-        if (mine) setEquipeId(String(mine.id))
+        if (mine) { setEquipeId(String(mine.id)); setEquipeIds([String(mine.id)]) }
       }
       setEquipes(list)
     }).catch(() => {})
@@ -123,7 +127,11 @@ export default function CreateEventPage() {
 
   const canNext = () => {
     if (step === 1) return !!type
-    if (step === 2) return !!equipeId && !!date && !!heure
+    if (step === 2) {
+      const hasTeam = type === 'entrainement' ? equipeIds.length > 0 : !!equipeId
+      const hasDate = isRecurring || !!date
+      return hasTeam && hasDate && !!heure
+    }
     if (step === 3) {
       if ((type === 'match' || type === 'coupe') && !adversaire) return false
       if (type && SEASON_REQUIRED_TYPES.includes(type) && !saison.trim()) return false
@@ -138,32 +146,38 @@ export default function CreateEventPage() {
     setSaving(true)
     try {
       if (type === 'entrainement' && isRecurring) {
-        const payload: Record<string, any> = {
-          equipe_id: parseInt(equipeId),
+        const teamIds = equipeIds.length > 0 ? equipeIds : [equipeId]
+        const results = await Promise.all(teamIds.map(id => api.post('/matchs/recurring', {
+          equipe_id: parseInt(id),
           day_of_week: recurDay,
           heure, date_debut: recurDateDebut, date_fin: recurDateFin,
           terrain_id: terrainId ? parseInt(terrainId) : undefined,
-        }
-        const r = await api.post('/matchs/recurring', payload)
-        setRecurringCount(r.data.count)
+          domicile_exterieur: domicile ? 'domicile' : 'exterieur',
+          lieu: !domicile && adresse.trim() ? adresse.trim() : null,
+        })))
+        setRecurringCount(results.reduce((sum, r) => sum + (r.data.count || 0), 0))
         setSubmittedRecurring(true)
         setTimeout(() => navigate('/calendrier'), 2000)
       } else {
-        const payload: Record<string, any> = {
-          equipe_id:          parseInt(equipeId),
-          type,
-          date:               `${date}T${heure}:00`,
-          heure_rdv:          heureRdv && date ? `${date}T${heureRdv}:00` : null,
-          domicile_exterieur: domicile ? 'domicile' : 'exterieur',
-          adversaire:         adversaire || null,
-          championnat:        type === 'match' ? champName.trim() : null,
-          saison:             type && SEASON_REQUIRED_TYPES.includes(type) ? saison.trim() : null,
-          statut:             'programme',
-          description:        instructions || null,
-          besoin_arbitre:     besoinArbitre || false,
-        }
-        if (terrainId) payload.terrain_id = parseInt(terrainId)
-        await api.post('/matchs', payload)
+        const teamIds = type === 'entrainement' ? equipeIds : [equipeId]
+        await Promise.all(teamIds.map(id => {
+          const payload: Record<string, any> = {
+            equipe_id:          parseInt(id),
+            type,
+            date:               `${date}T${heure}:00`,
+            heure_rdv:          heureRdv && date ? `${date}T${heureRdv}:00` : null,
+            domicile_exterieur: domicile ? 'domicile' : 'exterieur',
+            lieu:               !domicile && adresse.trim() ? adresse.trim() : null,
+            adversaire:         adversaire || null,
+            championnat:        type === 'match' ? champName.trim() : null,
+            saison:             type && SEASON_REQUIRED_TYPES.includes(type) ? saison.trim() : null,
+            statut:             'programme',
+            description:        instructions || null,
+            besoin_arbitre:     besoinArbitre || false,
+          }
+          if (terrainId) payload.terrain_id = parseInt(terrainId)
+          return api.post('/matchs', payload)
+        }))
         setSubmitted(true)
         setTimeout(() => navigate('/calendrier'), 1800)
       }
@@ -285,18 +299,41 @@ export default function CreateEventPage() {
             <h3 className="text-headline-md mb-1">Informations générales</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Équipe *</label>
-                <div className="relative">
-                  <select value={equipeId} onChange={e => setEquipeId(e.target.value)} required
-                    className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10">
-                    <option value="">Sélectionner une équipe</option>
-                    {equipes.map(eq => (
-                      <option key={eq.id} value={eq.id}>{eq.categorie?.nom ? `${eq.categorie.nom} — ` : ''}{eq.nom}</option>
-                    ))}
-                  </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
-                </div>
+              <div className={`space-y-1.5 ${type === 'entrainement' ? 'md:col-span-2' : ''}`}>
+                <label className="text-label-md text-on-surface-variant">
+                  {type === 'entrainement' ? 'Équipe(s) *' : 'Équipe *'}
+                </label>
+                {type === 'entrainement' ? (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {equipes.map(eq => {
+                        const id = String(eq.id)
+                        const selected = equipeIds.includes(id)
+                        return (
+                          <button type="button" key={eq.id} onClick={() => toggleEquipeId(id)}
+                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border-2 text-label-md font-semibold transition-all ${
+                              selected ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+                            }`}>
+                            {selected && <span className="material-symbols-outlined text-[16px]">check</span>}
+                            {eq.categorie?.nom ? `${eq.categorie.nom} — ` : ''}{eq.nom}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <p className="text-[11px] text-on-surface-variant/60">Plusieurs équipes peuvent partager la même séance d'entraînement.</p>
+                  </>
+                ) : (
+                  <div className="relative">
+                    <select value={equipeId} onChange={e => setEquipeId(e.target.value)} required
+                      className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10">
+                      <option value="">Sélectionner une équipe</option>
+                      {equipes.map(eq => (
+                        <option key={eq.id} value={eq.id}>{eq.categorie?.nom ? `${eq.categorie.nom} — ` : ''}{eq.nom}</option>
+                      ))}
+                    </select>
+                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -401,35 +438,33 @@ export default function CreateEventPage() {
                     Adversaire {(type === 'match' || type === 'coupe') ? '*' : ''}
                   </label>
 
-                  {/* Match officiel / coupe : select depuis les adversaires connus */}
-                  {(type === 'match' || type === 'coupe') ? (
-                    <div className="relative">
-                      <select
-                        value={advChoice}
-                        onChange={e => {
-                          const v = e.target.value
-                          setAdvChoice(v)
-                          setAdversaire(v === NEW_ADV_SENTINEL ? '' : v)
-                        }}
-                        className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10 bg-white"
-                      >
-                        <option value="">Sélectionner un adversaire</option>
-                        {adversaires.map(a => (
-                          <option key={a.id} value={a.nom}>{a.nom}</option>
-                        ))}
-                        <option value={NEW_ADV_SENTINEL}>Autre (saisie libre)…</option>
-                      </select>
-                      <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
-                    </div>
-                  ) : null}
+                  {/* Adversaire enregistré (page Adversaires) ou saisie libre — pour tous les types de match */}
+                  <div className="relative">
+                    <select
+                      value={advChoice}
+                      onChange={e => {
+                        const v = e.target.value
+                        setAdvChoice(v)
+                        setAdversaire(v === NEW_ADV_SENTINEL ? '' : v)
+                      }}
+                      className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10 bg-white"
+                    >
+                      <option value="">Sélectionner un adversaire</option>
+                      {adversaires.map(a => (
+                        <option key={a.id} value={a.nom}>{a.nom}</option>
+                      ))}
+                      <option value={NEW_ADV_SENTINEL}>Autre (saisie libre)…</option>
+                    </select>
+                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+                  </div>
 
-                  {/* Si "Autre" sélectionné dans le select, ou amical/tournoi/plateau : texte libre.
+                  {/* Si "Autre" sélectionné dans le select : texte libre pour créer/saisir un adversaire non enregistré.
                       La visibilité dépend de advChoice (fige sur le sentinel), pas de la valeur tapée —
                       sinon le champ se refermait dès la 1ère lettre saisie (adversaire n'égalait plus le sentinel). */}
-                  {(type === 'amical' || type === 'tournoi' || type === 'plateau' || advChoice === NEW_ADV_SENTINEL) && (
+                  {advChoice === NEW_ADV_SENTINEL && (
                     <input
                       type="text"
-                      autoFocus={advChoice === NEW_ADV_SENTINEL}
+                      autoFocus
                       value={adversaire}
                       onChange={e => setAdversaire(e.target.value)}
                       placeholder="Ex : Red Star FC"
@@ -495,22 +530,36 @@ export default function CreateEventPage() {
                       )}
                       <p className="text-[11px] text-on-surface-variant/60">Rattaché à la saison {saison || currentSeason()} — plusieurs championnats sont possibles au sein d'une même saison (ex: phases en jeunes).</p>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-label-md text-on-surface-variant">Lieu de réception</label>
-                      <div className="flex gap-3">
-                        {[{ v: true, l: '🏠 Domicile' }, { v: false, l: '✈️ Extérieur' }].map(({ v, l }) => (
-                          <button key={l} onClick={() => setDomicile(v)}
-                            className={`flex-1 py-3 rounded-xl border-2 text-label-lg font-semibold transition-all ${
-                              domicile === v ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
-                            }`}>
-                            {l}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
                   </>
                 )}
               </>
+            )}
+
+            {/* Domicile / Extérieur — pour tous les types d'événement (le match officiel l'avait déjà,
+                on l'étend aux autres : amical, coupe, entraînement, tournoi, plateau, réunion, autre) */}
+            {type && (
+              <div className="space-y-2">
+                <label className="text-label-md text-on-surface-variant">Lieu de réception</label>
+                <div className="flex gap-3">
+                  {[{ v: true, l: '🏠 Domicile' }, { v: false, l: '✈️ Extérieur' }].map(({ v, l }) => (
+                    <button key={l} onClick={() => setDomicile(v)}
+                      className={`flex-1 py-3 rounded-xl border-2 text-label-lg font-semibold transition-all ${
+                        domicile === v ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+                      }`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                {!domicile && (
+                  <input
+                    type="text"
+                    value={adresse}
+                    onChange={e => setAdresse(e.target.value)}
+                    placeholder="Adresse du lieu à l'extérieur (ex : 12 rue du Stade, 59000 Lille)"
+                    className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all mt-2"
+                  />
+                )}
+              </div>
             )}
 
             <div className="space-y-1.5">
@@ -554,10 +603,14 @@ export default function CreateEventPage() {
             <div className="bg-surface-container-low rounded-xl p-5 space-y-3">
               {[
                 { icon: EVENT_TYPES.find(e => e.key === type)?.icon || 'event', label: 'Type', val: EVENT_TYPES.find(e => e.key === type)?.label },
-                { icon: 'groups', label: 'Équipe', val: equipes.find(e => String(e.id) === equipeId)?.nom || '—' },
+                type === 'entrainement'
+                  ? { icon: 'groups', label: equipeIds.length > 1 ? 'Équipes' : 'Équipe', val: equipes.filter(e => equipeIds.includes(String(e.id))).map(e => e.nom).join(', ') || '—' }
+                  : { icon: 'groups', label: 'Équipe', val: equipes.find(e => String(e.id) === equipeId)?.nom || '—' },
                 { icon: 'calendar_today', label: 'Date', val: date ? new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—' },
                 { icon: 'schedule', label: 'Heure', val: heure || '—' },
                 { icon: 'location_on', label: 'Terrain', val: terrains.find(t => String(t.id) === terrainId)?.nom || 'Non précisé' },
+                { icon: domicile ? 'home' : 'flight_takeoff', label: 'Lieu de réception', val: domicile ? 'Domicile' : 'Extérieur' },
+                (!domicile && adresse.trim()) ? { icon: 'pin_drop', label: 'Adresse', val: adresse.trim() } : null,
                 adversaire ? { icon: 'sports_soccer', label: 'Adversaire', val: `vs ${adversaire}` } : null,
                 (type && SEASON_REQUIRED_TYPES.includes(type)) ? { icon: 'calendar_month', label: 'Saison', val: saison || '—' } : null,
                 (type === 'match' && champName) ? { icon: 'emoji_events', label: 'Championnat', val: champName } : null,

@@ -4,15 +4,44 @@ import App from './App'
 import { LangProvider } from './i18n/LangContext'
 import './index.css'
 
+// Après un déploiement, un onglet resté ouvert peut tenter de charger un chunk
+// (page lazy) dont le hash n'existe plus sur le serveur → on force un reload
+// complet (une seule fois, pour éviter une boucle) qui récupère le nouvel index.html.
+function isChunkLoadError(err: Error) {
+  return /dynamically imported module|Importing a module script failed|Loading chunk|Failed to fetch dynamically imported module/i.test(err.message || '')
+}
+
+function reloadOnceForChunkError() {
+  const key = 'mch-chunk-reload-at'
+  const last = Number(sessionStorage.getItem(key) || 0)
+  if (Date.now() - last > 10000) {
+    sessionStorage.setItem(key, String(Date.now()))
+    window.location.reload()
+    return true
+  }
+  return false
+}
+
+window.addEventListener('vite:preloadError', () => {
+  reloadOnceForChunkError()
+})
+
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { error: Error | null }
 > {
   state = { error: null }
   static getDerivedStateFromError(error: Error) { return { error } }
+  componentDidCatch(error: Error) {
+    if (isChunkLoadError(error)) reloadOnceForChunkError()
+  }
   render() {
     if (this.state.error) {
       const err = this.state.error as Error
+      if (isChunkLoadError(err)) {
+        // Reload déjà déclenché par componentDidCatch ; on n'affiche rien pendant la transition.
+        return null
+      }
       return (
         <div style={{ padding: 40, fontFamily: 'monospace', background: '#fff1f2', minHeight: '100vh' }}>
           <h2 style={{ color: '#b91c1c' }}>❌ Erreur de rendu</h2>
