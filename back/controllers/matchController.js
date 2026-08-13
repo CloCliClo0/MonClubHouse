@@ -1,4 +1,4 @@
-const { Match, Equipe, Terrain, Convocation, Composition, User, Category } = require('../models');
+const { Match, Equipe, Terrain, Convocation, Composition, User, Category, MatchEvent, PlayerVote, ArbitragePresence } = require('../models');
 const { validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 
@@ -201,8 +201,13 @@ const remove = async (req, res) => {
   try {
     const match = await Match.findByPk(req.params.id);
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
-    await Convocation.destroy({ where: { match_id: match.id } });
-    await Composition.destroy({ where: { match_id: match.id } });
+    await Promise.all([
+      Convocation.destroy({ where: { match_id: match.id } }),
+      Composition.destroy({ where: { match_id: match.id } }),
+      MatchEvent.destroy({ where: { match_id: match.id } }),
+      PlayerVote.destroy({ where: { match_id: match.id } }),
+      ArbitragePresence.destroy({ where: { match_id: match.id } }),
+    ]);
     await match.destroy();
     return res.json({ success: true, message: 'Événement supprimé' });
   } catch (err) {

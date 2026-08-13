@@ -129,7 +129,7 @@ export default function EventPage() {
   }
 
   const deleteEvent = async () => {
-    if (!confirm('Supprimer cet événement ? Cette action est irréversible.')) return
+    if (!confirm('Supprimer cet événement ? Les convocations, la composition et les statistiques associées seront aussi définitivement supprimées. Cette action est irréversible.')) return
     setDeleting(true)
     try {
       await api.patch(`/matchs/${id}/disable`)

@@ -9,6 +9,7 @@ type Player = {
   position: string
   x: number
   y: number
+  statut?: string
 }
 
 type BenchPlayer = {
@@ -16,6 +17,7 @@ type BenchPlayer = {
   name: string
   number: number
   position: string
+  statut?: string
 }
 
 type ApiMatch = {
@@ -177,13 +179,14 @@ function buildTeam(convocations: ConvoquedPlayer[], formation: string, mode: Com
 
   const field: Player[] = slots.map((slot, i) => {
     const p = sorted[i]
-    return { ...slot, name: p ? playerLabel(p) : '—', number: p?.numero_maillot ?? i + 1 }
+    return { ...slot, name: p ? playerLabel(p) : '—', number: p?.numero_maillot ?? i + 1, statut: p?.statut }
   })
   const bench: BenchPlayer[] = sorted.slice(slots.length).map((p, i) => ({
     id: 1000 + i,
     name: playerLabel(p),
     number: p.numero_maillot ?? slots.length + i + 1,
     position: p.poste ?? '—',
+    statut: p.statut,
   }))
   return { field, bench }
 }
@@ -246,9 +249,9 @@ export default function CompositionPage() {
         const cnt = { present: 0, incertain: 0, convoque: 0, absent: 0, non_retenu: 0 }
         list.forEach((c: any) => { if (c.statut in cnt) cnt[c.statut as keyof typeof cnt]++ })
         setRawCounts(cnt)
-        // Joueurs éligibles (sans absents ni non-retenus)
+        // Tous les convoqués (y compris ceux ayant répondu "absent") : la pré-composition doit
+        // pouvoir les inclure ; seule la composition finale les exclura (cf. buildTeam mode='final').
         const eligible: ConvoquedPlayer[] = list
-          .filter((c: any) => c.statut !== 'absent' && c.statut !== 'non_retenu')
           .map((c: any) => ({
             userId:         c.joueur.id,
             nom:            c.joueur.nom,
@@ -300,11 +303,20 @@ export default function CompositionPage() {
     setSaving(true)
     setSaveError('')
     try {
+      // En mode "final", on garantit qu'aucun joueur non-présent (échange manuel compris) n'est enregistré.
+      let titulaires = fieldPlayers
+      let remplacants = bench
+      if (mode === 'final') {
+        titulaires = fieldPlayers.map(p => p.statut === 'present' ? p : { ...p, name: '—', number: 0, statut: undefined })
+        remplacants = bench.filter(p => p.statut === 'present')
+        setFieldPlayers(titulaires)
+        setBench(remplacants)
+      }
       await api.post('/matchs/composition', {
         match_id:    selectedMatchId,
         formation,
-        titulaires:  fieldPlayers,
-        remplacants: bench,
+        titulaires,
+        remplacants,
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -651,7 +663,7 @@ export default function CompositionPage() {
           </div>
           <p className="text-body-sm text-on-surface-variant mt-3">
             {mode === 'pre'
-              ? 'Pré-composition : inclut les convoqués en attente de réponse et les incertains.'
+              ? 'Pré-composition : inclut tous les convoqués (en attente, incertains, et même les absents, signalés en rouge).'
               : 'Composition finale : uniquement les joueurs ayant confirmé leur présence.'}
           </p>
           {mode === 'final' && rawCounts.present < 11 && (
@@ -762,6 +774,9 @@ export default function CompositionPage() {
                     }`}>{p.number}</span>
                     <div className="flex-1">
                       <span className="text-label-lg text-on-surface">{p.name}</span>
+                      {p.statut === 'absent' && (
+                        <span className="ml-2 text-[10px] font-bold text-error bg-red-50 px-1.5 py-0.5 rounded border border-red-200">Absent</span>
+                      )}
                     </div>
                     <span className="text-label-md text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded text-[11px]">
                       {p.position}
@@ -800,6 +815,9 @@ export default function CompositionPage() {
                     }`}>{p.number}</span>
                     <div className="flex-1">
                       <span className="text-label-lg text-on-surface">{p.name}</span>
+                      {p.statut === 'absent' && (
+                        <span className="ml-2 text-[10px] font-bold text-error bg-red-50 px-1.5 py-0.5 rounded border border-red-200">Absent</span>
+                      )}
                     </div>
                     <span className="text-label-md text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded text-[11px]">
                       {p.position}

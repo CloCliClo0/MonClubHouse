@@ -1,4 +1,4 @@
-const { ChEquipe, ChMatch } = require('../models');
+const { ChEquipe, ChMatch, Match, Convocation, Composition, MatchEvent, PlayerVote, ArbitragePresence } = require('../models');
 const { Op } = require('sequelize');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -223,14 +223,35 @@ const deleteChampionnat = async (req, res) => {
     if (!equipe_ref_id || !saison || !championnat) {
       return res.status(400).json({ success: false, message: 'equipe_ref_id, saison et championnat sont requis' });
     }
+
+    // Supprime aussi les vrais événements calendrier (Résultats/Convocations/Compositions) de cette
+    // saison/championnat, sans quoi ils restent orphelins une fois le classement effacé.
+    const matchs = await Match.findAll({
+      where: { club_id, equipe_id: equipe_ref_id, saison, championnat },
+      attributes: ['id'],
+    });
+    const matchIds = matchs.map(m => m.id);
+    let deletedMatchs = 0;
+    if (matchIds.length > 0) {
+      await Promise.all([
+        Convocation.destroy({ where: { match_id: matchIds } }),
+        Composition.destroy({ where: { match_id: matchIds } }),
+        MatchEvent.destroy({ where: { match_id: matchIds } }),
+        PlayerVote.destroy({ where: { match_id: matchIds } }),
+        ArbitragePresence.destroy({ where: { match_id: matchIds } }),
+      ]);
+      deletedMatchs = await Match.destroy({ where: { id: matchIds } });
+    }
+
     const equipes = await ChEquipe.findAll({ where: { club_id, equipe_ref_id, saison, championnat }, attributes: ['id'] });
     const ids = equipes.map(e => e.id);
     if (ids.length > 0) {
       await ChMatch.destroy({ where: { club_id, [Op.or]: [{ dom_id: ids }, { ext_id: ids }] } });
     }
     await ChEquipe.destroy({ where: { club_id, equipe_ref_id, saison, championnat } });
-    return res.json({ success: true });
+    return res.json({ success: true, data: { deleted_matchs: deletedMatchs } });
   } catch (err) {
+    console.error('[championnat.deleteChampionnat]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

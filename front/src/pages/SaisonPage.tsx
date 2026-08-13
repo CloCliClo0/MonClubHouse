@@ -130,6 +130,8 @@ export default function SaisonPage() {
   const [resultForm, setResultForm]       = useState(BLANK_RESULT)
   const [editingMatch, setEditingMatch]   = useState<ChMatchRow | null>(null)
   const [savingCh, setSavingCh]           = useState(false)
+  const [showDeleteChamp, setShowDeleteChamp] = useState(false)
+  const [deletingChamp, setDeletingChamp] = useState(false)
 
   // ── Chargement équipes ────────────────────────────────────────────────────
 
@@ -352,11 +354,16 @@ export default function SaisonPage() {
 
   const handleDeleteChamp = async () => {
     if (!selectedTeamId || !activeChamp) return
-    if (!confirm(`Supprimer le championnat "${activeChamp}" et toutes ses données ?`)) return
-    await api.delete(`/championnat/complet?equipe_ref_id=${selectedTeamId}&saison=${selectedSaison}&championnat=${encodeURIComponent(activeChamp)}`)
-    setChampList(prev => prev.filter(c => c !== activeChamp))
-    setActiveChamp('')
-    setChampData(null)
+    setDeletingChamp(true)
+    try {
+      await api.delete(`/championnat/complet?equipe_ref_id=${selectedTeamId}&saison=${selectedSaison}&championnat=${encodeURIComponent(activeChamp)}`)
+      setChampList(prev => prev.filter(c => c !== activeChamp))
+      setActiveChamp('')
+      setChampData(null)
+      setShowDeleteChamp(false)
+    } finally {
+      setDeletingChamp(false)
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -626,7 +633,7 @@ export default function SaisonPage() {
                   onEditResult={openEditResult}
                   onDeleteResult={handleDeleteMatch}
                   onDeleteTeam={handleDeleteTeam}
-                  onDeleteChamp={handleDeleteChamp}
+                  onDeleteChamp={() => setShowDeleteChamp(true)}
                 />
               </div>
             </div>
@@ -843,6 +850,33 @@ export default function SaisonPage() {
               <button onClick={createSaison} disabled={!newSaisonName.trim()}
                 className="px-5 py-2.5 bg-primary text-white rounded-lg text-label-lg hover:bg-primary/90 disabled:opacity-40 transition-colors">
                 Créer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmation suppression championnat ───────────────────────────── */}
+      {showDeleteChamp && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => !deletingChamp && setShowDeleteChamp(false)}>
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl p-6 text-center" onClick={e => e.stopPropagation()}>
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-error text-[28px]">warning</span>
+            </div>
+            <h3 className="text-headline-md mb-2">Supprimer "{activeChamp}" ?</h3>
+            <p className="text-body-md text-on-surface-variant mb-4">
+              Cette action supprime définitivement le classement <strong>et tous les matchs réels</strong> de ce championnat pour la saison {selectedSaison} : calendrier, résultats, convocations et compositions associées seront eux aussi effacés.
+            </p>
+            <p className="text-body-sm text-error font-medium mb-6">Cette action est irréversible.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteChamp(false)} disabled={deletingChamp}
+                className="flex-1 py-2.5 border border-outline-variant rounded-xl text-label-lg hover:bg-surface-container-low transition-colors disabled:opacity-40">
+                Annuler
+              </button>
+              <button onClick={handleDeleteChamp} disabled={deletingChamp}
+                className="flex-1 py-2.5 bg-error text-white rounded-xl text-label-lg hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2">
+                {deletingChamp && <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>}
+                Supprimer définitivement
               </button>
             </div>
           </div>
