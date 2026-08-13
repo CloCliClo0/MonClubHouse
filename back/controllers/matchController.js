@@ -32,15 +32,39 @@ const getAll = async (req, res) => {
       include: [
         { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
           include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] },
-        { model: Terrain, as: 'terrain', attributes: ['id', 'nom', 'adresse'], required: false },
-        { model: Composition, as: 'composition', attributes: ['id', 'titulaires', 'remplacants'], required: false },
-        { model: Convocation, as: 'convocations', attributes: ['id', 'statut'], required: false },
+        { model: Terrain, as: 'terrain', attributes: ['id', 'nom', 'adresse'], required: false }
       ],
       order: [['date', 'ASC']],
       limit: req.query.limit ? parseInt(req.query.limit, 10) : undefined,
     });
-    return res.json({ success: true, data: matchs });
+
+    // Compositions/convocations récupérées à part (requêtes indépendantes) pour ne jamais
+    // faire échouer la liste principale des matchs si ce complément échoue.
+    let data = matchs.map(m => m.toJSON());
+    try {
+      const matchIds = data.map(m => m.id);
+      if (matchIds.length > 0) {
+        const [compositions, convocations] = await Promise.all([
+          Composition.findAll({ where: { match_id: { [Op.in]: matchIds } }, attributes: ['id', 'match_id', 'titulaires', 'remplacants'] }),
+          Convocation.findAll({ where: { match_id: { [Op.in]: matchIds } }, attributes: ['id', 'match_id', 'statut'] }),
+        ]);
+        const compositionsByMatch = {};
+        compositions.forEach(c => { compositionsByMatch[c.match_id] = c; });
+        const convocationsByMatch = {};
+        convocations.forEach(c => { (convocationsByMatch[c.match_id] = convocationsByMatch[c.match_id] || []).push(c); });
+        data = data.map(m => ({
+          ...m,
+          composition: compositionsByMatch[m.id] || null,
+          convocations: convocationsByMatch[m.id] || [],
+        }));
+      }
+    } catch (err) {
+      console.error('[match.getAll] compositions/convocations:', err.message);
+    }
+
+    return res.json({ success: true, data });
   } catch (err) {
+    console.error('[match.getAll]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

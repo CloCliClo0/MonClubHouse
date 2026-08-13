@@ -13,7 +13,6 @@ export default function OpponentsPage() {
   const [opponents, setOpponents]       = useState<Opponent[]>([])
   const [loading, setLoading]           = useState(true)
   const [search, setSearch]             = useState('')
-  const [activeCategory, setActiveCategory] = useState<string>('Tous')
   const [modal, setModal]               = useState<ModalState>({ open: false })
   const [form, setForm]                 = useState(BLANK)
   const [saving, setSaving]             = useState(false)
@@ -26,11 +25,9 @@ export default function OpponentsPage() {
 
   useEffect(() => { load() }, [])
 
-  const filtered = opponents.filter(o => {
-    const matchCat    = activeCategory === 'Tous' || o.categorie === activeCategory
-    const matchSearch = o.nom.toLowerCase().includes(search.toLowerCase()) || o.ville?.toLowerCase().includes(search.toLowerCase())
-    return matchCat && matchSearch
-  })
+  const filtered = opponents.filter(o =>
+    o.nom.toLowerCase().includes(search.toLowerCase()) || o.ville?.toLowerCase().includes(search.toLowerCase())
+  )
 
   const openAdd  = () => { setForm(BLANK); setModal({ open: true, editing: null }) }
   const openEdit = (o: Opponent) => { setForm({ nom: o.nom, categorie: o.categorie, ville: o.ville, contact: o.contact, telephone: o.telephone, couleur: o.couleur }); setModal({ open: true, editing: o }) }
@@ -93,23 +90,12 @@ export default function OpponentsPage() {
       </div>
 
       {/* Filtres */}
-      <div className="bg-white border border-[#e8e8f0] rounded-xl p-4 mb-5 flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="bg-white border border-[#e8e8f0] rounded-xl p-4 mb-5">
+        <div className="relative">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
           <input value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all"
             placeholder="Rechercher un club, une ville…" />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {(['Tous', ...CATEGORIES]).map(cat => (
-            <button key={cat} onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1.5 rounded-full text-label-md transition-all ${
-                activeCategory === cat ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant'
-              }`}>
-              {cat}
-              {cat !== 'Tous' && categoryCounts[cat] > 0 && <span className="ml-1 text-[10px]">({categoryCounts[cat]})</span>}
-            </button>
-          ))}
         </div>
       </div>
 
