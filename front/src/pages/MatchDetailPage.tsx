@@ -378,8 +378,8 @@ export default function MatchDetailPage() {
                     {match.adversaire || 'Adversaire'}
                   </button>
                 </div>
-                {/* Joueur / Buteur */}
-                {convoquesPresents.length > 0 && (
+                {/* Joueur / Buteur — uniquement pour notre équipe : côté adversaire, on ne connaît pas leurs joueurs */}
+                {eventEquipe === 'domicile' && convoquesPresents.length > 0 && (
                   <select
                     value={eventJoueur}
                     onChange={e => setEventJoueur(e.target.value ? Number(e.target.value) : '')}

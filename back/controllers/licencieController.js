@@ -6,11 +6,14 @@ const getAll = async (req, res) => {
     if (req.query.equipe_id) where.equipe_id = req.query.equipe_id;
     if (req.query.statut) where.statut = req.query.statut;
 
-    // Filtre club via l'équipe (les licenciés n'ont pas de club_id direct)
+    // Filtre club (+ catégorie si fournie) via l'équipe (les licenciés n'ont pas de club_id direct)
+    const equipeWhere = {};
+    if (req.query.categorie_id) equipeWhere.categorie_id = req.query.categorie_id;
+    if (req.user.role !== 'superadmin' && req.user.club_id) equipeWhere.club_id = req.user.club_id;
     const includeEquipe = {
       model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
       include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }],
-      ...(req.user.role !== 'superadmin' && req.user.club_id ? { where: { club_id: req.user.club_id } } : {}),
+      ...(Object.keys(equipeWhere).length ? { where: equipeWhere } : {}),
     };
 
     const licencies = await Licencie.findAll({

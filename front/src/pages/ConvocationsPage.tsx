@@ -120,6 +120,17 @@ export default function ConvocationsPage() {
 
   // ── Chargement convocations + roster équipe ────────────────────────────────
 
+  const mapConvocations = (list: any[]): Player[] => list
+    .filter((c: any) => !c.joueur?.role || c.joueur.role === 'joueur')
+    .map((c: any) => ({
+      id:          c.joueur?.id,
+      nom:         c.joueur?.nom,
+      prenom:      c.joueur?.prenom,
+      statut:      c.statut === 'convoque' ? 'sans_reponse' : c.statut,
+      notif_email: c.joueur?.notif_email ?? true,
+      licencie:    c.joueur?.licence,
+    }))
+
   const loadMatch = async (match: Match) => {
     setSelectedMatch(match)
     setLoadingPlayers(true)
@@ -138,16 +149,7 @@ export default function ConvocationsPage() {
       // Convocations existantes — un compte parent ne doit jamais apparaître ici (peut arriver si
       // une convocation a été créée avant le correctif du roster, cf. equipeController.getById)
       const convoList = convoRes.data.data || convoRes.data || []
-      const mapped: Player[] = convoList
-        .filter((c: any) => !c.joueur?.role || c.joueur.role === 'joueur')
-        .map((c: any) => ({
-          id:          c.joueur?.id,
-          nom:         c.joueur?.nom,
-          prenom:      c.joueur?.prenom,
-          statut:      c.statut === 'convoque' ? 'sans_reponse' : c.statut,
-          notif_email: c.joueur?.notif_email ?? true,
-          licencie:    c.joueur?.licence,
-        }))
+      let mapped = mapConvocations(convoList)
       setPlayers(mapped)
 
       // Roster de l'équipe — exclut les comptes parent : un `Licencie` est aussi créé pour un parent
@@ -156,20 +158,21 @@ export default function ConvocationsPage() {
       const licencies: any[] = equipeData.licencies || []
       const activeLicencies = licencies.filter((l: any) => l.statut === 'actif' && l.user && l.user.role === 'joueur')
 
+      let resolvedTeamPlayers: TeamPlayer[] = []
       if (activeLicencies.length > 0) {
-        setTeamPlayers(activeLicencies.map((l: any) => ({
+        resolvedTeamPlayers = activeLicencies.map((l: any) => ({
           userId:         l.user.id,
           nom:            l.user.nom,
           prenom:         l.user.prenom,
           poste:          l.poste ?? null,
           numero_maillot: l.numero_maillot ?? null,
-        })))
+        }))
       } else {
         // Fallback : roster vide → afficher tous les joueurs du club
         try {
           const usersRes = await api.get('/admin/users')
           const allUsers: any[] = usersRes.data.data || usersRes.data || []
-          setTeamPlayers(allUsers
+          resolvedTeamPlayers = allUsers
             .filter((u: any) => u.role === 'joueur')
             .map((u: any) => ({
               userId:         u.id,
@@ -178,10 +181,53 @@ export default function ConvocationsPage() {
               poste:          null,
               numero_maillot: null,
             }))
-          )
           setIsClubFallback(true)
         } catch {
           // keep empty
+        }
+      }
+
+      // Entraînement : le vivier de joueurs couvre toute la catégorie (équipes sœurs), pas
+      // seulement cette équipe précise (ex: Senior A + Senior B s'entraînent ensemble).
+      if (match.type === 'entrainement' && equipeData.categorie_id) {
+        try {
+          const catRes = await api.get('/licencies', { params: { categorie_id: equipeData.categorie_id, statut: 'actif' } })
+          const catLicencies: any[] = catRes.data.data || catRes.data || []
+          const byUserId = new Map<number, TeamPlayer>()
+          catLicencies
+            .filter((l: any) => l.user && l.user.role === 'joueur')
+            .forEach((l: any) => {
+              if (!byUserId.has(l.user.id)) {
+                byUserId.set(l.user.id, {
+                  userId:         l.user.id,
+                  nom:            l.user.nom,
+                  prenom:         l.user.prenom,
+                  poste:          l.poste ?? null,
+                  numero_maillot: l.numero_maillot ?? null,
+                })
+              }
+            })
+          if (byUserId.size > 0) resolvedTeamPlayers = Array.from(byUserId.values())
+        } catch {
+          // garde le roster de l'équipe seule en repli
+        }
+      }
+
+      setTeamPlayers(resolvedTeamPlayers)
+
+      // Entraînement : convoque automatiquement tous les joueurs de la catégorie pas encore convoqués.
+      if (match.type === 'entrainement' && resolvedTeamPlayers.length > 0) {
+        const alreadyConvoked = new Set(mapped.map(p => p.id))
+        const missingIds = resolvedTeamPlayers.filter(p => !alreadyConvoked.has(p.userId)).map(p => p.userId)
+        if (missingIds.length > 0) {
+          await api.post(`/matchs/${match.id}/convocations`, {
+            match_id:      match.id,
+            joueur_ids:    missingIds,
+            envoyer_email: false,
+          }).catch(() => {})
+          const r2 = await api.get(`/matchs/${match.id}/convocations`)
+          mapped = mapConvocations(r2.data.data || r2.data || [])
+          setPlayers(mapped)
         }
       }
     } catch {
@@ -226,17 +272,7 @@ export default function ConvocationsPage() {
       })
       // Recharger les convocations
       const r = await api.get(`/matchs/${selectedMatch.id}/convocations`)
-      const list = r.data.data || r.data || []
-      setPlayers(list
-        .filter((c: any) => !c.joueur?.role || c.joueur.role === 'joueur')
-        .map((c: any) => ({
-          id:          c.joueur?.id,
-          nom:         c.joueur?.nom,
-          prenom:      c.joueur?.prenom,
-          statut:      c.statut === 'convoque' ? 'sans_reponse' : c.statut,
-          notif_email: c.joueur?.notif_email ?? true,
-          licencie:    c.joueur?.licence,
-        })))
+      setPlayers(mapConvocations(r.data.data || r.data || []))
       setPendingAdd(new Set())
       setShowAddPanel(false)
     } catch {

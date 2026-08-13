@@ -6,6 +6,7 @@ const getByMatch = async (req, res) => {
     if (!compo) return res.status(404).json({ success: false, message: 'Composition introuvable' });
     return res.json({ success: true, data: compo });
   } catch (err) {
+    console.error('[composition.getByMatch]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
@@ -13,20 +14,30 @@ const getByMatch = async (req, res) => {
 const upsert = async (req, res) => {
   try {
     const { match_id, formation, titulaires, remplacants, notes_tactiques } = req.body;
+    if (!match_id) return res.status(400).json({ success: false, message: 'match_id requis' });
 
     const match = await Match.findByPk(match_id);
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
 
-    const [compo, created] = await Composition.findOrCreate({
-      where: { match_id },
-      defaults: {
-        formation: formation || '4-3-3',
-        titulaires: titulaires || [],
-        remplacants: remplacants || [],
-        notes_tactiques,
-        cree_par: req.user.id
+    let compo = await Composition.findOne({ where: { match_id } });
+    let created = false;
+    if (!compo) {
+      try {
+        compo = await Composition.create({
+          match_id,
+          formation: formation || '4-3-3',
+          titulaires: titulaires || [],
+          remplacants: remplacants || [],
+          notes_tactiques,
+          cree_par: req.user.id,
+        });
+        created = true;
+      } catch (createErr) {
+        if (createErr.name !== 'SequelizeUniqueConstraintError') throw createErr;
+        // Une requête concurrente a créé la ligne entre-temps (double-clic, etc.) → on la récupère.
+        compo = await Composition.findOne({ where: { match_id } });
       }
-    });
+    }
 
     if (!created) {
       await compo.update({ formation, titulaires, remplacants, notes_tactiques });
@@ -34,6 +45,7 @@ const upsert = async (req, res) => {
 
     return res.status(created ? 201 : 200).json({ success: true, data: compo });
   } catch (err) {
+    console.error('[composition.upsert]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

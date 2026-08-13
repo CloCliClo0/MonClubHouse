@@ -112,6 +112,7 @@ const getById = async (req, res) => {
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
     return res.json({ success: true, data: match });
   } catch (err) {
+    console.error('[match.getById]', err.message);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

@@ -42,16 +42,18 @@ const addEvent = async (req, res) => {
       description: description ?? null,
     });
 
-    // Recalculer le score si c'est un but ou but_annulé
+    // Recalculer le score si c'est un but ou but_annulé.
+    // `equipe` code déjà le côté "notre équipe" ('domicile') vs "adversaire" ('exterieur') tel que
+    // choisi dans l'UI (cf. front MatchDetailPage.tsx) — ce n'est PAS le domicile/extérieur réel du
+    // match (`match.domicile_exterieur`), donc on ne doit surtout pas croiser les deux ici (ça inversait
+    // le score sur les matchs à l'extérieur).
     if (type === 'but' || type === 'but_annule') {
       const allEvents = await MatchEvent.findAll({ where: { match_id: match.id } });
       let scoreEquipe = 0, scoreAdversaire = 0;
       for (const e of allEvents) {
         if (e.type === 'but') {
-          if (match.domicile_exterieur === 'domicile' && e.equipe === 'domicile') scoreEquipe++;
-          else if (match.domicile_exterieur === 'domicile' && e.equipe === 'exterieur') scoreAdversaire++;
-          else if (match.domicile_exterieur === 'exterieur' && e.equipe === 'exterieur') scoreEquipe++;
-          else if (match.domicile_exterieur === 'exterieur' && e.equipe === 'domicile') scoreAdversaire++;
+          if (e.equipe === 'domicile') scoreEquipe++;
+          else if (e.equipe === 'exterieur') scoreAdversaire++;
         }
       }
       await match.update({ score_equipe: scoreEquipe, score_adversaire: scoreAdversaire });
