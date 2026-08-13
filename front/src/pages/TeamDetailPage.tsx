@@ -181,7 +181,7 @@ export default function TeamDetailPage() {
 
   const parents = team.licencies
     .filter(l => l.user && l.user.parent)
-    .map(l => ({ player: l.user, parent: l.user.parent! }))
+    .map(l => ({ player: l.user!, parent: l.user!.parent! }))
 
   return (
     <div>
