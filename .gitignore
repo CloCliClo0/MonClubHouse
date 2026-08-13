@@ -43,3 +43,6 @@ instructions.md
 # ── TEST ─────────────────────────────────────────────────────────────
 
 test-unitaire/
+
+# ── App mobile (React Native / Expo, non versionnée) ──────────────────────────
+mobile/
