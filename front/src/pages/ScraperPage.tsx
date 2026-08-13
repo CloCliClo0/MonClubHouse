@@ -53,7 +53,7 @@ export default function ScraperPage() {
 
   /* ── Import ── */
   const [importing, setImporting]       = useState(false)
-  const [importResult, setImportResult] = useState<{ created_matchs: number; new_teams: string[] } | null>(null)
+  const [importResult, setImportResult] = useState<{ created_matchs: number; created_events: number; new_teams: string[] } | null>(null)
 
   /* ── Vérification équipes ── */
   type TeamInfo = {
@@ -632,6 +632,15 @@ export default function ScraperPage() {
             <p className="text-body-md mt-0.5">
               {importResult.created_matchs} match{importResult.created_matchs !== 1 ? 's' : ''} importé{importResult.created_matchs !== 1 ? 's' : ''} dans "{champName}".
             </p>
+            {importResult.created_events > 0 ? (
+              <p className="text-body-sm mt-1 text-green-700">
+                {importResult.created_events} événement{importResult.created_events > 1 ? 's' : ''} ajouté{importResult.created_events > 1 ? 's' : ''} au calendrier (visible{importResult.created_events > 1 ? 's' : ''} dans Résultats, convocations et compositions possibles).
+              </p>
+            ) : (
+              <p className="text-body-sm mt-1 text-amber-700">
+                Aucun événement calendrier créé — le nom de votre équipe n'a été reconnu dans aucun match importé.
+              </p>
+            )}
             {importResult.new_teams.length > 0 && (
               <div className="mt-2">
                 <p className="text-body-sm font-medium">Nouvelles équipes créées :</p>

@@ -1,5 +1,34 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { ChEquipe, ChMatch } = require('../models');
+const { ChEquipe, ChMatch, Match, Equipe } = require('../models');
+
+function norm(s) {
+  return s.toLowerCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => i);
+  for (let j = 1; j <= n; j++) {
+    let prev = dp[0]; dp[0] = j;
+    for (let i = 1; i <= m; i++) {
+      const tmp = dp[i];
+      dp[i] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[i - 1], dp[i]);
+      prev = tmp;
+    }
+  }
+  return dp[m];
+}
+
+function simScore(a, b) {
+  const na = norm(a), nb = norm(b);
+  if (na === nb) return 1;
+  if (na.includes(nb) || nb.includes(na)) return 0.85;
+  const dist = levenshtein(na, nb);
+  const maxLen = Math.max(na.length, nb.length);
+  return maxLen === 0 ? 1 : Math.max(0, 1 - dist / maxLen);
+}
 
 // Quota journalier par rôle
 const DAILY_LIMITS = {
@@ -179,7 +208,6 @@ const checkTeams = async (req, res) => {
 
     let club_id = req.user.club_id;
     if (!club_id) {
-      const { Equipe } = require('../models');
       const eq = await Equipe.findByPk(equipe_ref_id, { attributes: ['club_id'] });
       club_id = eq?.club_id || null;
     }
@@ -190,35 +218,6 @@ const checkTeams = async (req, res) => {
       attributes: ['id', 'nom'],
       raw: true,
     });
-
-    function norm(s) {
-      return s.toLowerCase().trim()
-        .normalize('NFD').replace(/[̀-ͯ]/g, '')
-        .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
-    }
-
-    function levenshtein(a, b) {
-      const m = a.length, n = b.length;
-      const dp = Array.from({ length: m + 1 }, (_, i) => i);
-      for (let j = 1; j <= n; j++) {
-        let prev = dp[0]; dp[0] = j;
-        for (let i = 1; i <= m; i++) {
-          const tmp = dp[i];
-          dp[i] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[i - 1], dp[i]);
-          prev = tmp;
-        }
-      }
-      return dp[m];
-    }
-
-    function simScore(a, b) {
-      const na = norm(a), nb = norm(b);
-      if (na === nb) return 1;
-      if (na.includes(nb) || nb.includes(na)) return 0.85;
-      const dist = levenshtein(na, nb);
-      const maxLen = Math.max(na.length, nb.length);
-      return maxLen === 0 ? 1 : Math.max(0, 1 - dist / maxLen);
-    }
 
     const uniqueNames = [...new Set(team_names.map(n => String(n).trim()).filter(Boolean))];
     const teams = uniqueNames.map(name => {
@@ -252,19 +251,22 @@ const importMatches = async (req, res) => {
     }
 
     // Superadmin peut avoir club_id null → le résoudre depuis l'équipe sélectionnée
-    let club_id = req.user.club_id;
-    if (!club_id) {
-      const { Equipe } = require('../models');
-      const eq = await Equipe.findByPk(equipe_ref_id, { attributes: ['club_id'] });
-      club_id = eq?.club_id || null;
-    }
+    const notreEquipe = await Equipe.findByPk(equipe_ref_id, { attributes: ['id', 'nom', 'club_id'] });
+    let club_id = req.user.club_id || notreEquipe?.club_id || null;
     if (!club_id) {
       return res.status(400).json({ success: false, message: 'Impossible de déterminer le club de cette équipe.' });
     }
 
+    // Un côté du match (dom ou ext) est-il notre équipe ? Sert à créer l'événement calendrier/résultat correspondant.
+    // On honore un lien manuel déjà posé (ChEquipe.equipe_id, cf. page Saison) en priorité, sinon on compare les noms.
+    const OUR_TEAM_THRESHOLD = 0.72;
+    const isOurTeam = (eq) => eq.equipe_id === Number(equipe_ref_id)
+      || (!!notreEquipe && simScore(eq.nom, notreEquipe.nom) >= OUR_TEAM_THRESHOLD);
+
     const teamCache = {};
     const newTeams = [];
     let createdMatchs = 0;
+    let createdEvents = 0;
 
     const getOrCreateTeam = async (nom) => {
       // Appliquer l'override admin si défini (ex : "Paris FC" → "FC Paris")
@@ -301,9 +303,37 @@ const importMatches = async (req, res) => {
         });
         createdMatchs++;
       }
+
+      // Notre équipe joue ce match → créer/compléter l'événement calendrier (Résultats, Convocations, Compositions)
+      const domIsUs = isOurTeam(domEq);
+      const extIsUs = isOurTeam(extEq);
+      if (domIsUs || extIsUs) {
+        const adversaireNom = domIsUs ? extEq.nom : domEq.nom;
+        const existingEvent = await Match.findOne({
+          where: {
+            equipe_id: equipe_ref_id, adversaire: adversaireNom,
+            saison, championnat: championnat || null,
+            journee: m.journee || null, date: m.date || null,
+          },
+        });
+        if (!existingEvent) {
+          await Match.create({
+            equipe_id: equipe_ref_id, club_id,
+            adversaire: adversaireNom,
+            date: m.date || null,
+            type: 'match',
+            domicile_exterieur: domIsUs ? 'domicile' : 'exterieur',
+            score_equipe: domIsUs ? (m.score_dom ?? null) : (m.score_ext ?? null),
+            score_adversaire: domIsUs ? (m.score_ext ?? null) : (m.score_dom ?? null),
+            statut: (m.score_dom != null && m.score_ext != null) ? 'termine' : 'programme',
+            championnat: championnat || null, saison, journee: m.journee || null,
+          });
+          createdEvents++;
+        }
+      }
     }
 
-    return res.json({ success: true, data: { created_matchs: createdMatchs, new_teams: newTeams } });
+    return res.json({ success: true, data: { created_matchs: createdMatchs, created_events: createdEvents, new_teams: newTeams } });
   } catch (err) {
     console.error('[AI Scraper] Erreur import:', err.message);
     return res.status(500).json({ success: false, message: 'Erreur lors de l\'import' });
