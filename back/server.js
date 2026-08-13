@@ -344,6 +344,15 @@ const applyStartupMigrations = async () => {
       await sequelize.query("ALTER TABLE matchs ADD COLUMN saison VARCHAR(20) NULL");
       console.log('[DB] Colonne matchs.saison ajoutée');
     }
+    // L'ENUM matchs.type créé en migration 005 ne contient pas 'autre', alors que le modèle Sequelize
+    // et matchController.TYPE_MAP (plateau/reunion → autre) s'appuient dessus depuis toujours — tout
+    // événement Plateau/Réunion/Autre échouait silencieusement à l'insertion (valeur ENUM invalide).
+    const [typeColRows] = await sequelize.query("SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='matchs' AND COLUMN_NAME='type' AND TABLE_SCHEMA=DATABASE()");
+    const typeColumnType = typeColRows[0]?.COLUMN_TYPE || '';
+    if (!typeColumnType.includes("'autre'")) {
+      await sequelize.query("ALTER TABLE matchs MODIFY COLUMN type ENUM('match','entrainement','tournoi','amical','coupe','autre') NOT NULL DEFAULT 'match'");
+      console.log("[DB] Enum matchs.type élargi avec 'autre'");
+    }
   } catch (e) {
     console.warn('[DB] Migration startup échouée (matchs) :', e.message);
     migrationIssues.push({ block: 'matchs', error: e.message });

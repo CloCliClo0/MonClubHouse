@@ -68,8 +68,19 @@ export default function VotePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 animate-pulse">
+        <div>
+          <div className="h-7 w-52 bg-gray-200 rounded" />
+          <div className="h-4 w-64 bg-gray-100 rounded mt-2" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="bg-white rounded-xl border-2 border-gray-100 p-4 text-center">
+              <div className="w-14 h-14 rounded-full bg-gray-200 mx-auto mb-2" />
+              <div className="h-3 w-16 bg-gray-200 rounded mx-auto" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }

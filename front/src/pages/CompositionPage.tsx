@@ -401,9 +401,22 @@ export default function CompositionPage() {
         </div>
 
         {loading && (
-          <div className="flex items-center justify-center py-20 text-on-surface-variant">
-            <span className="material-symbols-outlined text-[36px] animate-spin mr-3">progress_activity</span>
-            Chargement des matchs…
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-white border border-[#e8e8f0] rounded-xl p-5 animate-pulse">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-surface-container-low rounded-xl shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="h-4 w-2/3 bg-surface-container-low rounded" />
+                    <div className="h-3 w-1/3 bg-surface-container-low rounded" />
+                    <div className="flex gap-2 mt-2">
+                      <div className="h-5 w-16 bg-surface-container-low rounded" />
+                      <div className="h-5 w-20 bg-surface-container-low rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -484,9 +497,13 @@ export default function CompositionPage() {
           <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           Choisir un autre match
         </button>
-        <div className="flex flex-col items-center justify-center py-24 gap-3 text-on-surface-variant">
-          <span className="material-symbols-outlined text-[48px] text-primary animate-spin">progress_activity</span>
-          <p className="text-body-md">Chargement des convocations…</p>
+        <div className="animate-pulse">
+          <div className="h-64 sm:h-80 bg-surface-container-low rounded-2xl mb-5" />
+          <div className="flex gap-3 flex-wrap">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-16 w-24 bg-surface-container-low rounded-xl" />
+            ))}
+          </div>
         </div>
       </div>
     )

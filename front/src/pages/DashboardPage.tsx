@@ -110,7 +110,7 @@ export default function DashboardPage() {
     { icon: 'calendar_today',       label: 'Calendrier',     to: '/calendrier'  },
     { icon: 'forum',                label: 'Messages',       to: '/messages'    },
   ] : [
-    { icon: 'assignment_turned_in', label: 'Convocations', to: '/convocations' },
+    { icon: 'assignment_turned_in', label: 'Convocations et présences', to: '/convocations' },
     { icon: 'format_list_numbered', label: 'Composition',  to: '/composition'  },
     { icon: 'sports_soccer',        label: 'Équipes',      to: '/equipes'      },
     { icon: 'forum',                label: 'Messages',     to: '/messages'     },

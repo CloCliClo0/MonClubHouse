@@ -12,7 +12,7 @@ type Licencie = {
   user: {
     id: number; nom: string; prenom: string; email: string; avatar?: string; telephone?: string; parent_id?: number
     parent?: { id: number; nom: string; prenom: string; email: string; telephone?: string } | null
-  }
+  } | null
 }
 
 type TeamDetail = {
@@ -180,7 +180,7 @@ export default function TeamDetailPage() {
   if (!team) return null
 
   const parents = team.licencies
-    .filter(l => l.user.parent)
+    .filter(l => l.user && l.user.parent)
     .map(l => ({ player: l.user, parent: l.user.parent! }))
 
   return (
@@ -286,6 +286,14 @@ export default function TeamDetailPage() {
                 {team.licencies.map(lic => (
                   <tr key={lic.id} className="hover:bg-surface-container-low transition-colors">
                     <td className="px-4 py-3">
+                      {!lic.user ? (
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 shrink-0">
+                            <span className="material-symbols-outlined text-[18px]">person_off</span>
+                          </div>
+                          <p className="text-body-sm text-on-surface-variant italic">Utilisateur supprimé</p>
+                        </div>
+                      ) : (
                       <div className="flex items-center gap-3">
                         {lic.user.avatar ? (
                           <>
@@ -314,6 +322,7 @@ export default function TeamDetailPage() {
                           <span className={`sm:hidden px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUT_COLORS[lic.statut]}`}>{lic.statut}</span>
                         </div>
                       </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
                       {canManage ? (
@@ -335,7 +344,7 @@ export default function TeamDetailPage() {
                       {lic.numero_licence || <span className="opacity-40">—</span>}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      {lic.user.parent ? (
+                      {lic.user?.parent ? (
                         <div>
                           <p className="text-body-sm text-on-surface font-medium">{lic.user.parent.prenom} {lic.user.parent.nom}</p>
                           <p className="text-[11px] text-on-surface-variant">{lic.user.parent.email}</p>
@@ -533,7 +542,7 @@ export default function TeamDetailPage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Modifier la licence — {licModal.user.prenom} {licModal.user.nom}</h3>
+              <h3 className="font-semibold text-gray-900">Modifier la licence — {licModal.user ? `${licModal.user.prenom} ${licModal.user.nom}` : 'Utilisateur supprimé'}</h3>
               <button onClick={() => setLicModal(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
             </div>
             <div className="p-5 space-y-4">

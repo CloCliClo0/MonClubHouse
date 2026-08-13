@@ -8,7 +8,7 @@ const t = {
       calendrier:    'Calendrier',
       messages:      'Messages',
       equipes:       'Équipes',
-      convocations:  'Convocations',
+      convocations:  'Convocations et présences',
       composition:   'Composition',
       adversaires:   'Adversaires',
       saison:        'Saison',
@@ -121,7 +121,7 @@ const t = {
     },
     // ── Convocations ────────────────────────────────────────────────
     convocations: {
-      title:        'Convocations',
+      title:        'Convocations et présences',
       subtitle:     'Gérez les convocations',
       present:      'Présent',
       absent:       'Absent',
@@ -241,7 +241,7 @@ const t = {
       calendrier:    'Calendar',
       messages:      'Messages',
       equipes:       'Teams',
-      convocations:  'Convocations',
+      convocations:  'Call-ups & attendance',
       composition:   'Line-up',
       adversaires:   'Opponents',
       saison:        'Season',
@@ -348,7 +348,7 @@ const t = {
       cancelled:    'Cancelled',
     },
     convocations: {
-      title:        'Convocations',
+      title:        'Call-ups & attendance',
       subtitle:     'Manage convocations',
       present:      'Present',
       absent:       'Absent',

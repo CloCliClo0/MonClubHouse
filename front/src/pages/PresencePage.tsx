@@ -324,8 +324,26 @@ export default function PresencePage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-20 bg-gray-200 rounded-full" />
+                    <div className="h-4 w-28 bg-gray-200 rounded" />
+                  </div>
+                  <div className="h-3 w-36 bg-gray-100 rounded" />
+                </div>
+                <div className="h-6 w-16 bg-gray-200 rounded-full shrink-0" />
+              </div>
+              <div className="mt-3 flex gap-2">
+                <div className="flex-1 h-9 bg-gray-100 rounded-lg" />
+                <div className="flex-1 h-9 bg-gray-100 rounded-lg" />
+                <div className="flex-1 h-9 bg-gray-100 rounded-lg" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : loadError ? (
         <div className="text-center py-12 text-gray-400">
