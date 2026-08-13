@@ -13,6 +13,8 @@ type Match = {
   domicile_exterieur: string
   championnat: string
   equipe: { nom: string; categorie?: { id: number; nom: string } | null }
+  composition?: { titulaires: unknown[] | null; remplacants: unknown[] | null } | null
+  convocations?: { id: number; statut: string }[]
 }
 
 type Standing = {
@@ -95,6 +97,9 @@ export default function ResultsPage() {
   }
 
   const formColor: Record<string, string> = { V: 'bg-green-500', N: 'bg-orange-400', D: 'bg-red-500' }
+
+  const compoReady = (m: Match) => !!m.composition && (((m.composition.titulaires?.length || 0) + (m.composition.remplacants?.length || 0)) > 0)
+  const presentCount = (m: Match) => (m.convocations || []).filter(c => c.statut === 'present').length
 
   return (
     <div>
@@ -196,6 +201,17 @@ export default function ResultsPage() {
                           }`}>
                             {m.domicile_exterieur === 'domicile' ? '🏠 Dom.' : '✈️ Ext.'}
                           </span>
+                          {compoReady(m) && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[12px]">groups</span>Compo prête
+                            </span>
+                          )}
+                          {(m.convocations?.length || 0) > 0 && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[12px]">how_to_reg</span>
+                              {presentCount(m)}/{m.convocations!.length} présents
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="text-label-lg text-primary font-bold">{m.equipe?.nom}</span>

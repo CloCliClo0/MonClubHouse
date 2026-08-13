@@ -1,5 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { ChEquipe, ChMatch, Match, Equipe } = require('../models');
+const { ChEquipe, ChMatch, Match, Equipe, Adversaire } = require('../models');
 
 function norm(s) {
   return s.toLowerCase().trim()
@@ -279,6 +279,24 @@ const importMatches = async (req, res) => {
     let createdMatchs = 0;
     let createdEvents = 0;
 
+    // Adversaires (liste "club" séparée de ChEquipe) : préchargés puis complétés par rapprochement de nom.
+    const existingAdversaires = await Adversaire.findAll({ where: { club_id }, attributes: ['id', 'nom'] });
+    const advCache = {};
+    const newAdversaires = [];
+    const getOrCreateAdversaire = async (nom) => {
+      const trimmed = nom.trim();
+      const key = trimmed.toLowerCase();
+      if (advCache[key]) return advCache[key];
+      let adv = existingAdversaires.find(a => norm(a.nom) === norm(trimmed));
+      if (!adv) {
+        adv = await Adversaire.create({ club_id, nom: trimmed });
+        existingAdversaires.push(adv);
+        newAdversaires.push(adv.nom);
+      }
+      advCache[key] = adv;
+      return adv;
+    };
+
     const getOrCreateTeam = async (nom) => {
       // Appliquer l'override admin si défini (ex : "Paris FC" → "FC Paris")
       const resolvedNom = (team_overrides[nom.trim()] || nom.trim());
@@ -324,6 +342,7 @@ const importMatches = async (req, res) => {
       else { domIsUs = isOurTeam(domEq); extIsUs = isOurTeam(extEq); }
       if (domIsUs || extIsUs) {
         const adversaireNom = domIsUs ? extEq.nom : domEq.nom;
+        const adv = await getOrCreateAdversaire(adversaireNom);
         const existingEvent = await Match.findOne({
           where: {
             equipe_id: equipe_ref_id, adversaire: adversaireNom,
@@ -334,7 +353,7 @@ const importMatches = async (req, res) => {
         if (!existingEvent) {
           await Match.create({
             equipe_id: equipe_ref_id, club_id,
-            adversaire: adversaireNom,
+            adversaire: adversaireNom, adversaire_id: adv.id,
             date: m.date || null,
             type: 'match',
             domicile_exterieur: domIsUs ? 'domicile' : 'exterieur',
@@ -344,11 +363,14 @@ const importMatches = async (req, res) => {
             championnat: championnat || null, saison, journee: m.journee || null,
           });
           createdEvents++;
+        } else if (!existingEvent.adversaire_id) {
+          // Événement créé avant ce correctif : relie-le rétroactivement à l'adversaire.
+          await existingEvent.update({ adversaire_id: adv.id });
         }
       }
     }
 
-    return res.json({ success: true, data: { created_matchs: createdMatchs, created_events: createdEvents, new_teams: newTeams } });
+    return res.json({ success: true, data: { created_matchs: createdMatchs, created_events: createdEvents, new_teams: newTeams, new_adversaires: newAdversaires } });
   } catch (err) {
     console.error('[AI Scraper] Erreur import:', err.message);
     return res.status(500).json({ success: false, message: 'Erreur lors de l\'import' });

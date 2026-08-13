@@ -32,7 +32,9 @@ const getAll = async (req, res) => {
       include: [
         { model: Equipe, as: 'equipe', attributes: ['id', 'nom', 'categorie_id'],
           include: [{ model: Category, as: 'categorie', attributes: ['id', 'nom'], required: false }] },
-        { model: Terrain, as: 'terrain', attributes: ['id', 'nom', 'adresse'], required: false }
+        { model: Terrain, as: 'terrain', attributes: ['id', 'nom', 'adresse'], required: false },
+        { model: Composition, as: 'composition', attributes: ['id', 'titulaires', 'remplacants'], required: false },
+        { model: Convocation, as: 'convocations', attributes: ['id', 'statut'], required: false },
       ],
       order: [['date', 'ASC']],
       limit: req.query.limit ? parseInt(req.query.limit, 10) : undefined,

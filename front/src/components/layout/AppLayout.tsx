@@ -20,19 +20,20 @@ type ProfileData = {
   telephone: string | null
   avatar: string | null
   role: string
+  has_password: boolean
 }
 
 const ROLES_REQUIRING_PROFILE = ['joueur', 'parent', 'coach', 'dirigeant']
 const PLAYER_ROLES = ['joueur']
 
-function isProfileComplete(p: ProfileData): boolean {
+function isProfileFieldsComplete(p: ProfileData): boolean {
   if (!ROLES_REQUIRING_PROFILE.includes(p.role)) return true
   if (!p.date_naissance) return false
   if (PLAYER_ROLES.includes(p.role) && (!p.poste || !p.pied_fort || !p.taille)) return false
   return true
 }
 
-function ProfileCompleteModal({ onDone }: { onDone: () => void }) {
+function ProfileCompleteModal({ needsPassword, needsFields, onDone }: { needsPassword: boolean; needsFields: boolean; onDone: () => void }) {
   const role = localStorage.getItem('role') || 'joueur'
   const isPlayer = PLAYER_ROLES.includes(role)
 
@@ -42,23 +43,32 @@ function ProfileCompleteModal({ onDone }: { onDone: () => void }) {
   const [taille, setTaille]         = useState('')
   const [telephone, setTelephone]   = useState('')
   const [avatar, setAvatar]         = useState<string | null>(null)
+  const [password, setPassword]     = useState('')
+  const [password2, setPassword2]   = useState('')
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState('')
 
-  const canSubmit = !!dateNaiss && (!isPlayer || (!!poste && !!piedFort && !!taille))
+  const passwordOk = !needsPassword || (password.length >= 8 && password === password2)
+  const fieldsOk    = !needsFields || (!!dateNaiss && (!isPlayer || (!!poste && !!piedFort && !!taille)))
+  const canSubmit = passwordOk && fieldsOk
 
   const handleSave = async () => {
     if (!canSubmit) return
     setSaving(true); setError('')
     try {
-      await api.put('/profil', {
-        date_naissance: dateNaiss,
-        telephone: telephone || null,
-        poste: poste || null,
-        pied_fort: piedFort || null,
-        taille: taille ? parseInt(taille) : null,
-        avatar: avatar || undefined,
-      })
+      if (needsPassword) {
+        await api.post('/profil/set-initial-password', { password })
+      }
+      if (needsFields) {
+        await api.put('/profil', {
+          date_naissance: dateNaiss,
+          telephone: telephone || null,
+          poste: poste || null,
+          pied_fort: piedFort || null,
+          taille: taille ? parseInt(taille) : null,
+          avatar: avatar || undefined,
+        })
+      }
       onDone()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de la sauvegarde.')
@@ -75,76 +85,121 @@ function ProfileCompleteModal({ onDone }: { onDone: () => void }) {
               <span className="material-symbols-outlined text-white text-[20px]">person_add</span>
             </div>
             <div>
-              <h2 className="text-headline-md text-on-surface">Complétez votre profil</h2>
-              <p className="text-body-sm text-on-surface-variant">Bienvenue ! Quelques infos sont nécessaires pour continuer.</p>
+              <h2 className="text-headline-md text-on-surface">
+                {needsFields ? 'Complétez votre profil' : 'Sécurisez votre compte'}
+              </h2>
+              <p className="text-body-sm text-on-surface-variant">
+                {needsFields && needsPassword
+                  ? 'Bienvenue ! Quelques infos et un mot de passe sont nécessaires pour continuer.'
+                  : needsFields
+                  ? 'Bienvenue ! Quelques infos sont nécessaires pour continuer.'
+                  : 'Définissez un mot de passe pour pouvoir vous connecter même sans Google.'}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Photo */}
-          <div className="flex flex-col items-center gap-3 pb-4 border-b border-[#e8e8f0]">
-            <PhotoUpload
-              type="avatar" shape="circle" size={96}
-              currentUrl={avatar || undefined}
-              label="Ajouter une photo"
-              onSuccess={(url) => setAvatar(url)}
-            />
-            <p className="text-body-sm text-on-surface-variant">Photo de profil (optionnel)</p>
-          </div>
-
-          {/* Date de naissance */}
-          <div className="space-y-1.5">
-            <label className="text-label-md text-on-surface-variant flex items-center gap-1">
-              Date de naissance
-              <span className="text-error">*</span>
-            </label>
-            <BirthdateSelect value={dateNaiss} onChange={setDateNaiss} />
-          </div>
-
-          {/* Téléphone */}
-          <div className="space-y-1.5">
-            <label className="text-label-md text-on-surface-variant">Téléphone</label>
-            <input type="tel" value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="+33 6 12 34 56 78"
-              className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-          </div>
-
-          {/* Champs spécifiques joueur/coach */}
-          {isPlayer && (
+          {needsFields && (
             <>
+              {/* Photo */}
+              <div className="flex flex-col items-center gap-3 pb-4 border-b border-[#e8e8f0]">
+                <PhotoUpload
+                  type="avatar" shape="circle" size={96}
+                  currentUrl={avatar || undefined}
+                  label="Ajouter une photo"
+                  onSuccess={(url) => setAvatar(url)}
+                />
+                <p className="text-body-sm text-on-surface-variant">Photo de profil (optionnel)</p>
+              </div>
+
+              {/* Date de naissance */}
               <div className="space-y-1.5">
                 <label className="text-label-md text-on-surface-variant flex items-center gap-1">
-                  Poste
+                  Date de naissance
                   <span className="text-error">*</span>
                 </label>
-                <input type="text" value={poste} onChange={e => setPoste(e.target.value)} placeholder="Gardien, Défenseur, Milieu, Attaquant…"
+                <BirthdateSelect value={dateNaiss} onChange={setDateNaiss} />
+              </div>
+
+              {/* Téléphone */}
+              <div className="space-y-1.5">
+                <label className="text-label-md text-on-surface-variant">Téléphone</label>
+                <input type="tel" value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="+33 6 12 34 56 78"
                   className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-label-md text-on-surface-variant flex items-center gap-1">
-                    Pied fort
-                    <span className="text-error">*</span>
-                  </label>
-                  <select value={piedFort} onChange={e => setPiedFort(e.target.value)} required
-                    className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all bg-white">
-                    <option value="">Choisir…</option>
-                    <option value="droit">Droit</option>
-                    <option value="gauche">Gauche</option>
-                    <option value="ambidextre">Ambidextre</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-label-md text-on-surface-variant flex items-center gap-1">
-                    Taille (cm)
-                    <span className="text-error">*</span>
-                  </label>
-                  <input type="number" min="100" max="230" value={taille} onChange={e => setTaille(e.target.value)} placeholder="Ex : 178"
-                    className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                </div>
-              </div>
+              {/* Champs spécifiques joueur/coach */}
+              {isPlayer && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-label-md text-on-surface-variant flex items-center gap-1">
+                      Poste
+                      <span className="text-error">*</span>
+                    </label>
+                    <input type="text" value={poste} onChange={e => setPoste(e.target.value)} placeholder="Gardien, Défenseur, Milieu, Attaquant…"
+                      className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-label-md text-on-surface-variant flex items-center gap-1">
+                        Pied fort
+                        <span className="text-error">*</span>
+                      </label>
+                      <select value={piedFort} onChange={e => setPiedFort(e.target.value)} required
+                        className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary transition-all bg-white">
+                        <option value="">Choisir…</option>
+                        <option value="droit">Droit</option>
+                        <option value="gauche">Gauche</option>
+                        <option value="ambidextre">Ambidextre</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-label-md text-on-surface-variant flex items-center gap-1">
+                        Taille (cm)
+                        <span className="text-error">*</span>
+                      </label>
+                      <input type="number" min="100" max="230" value={taille} onChange={e => setTaille(e.target.value)} placeholder="Ex : 178"
+                        className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                    </div>
+                  </div>
+                </>
+              )}
             </>
+          )}
+
+          {needsPassword && (
+            <div className={`space-y-4 ${needsFields ? 'pt-4 border-t border-[#e8e8f0]' : ''}`}>
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                <span className="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-0.5">lock</span>
+                <p className="text-body-sm text-amber-800">
+                  Votre compte n'a pas de mot de passe (connexion via Google). Définissez-en un pour pouvoir aussi vous connecter avec votre email.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-label-md text-on-surface-variant flex items-center gap-1">
+                  Mot de passe
+                  <span className="text-error">*</span>
+                </label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="8 caractères minimum"
+                  className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-label-md text-on-surface-variant flex items-center gap-1">
+                  Confirmer le mot de passe
+                  <span className="text-error">*</span>
+                </label>
+                <input type="password" value={password2} onChange={e => setPassword2(e.target.value)} placeholder="8 caractères minimum"
+                  className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                {password && password2 && password !== password2 && (
+                  <p className="text-body-sm text-error">Les mots de passe ne correspondent pas.</p>
+                )}
+                {password && password.length < 8 && (
+                  <p className="text-body-sm text-error">8 caractères minimum.</p>
+                )}
+              </div>
+            </div>
           )}
 
           {error && (
@@ -179,6 +234,8 @@ export default function AppLayout() {
   const { setUser } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [modalNeedsPassword, setModalNeedsPassword] = useState(false)
+  const [modalNeedsFields, setModalNeedsFields] = useState(false)
   const [profileChecked, setProfileChecked] = useState(false)
   const [showSubscriptionGate, setShowSubscriptionGate] = useState(false)
   const [canBuyForClub, setCanBuyForClub] = useState(false)
@@ -199,7 +256,12 @@ export default function AppLayout() {
         date_naissance: u.date_naissance || null,
         avatar:         u.avatar || null,
       })
-      if (ROLES_REQUIRING_PROFILE.includes(role) && !isProfileComplete({ ...u, role })) {
+      const profileData = { ...u, role }
+      const needsPassword = !profileData.has_password
+      const needsFields    = !isProfileFieldsComplete(profileData)
+      if (needsPassword || needsFields) {
+        setModalNeedsPassword(needsPassword)
+        setModalNeedsFields(needsFields)
         setShowProfileModal(true)
       }
     }).catch(() => {}).finally(() => setProfileChecked(true))
@@ -231,7 +293,11 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-[#f4f4f6]">
       {showProfileModal && (
-        <ProfileCompleteModal onDone={() => setShowProfileModal(false)} />
+        <ProfileCompleteModal
+          needsPassword={modalNeedsPassword}
+          needsFields={modalNeedsFields}
+          onDone={() => setShowProfileModal(false)}
+        />
       )}
 
       {!showProfileModal && showSubscriptionGate && (

@@ -54,7 +54,7 @@ export default function ScraperPage() {
 
   /* ── Import ── */
   const [importing, setImporting]       = useState(false)
-  const [importResult, setImportResult] = useState<{ created_matchs: number; created_events: number; new_teams: string[] } | null>(null)
+  const [importResult, setImportResult] = useState<{ created_matchs: number; created_events: number; new_teams: string[]; new_adversaires: string[] } | null>(null)
 
   /* ── Vérification équipes ── */
   type TeamInfo = {
@@ -654,6 +654,19 @@ export default function ScraperPage() {
                   ))}
                 </ul>
                 <p className="text-body-sm mt-2 text-green-700">Vérifiez dans <strong>Saison → Classement</strong>.</p>
+              </div>
+            )}
+            {importResult.new_adversaires.length > 0 && (
+              <div className="mt-2">
+                <p className="text-body-sm font-medium">Nouveaux adversaires ajoutés :</p>
+                <ul className="mt-1 space-y-0.5">
+                  {importResult.new_adversaires.map(a => (
+                    <li key={a} className="text-body-sm flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[14px]">add_circle</span>{a}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-body-sm mt-2 text-green-700">Vérifiez dans <strong>Adversaires</strong>.</p>
               </div>
             )}
           </div>
