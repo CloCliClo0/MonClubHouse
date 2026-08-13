@@ -38,11 +38,12 @@ export default function ScraperPage() {
   const champName = champSelect === NEW_CHAMP_SENTINEL ? champNew : champSelect
 
   /* ── Source ── */
-  const [sourceMode, setSourceMode]   = useState<'file' | 'html'>('file')
+  const [sourceMode, setSourceMode]   = useState<'file' | 'html' | 'json'>('file')
   const [file, setFile]               = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [dragging, setDragging]       = useState(false)
   const [html, setHtml]               = useState('')
+  const [json, setJson]               = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   /* ── Analyse ── */
@@ -129,6 +130,8 @@ export default function ScraperPage() {
         const fd = new FormData()
         fd.append('file', file)
         r = await api.post('/ai-scraper/analyse', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      } else if (sourceMode === 'json') {
+        r = await api.post('/ai-scraper/analyse', { json })
       } else {
         r = await api.post('/ai-scraper/analyse', { html })
       }
@@ -221,7 +224,7 @@ export default function ScraperPage() {
   const toggleMatch   = (i: number) => { setMatches(p => p.map((m, idx) => idx === i ? { ...m, selected: !m.selected } : m)); setTeamStep(null) }
   const toggleAll     = (v: boolean) => { setMatches(p => p.map(m => ({ ...m, selected: v }))); setTeamStep(null) }
   const selectedCount = matches.filter(m => m.selected).length
-  const canAnalyse    = sourceMode === 'file' ? !!file : !!html.trim()
+  const canAnalyse    = sourceMode === 'file' ? !!file : sourceMode === 'json' ? !!json.trim() : !!html.trim()
 
   const quotaColor = !quota ? 'gray'
     : quota.remaining === 0 ? 'red'
@@ -249,7 +252,7 @@ export default function ScraperPage() {
             Agent IA — Import de matchs
           </h2>
           <p className="text-body-md text-on-surface-variant mt-1">
-            Envoyez une photo, un PDF ou du HTML — l'IA extrait automatiquement les matchs et scores.
+            Envoyez une photo, un PDF, du HTML ou du JSON — l'IA extrait automatiquement les matchs et scores.
           </p>
         </div>
 
@@ -332,7 +335,7 @@ export default function ScraperPage() {
       {/* Source */}
       <div className="bg-white border border-[#e8e8f0] rounded-xl overflow-hidden">
         <div className="flex border-b border-[#e8e8f0] overflow-x-auto">
-          {([['file', 'photo_library', 'Photo / PDF'], ['html', 'code', 'HTML / Texte']] as const).map(([mode, icon, label]) => (
+          {([['file', 'photo_library', 'Photo / PDF'], ['html', 'code', 'HTML / Texte'], ['json', 'data_object', 'JSON']] as const).map(([mode, icon, label]) => (
             <button key={mode} onClick={() => { setSourceMode(mode); setError(null) }}
               className={`flex items-center gap-2 px-5 py-3.5 text-label-lg whitespace-nowrap border-b-2 transition-colors
                 ${sourceMode === mode
@@ -396,7 +399,7 @@ export default function ScraperPage() {
                 <span>Astuce : faites une capture d'écran du tableau de résultats (FFF, Footeo…) et uploadez-la directement.</span>
               </div>
             </>
-          ) : (
+          ) : sourceMode === 'html' ? (
             <>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
@@ -414,7 +417,25 @@ export default function ScraperPage() {
                 <span>Astuce : Ctrl+U pour voir le source de la page, puis Ctrl+A Ctrl+C pour tout copier.</span>
               </div>
             </>
-          )}
+          ) : sourceMode === 'json' ? (
+            <>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-label-md text-on-surface-variant">JSON</label>
+                  <span className="text-label-sm text-on-surface-variant">{json.length.toLocaleString()} car.</span>
+                </div>
+                <textarea value={json}
+                  onChange={e => { setJson(e.target.value); setMatches([]); setImportResult(null) }}
+                  placeholder='Collez ici un export JSON (ex: [{"dom":"Equipe A","ext":"Equipe B","score_dom":2,"score_ext":1,"date":"2025-09-14"}, ...])'
+                  rows={10}
+                  className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-sm font-mono focus:outline-none focus:border-primary transition-all resize-y" />
+              </div>
+              <div className="flex items-start gap-2 text-body-sm text-on-surface-variant bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                <span className="material-symbols-outlined text-blue-500 text-[18px] shrink-0 mt-0.5">lightbulb</span>
+                <span>Astuce : collez un export JSON d'un calendrier ou d'une API de résultats — l'IA reconnaît la structure automatiquement.</span>
+              </div>
+            </>
+          ) : null}
 
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-body-sm">

@@ -67,9 +67,10 @@ const analyseWithAI = async (req, res) => {
 
   const file = req.file;
   const html = req.body?.html;
+  const json = req.body?.json;
 
-  if (!file && !html?.trim()) {
-    return res.status(400).json({ success: false, message: 'Fournissez un fichier (image/PDF) ou du HTML/texte.' });
+  if (!file && !html?.trim() && !json?.trim()) {
+    return res.status(400).json({ success: false, message: 'Fournissez un fichier (image/PDF), du HTML/texte ou du JSON.' });
   }
 
   if (!process.env.GEMINI_API_KEY) {
@@ -92,6 +93,9 @@ const analyseWithAI = async (req, res) => {
           { inlineData: { data: base64, mimeType: file.mimetype } },
           { text: SYSTEM_PROMPT + '\n\nExtrais tous les matchs de ce document.' },
         ];
+      } else if (json?.trim()) {
+        const truncated = json.slice(0, 80000);
+        parts = [{ text: SYSTEM_PROMPT + `\n\nExtrais tous les matchs du JSON suivant :\n\n${truncated}` }];
       } else {
         const truncated = html.slice(0, 80000);
         parts = [{ text: SYSTEM_PROMPT + `\n\nExtrais tous les matchs du contenu suivant :\n\n${truncated}` }];
