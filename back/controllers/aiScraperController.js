@@ -55,16 +55,18 @@ function buildQuotaInfo(userId, role) {
   return { used: quota.count, limit, remaining: Math.max(0, limit - quota.count) };
 }
 
-const SYSTEM_PROMPT = `Tu es un assistant spécialisé dans l'extraction de données sportives.
+function buildSystemPrompt(equipeNom) {
+  return `Tu es un assistant spécialisé dans l'extraction de données sportives.
 Analyse le contenu fourni (screenshot, PDF, HTML ou texte d'un site de résultats sportifs) et extrais TOUS les matchs trouvés.
-
+${equipeNom ? `\nL'utilisateur gère l'équipe "${equipeNom}". Le nom affiché dans le document peut différer (nom complet du club, abréviation, orthographe légèrement différente...) — identifie quand même, pour CHAQUE match, quel côté correspond à cette équipe.\n` : ''}
 Pour chaque match, fournis exactement ces champs :
 - dom : nom de l'équipe à domicile (string)
 - ext : nom de l'équipe à l'extérieur (string)
 - score_dom : score de l'équipe domicile (number ou null si le match n'a pas encore eu lieu)
 - score_ext : score de l'équipe extérieure (number ou null si le match n'a pas encore eu lieu)
 - date : date au format YYYY-MM-DD (string ou null)
-- journee : numéro de journée/ronde (number ou null)
+- journee : numéro de journée/ronde (number ou null)${equipeNom ? `
+- notre_equipe : "dom" si "${equipeNom}" joue à domicile dans ce match, "ext" si elle joue à l'extérieur, null si tu ne peux vraiment pas déterminer (string ou null)` : ''}
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte avant ou après :
 {"matches":[...],"championnat":"nom du championnat ou null","saison":"ex: 2024-2025 ou null"}
@@ -74,6 +76,7 @@ RÈGLES IMPORTANTES :
 - "saison" = l'année sportive uniquement, au format AAAA-AAAA (ex: "2024-2025", "2025-2026"). Ce champ ne contient QUE des chiffres séparés par un tiret.
 
 Si aucun match n'est trouvé, retourne : {"matches":[],"championnat":null,"saison":null}`;
+}
 
 // GET /ai-scraper/quota
 const getQuota = (req, res) => {
@@ -105,6 +108,14 @@ const analyseWithAI = async (req, res) => {
   if (!process.env.GEMINI_API_KEY) {
     return res.status(500).json({ success: false, message: 'Clé API Gemini non configurée sur le serveur.' });
   }
+
+  // Nom de l'équipe du club (si fourni) → permet à l'IA de repérer quel côté de chaque match est "nous"
+  let equipeNom = null;
+  if (req.body?.equipe_ref_id) {
+    const eq = await Equipe.findByPk(req.body.equipe_ref_id, { attributes: ['nom'] }).catch(() => null);
+    equipeNom = eq?.nom || null;
+  }
+  const SYSTEM_PROMPT = buildSystemPrompt(equipeNom);
 
   // Ordre de préférence des modèles (fallback automatique)
   // gemini-2.0-flash a quota=0 sur ce projet → on utilise 2.5-flash en priorité
@@ -305,8 +316,12 @@ const importMatches = async (req, res) => {
       }
 
       // Notre équipe joue ce match → créer/compléter l'événement calendrier (Résultats, Convocations, Compositions)
-      const domIsUs = isOurTeam(domEq);
-      const extIsUs = isOurTeam(extEq);
+      // Priorité au champ renvoyé par l'IA (notre_equipe), qui a le contexte complet du document ;
+      // à défaut, on retombe sur le rapprochement de noms.
+      let domIsUs, extIsUs;
+      if (m.notre_equipe === 'dom') { domIsUs = true; extIsUs = false; }
+      else if (m.notre_equipe === 'ext') { domIsUs = false; extIsUs = true; }
+      else { domIsUs = isOurTeam(domEq); extIsUs = isOurTeam(extEq); }
       if (domIsUs || extIsUs) {
         const adversaireNom = domIsUs ? extEq.nom : domEq.nom;
         const existingEvent = await Match.findOne({

@@ -5,6 +5,7 @@ type ParsedMatch = {
   dom: string; ext: string
   score_dom: number | null; score_ext: number | null
   date: string | null; journee: number | null
+  notre_equipe?: 'dom' | 'ext' | null
   selected: boolean
 }
 
@@ -129,11 +130,12 @@ export default function ScraperPage() {
       if (sourceMode === 'file' && file) {
         const fd = new FormData()
         fd.append('file', file)
+        if (selectedEqId) fd.append('equipe_ref_id', selectedEqId)
         r = await api.post('/ai-scraper/analyse', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       } else if (sourceMode === 'json') {
-        r = await api.post('/ai-scraper/analyse', { json })
+        r = await api.post('/ai-scraper/analyse', { json, equipe_ref_id: selectedEqId || undefined })
       } else {
-        r = await api.post('/ai-scraper/analyse', { html })
+        r = await api.post('/ai-scraper/analyse', { html, equipe_ref_id: selectedEqId || undefined })
       }
       const data = r.data.data
       // Mise à jour du quota uniquement si le serveur renvoie les infos
