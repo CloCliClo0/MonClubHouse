@@ -142,7 +142,7 @@ export default function Topbar({ onMenuToggle }: Props) {
             </button>
 
             {showNotifs && (
-              <div className="absolute right-0 mt-2 w-[300px] sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-[#e8e8f0] overflow-hidden z-50">
+              <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-[#e8e8f0] overflow-hidden z-50">
                 <div className="px-4 py-3 border-b border-[#e8e8f0] flex items-center justify-between">
                   <h3 className="text-label-lg text-on-surface font-bold">Notifications</h3>
                   {unreadCount > 0 && (

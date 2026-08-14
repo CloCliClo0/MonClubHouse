@@ -617,13 +617,13 @@ export default function ConvocationsPage() {
           <p className="text-xs text-green-700">Ouvre l'application Messages ou WhatsApp de votre téléphone avec le message pré-rempli, pour chaque joueur convoqué.</p>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {smsLinks.map(l => (
-              <div key={l.joueur.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-green-100">
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{l.joueur.prenom} {l.joueur.nom}</p>
+              <div key={l.joueur.id} className="flex items-center justify-between flex-wrap gap-2 bg-white rounded-lg px-3 py-2 border border-green-100">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{l.joueur.prenom} {l.joueur.nom}</p>
                   <p className="text-xs text-gray-500">{l.telephone || 'Pas de numéro'}</p>
                 </div>
                 {l.smsUri ? (
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 flex-wrap">
                     <a href={l.smsUri} className="text-xs bg-green-100 text-green-700 font-medium px-3 py-1.5 rounded-lg hover:bg-green-200 transition flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">sms</span>Message
                     </a>

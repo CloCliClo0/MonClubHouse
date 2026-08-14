@@ -261,16 +261,16 @@ export default function MatchDetailPage() {
               {canManage && match.statut !== 'termine' && !isLive ? (
                 <>
                   <button onClick={() => setScoreHome(s => Math.max(0, s - 1))} className="text-white/60 hover:text-white text-2xl font-black">−</button>
-                  <span className="text-white font-black text-4xl w-8 text-center">{scoreHome}</span>
+                  <span className="text-white font-black text-4xl min-w-[1.5ch] text-center">{scoreHome}</span>
                   <span className="text-white/50 text-2xl">—</span>
-                  <span className="text-white font-black text-4xl w-8 text-center">{scoreAway}</span>
+                  <span className="text-white font-black text-4xl min-w-[1.5ch] text-center">{scoreAway}</span>
                   <button onClick={() => setScoreAway(s => Math.max(0, s - 1))} className="text-white/60 hover:text-white text-2xl font-black">−</button>
                 </>
               ) : (
                 <>
-                  <span className="text-white font-black text-4xl w-8 text-center">{match.score_equipe ?? '?'}</span>
+                  <span className="text-white font-black text-4xl min-w-[1.5ch] text-center">{match.score_equipe ?? '?'}</span>
                   <span className="text-white/50 text-2xl">—</span>
-                  <span className="text-white font-black text-4xl w-8 text-center">{match.score_adversaire ?? '?'}</span>
+                  <span className="text-white font-black text-4xl min-w-[1.5ch] text-center">{match.score_adversaire ?? '?'}</span>
                 </>
               )}
             </div>

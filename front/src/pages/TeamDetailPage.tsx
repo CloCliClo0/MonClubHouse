@@ -231,23 +231,25 @@ export default function TeamDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center border-b border-outline-variant mb-6 overflow-x-auto">
-        {[
-          { key: 'joueurs',  label: `Joueurs (${team.licencies.length})`, icon: 'sports_soccer' },
-          { key: 'parents',  label: `Parents (${parents.length})`,        icon: 'family_restroom' },
-          ...(canManage ? [{ key: 'infos', label: 'Infos équipe', icon: 'edit' }] : []),
-        ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as any)}
-            className={`flex items-center gap-2 px-5 py-3 text-label-lg transition-all ${
-              tab === t.key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
-            }`}>
-            <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
+      <div className="flex flex-col sm:flex-row sm:items-center border-b border-outline-variant mb-6 gap-2 sm:gap-0">
+        <div className="flex items-center overflow-x-auto">
+          {[
+            { key: 'joueurs',  label: `Joueurs (${team.licencies.length})`, icon: 'sports_soccer' },
+            { key: 'parents',  label: `Parents (${parents.length})`,        icon: 'family_restroom' },
+            ...(canManage ? [{ key: 'infos', label: 'Infos équipe', icon: 'edit' }] : []),
+          ].map(t => (
+            <button key={t.key} onClick={() => setTab(t.key as any)}
+              className={`flex items-center gap-2 px-5 py-3 text-label-lg whitespace-nowrap transition-all ${
+                tab === t.key ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'
+              }`}>
+              <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
+        </div>
         {canEditRoster && tab === 'joueurs' && (
           <button onClick={openAddModal}
-            className="ml-auto flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-label-md hover:bg-primary-container transition-colors">
+            className="sm:ml-auto shrink-0 flex items-center justify-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-label-md hover:bg-primary-container transition-colors">
             <span className="material-symbols-outlined text-[18px]">person_add</span>
             Ajouter un joueur
           </button>

@@ -61,7 +61,7 @@ export default function OpponentsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h2 className="text-headline-lg text-on-surface">Adversaires</h2>
           <p className="text-body-md text-on-surface-variant">Gérez les clubs adversaires par catégorie</p>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import { localDateTimeToISO } from '../utils/datetime'
 
 type Convocation = {
   id: number
@@ -146,7 +147,7 @@ export default function EventPage() {
     setEditMsg('')
     try {
       const payload: Record<string, any> = {
-        date:      `${editForm.date}T${editForm.heure}:00`,
+        date:      localDateTimeToISO(editForm.date, editForm.heure),
         adversaire: editForm.adversaire || null,
         notes:     editForm.notes || null,
       }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import { localDateTimeToISO } from '../utils/datetime'
 
 type EventType = 'match' | 'amical' | 'coupe' | 'entrainement' | 'tournoi' | 'plateau' | 'reunion' | 'autre'
 type Step = 1 | 2 | 3 | 4
@@ -151,7 +152,7 @@ export default function CreateEventPage() {
           equipe_id: parseInt(id),
           day_of_week: recurDay,
           heure, date_debut: recurDateDebut, date_fin: recurDateFin,
-          terrain_id: terrainId ? parseInt(terrainId) : undefined,
+          terrain_id: domicile && terrainId ? parseInt(terrainId) : undefined,
           domicile_exterieur: domicile ? 'domicile' : 'exterieur',
           lieu: !domicile && adresse.trim() ? adresse.trim() : null,
         })))
@@ -164,8 +165,8 @@ export default function CreateEventPage() {
           const payload: Record<string, any> = {
             equipe_id:          parseInt(id),
             type,
-            date:               `${date}T${heure}:00`,
-            heure_rdv:          heureRdv && date ? `${date}T${heureRdv}:00` : null,
+            date:               localDateTimeToISO(date, heure),
+            heure_rdv:          heureRdv ? localDateTimeToISO(date, heureRdv) : null,
             domicile_exterieur: domicile ? 'domicile' : 'exterieur',
             lieu:               !domicile && adresse.trim() ? adresse.trim() : null,
             adversaire:         adversaire || null,
@@ -175,7 +176,7 @@ export default function CreateEventPage() {
             description:        instructions || null,
             besoin_arbitre:     besoinArbitre || false,
           }
-          if (terrainId) payload.terrain_id = parseInt(terrainId)
+          if (domicile && terrainId) payload.terrain_id = parseInt(terrainId)
           return api.post('/matchs', payload)
         }))
         setSubmitted(true)
@@ -336,17 +337,48 @@ export default function CreateEventPage() {
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-label-md text-on-surface-variant">Terrain</label>
-                <div className="relative">
-                  <select value={terrainId} onChange={e => setTerrainId(e.target.value)}
-                    className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10">
-                    <option value="">Sélectionner un terrain</option>
-                    {terrains.map(t => <option key={t.id} value={t.id}>{t.nom}</option>)}
-                  </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+              {/* Domicile / Extérieur — décidé avant le terrain : à l'extérieur, c'est le terrain de
+                  l'adversaire (adresse libre), pas un de nos terrains habituels. */}
+              {type && (
+                <div className="space-y-2">
+                  <label className="text-label-md text-on-surface-variant">Lieu de réception</label>
+                  <div className="flex gap-3">
+                    {[{ v: true, l: '🏠 Domicile' }, { v: false, l: '✈️ Extérieur' }].map(({ v, l }) => (
+                      <button type="button" key={l} onClick={() => setDomicile(v)}
+                        className={`flex-1 py-3 rounded-xl border-2 text-label-lg font-semibold transition-all ${
+                          domicile === v ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+                        }`}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {domicile ? (
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Terrain</label>
+                  <div className="relative">
+                    <select value={terrainId} onChange={e => setTerrainId(e.target.value)}
+                      className="w-full appearance-none px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-10">
+                      <option value="">Sélectionner un terrain</option>
+                      {terrains.map(t => <option key={t.id} value={t.id}>{t.nom}</option>)}
+                    </select>
+                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-label-md text-on-surface-variant">Adresse à l'extérieur</label>
+                  <input
+                    type="text"
+                    value={adresse}
+                    onChange={e => setAdresse(e.target.value)}
+                    placeholder="Ex : 12 rue du Stade, 59000 Lille"
+                    className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+              )}
 
               {!isRecurring && (
                 <div className="space-y-1.5">
@@ -533,33 +565,6 @@ export default function CreateEventPage() {
                   </>
                 )}
               </>
-            )}
-
-            {/* Domicile / Extérieur — pour tous les types d'événement (le match officiel l'avait déjà,
-                on l'étend aux autres : amical, coupe, entraînement, tournoi, plateau, réunion, autre) */}
-            {type && (
-              <div className="space-y-2">
-                <label className="text-label-md text-on-surface-variant">Lieu de réception</label>
-                <div className="flex gap-3">
-                  {[{ v: true, l: '🏠 Domicile' }, { v: false, l: '✈️ Extérieur' }].map(({ v, l }) => (
-                    <button key={l} onClick={() => setDomicile(v)}
-                      className={`flex-1 py-3 rounded-xl border-2 text-label-lg font-semibold transition-all ${
-                        domicile === v ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
-                      }`}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-                {!domicile && (
-                  <input
-                    type="text"
-                    value={adresse}
-                    onChange={e => setAdresse(e.target.value)}
-                    placeholder="Adresse du lieu à l'extérieur (ex : 12 rue du Stade, 59000 Lille)"
-                    className="w-full px-4 py-3 border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all mt-2"
-                  />
-                )}
-              </div>
             )}
 
             <div className="space-y-1.5">

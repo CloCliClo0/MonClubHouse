@@ -61,10 +61,13 @@ const TYPE_ICONS: Record<string, string> = {
 
 const COMPETITION_TYPES = new Set(['match', 'tournoi', 'coupe', 'amical', 'plateau'])
 
-function formatDate(date: string, heure: string | null): string {
+function formatDate(date: string, heureRdv: string | null): string {
   const d = new Date(date)
   const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
-  return heure ? `${label} · ${heure.slice(0, 5)}` : label
+  if (!heureRdv) return label
+  const h = new Date(heureRdv)
+  if (isNaN(h.getTime())) return label
+  return `${label} · ${h.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
 }
 
 function toDisplay(m: ApiMatch): MatchDisplay {

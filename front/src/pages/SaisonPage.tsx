@@ -1340,11 +1340,11 @@ function ClassementView({
                         {m.date && (
                           <span className="text-label-sm text-on-surface-variant w-16 shrink-0">{fmtDate(m.date)}</span>
                         )}
-                        <span className="text-body-md text-on-surface flex-1 text-right truncate">{teamName(m.dom_id)}</span>
+                        <span className="text-body-md text-on-surface flex-1 min-w-0 text-right truncate">{teamName(m.dom_id)}</span>
                         <span className="text-label-lg font-black text-on-surface shrink-0 w-14 text-center">
                           {m.score_dom !== null && m.score_ext !== null ? `${m.score_dom} – ${m.score_ext}` : '— – —'}
                         </span>
-                        <span className="text-body-md text-on-surface flex-1 truncate">{teamName(m.ext_id)}</span>
+                        <span className="text-body-md text-on-surface flex-1 min-w-0 truncate">{teamName(m.ext_id)}</span>
                         {canManage && (
                           <div className="flex gap-1 shrink-0">
                             <button onClick={() => onEditResult(m)}

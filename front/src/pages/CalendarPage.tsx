@@ -127,6 +127,11 @@ export default function CalendarPage() {
       return ed.getFullYear() === y && ed.getMonth() === m && ed.getDate() === d
     })
 
+  const TYPE_ICON: Record<string, string> = {
+    match: '⚽', amical: '🤝', coupe: '🏆', entrainement: '🏃',
+    tournoi: '🥇', plateau: '🎪', reunion: '👥', autre: '📅',
+  }
+
   const typeColor = (type: string) =>
     ['match', 'amical', 'coupe', 'tournoi'].includes(type)
       ? 'bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20'
@@ -137,9 +142,12 @@ export default function CalendarPage() {
   const EventChip = ({ ev }: { ev: CalEvent }) => (
     <div
       onClick={() => navigate(`/evenements/${ev.id}`)}
-      className={`px-1.5 py-0.5 rounded text-[11px] font-semibold cursor-pointer truncate transition-colors ${typeColor(ev.type)}`}
+      title={ev.adversaire || ev.equipe?.nom || ev.type}
+      className={`px-1 sm:px-1.5 py-0.5 rounded text-[11px] font-semibold cursor-pointer truncate transition-colors flex items-center justify-center sm:justify-start gap-1 ${typeColor(ev.type)}`}
     >
-      {ev.type === 'entrainement' ? '🏃' : '⚽'} {ev.adversaire || ev.equipe?.nom || ev.type}
+      <span className="shrink-0">{TYPE_ICON[ev.type] || '📅'}</span>
+      {/* Sur mobile, seule l'icône reste visible pour éviter le dépassement des 7 colonnes du calendrier. */}
+      <span className="hidden sm:inline truncate">{ev.adversaire || ev.equipe?.nom || ev.type}</span>
     </div>
   )
 
