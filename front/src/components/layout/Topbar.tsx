@@ -19,6 +19,7 @@ interface Props { onMenuToggle: () => void }
 export default function Topbar({ onMenuToggle }: Props) {
   const navigate = useNavigate()
   const [notifs, setNotifs]         = useState<Notif[]>([])
+  const [unreadTotal, setUnreadTotal] = useState(0)
   const [showNotifs, setShowNotifs] = useState(false)
   const [showHelp, setShowHelp]     = useState(false)
   const [search, setSearch]         = useState('')
@@ -39,6 +40,7 @@ export default function Topbar({ onMenuToggle }: Props) {
         const d = r.data.data
         const list = Array.isArray(d) ? d : (d?.notifications ?? [])
         setNotifs(list)
+        setUnreadTotal(typeof d?.non_lues === 'number' ? d.non_lues : list.filter((n: Notif) => !n.lu).length)
       })
       .catch(() => {})
   }
@@ -81,9 +83,10 @@ export default function Topbar({ onMenuToggle }: Props) {
   const markAllRead = async () => {
     await api.patch('/profil/notifications/toutes-lues').catch(() => {})
     setNotifs([])
+    setUnreadTotal(0)
   }
 
-  const unreadCount = notifs.filter(n => !n.lu).length
+  const unreadCount = unreadTotal
 
   return (
     <>
@@ -162,6 +165,8 @@ export default function Topbar({ onMenuToggle }: Props) {
                       <div key={n.id}
                         onClick={async () => {
                           await api.patch(`/profil/notifications/${n.id}/lue`).catch(() => {})
+                          setNotifs(prev => prev.filter(p => p.id !== n.id))
+                          if (!n.lu) setUnreadTotal(prev => Math.max(0, prev - 1))
                           setShowNotifs(false)
                           if (n.lien) navigate(n.lien)
                         }}

@@ -75,9 +75,11 @@ const ENDPOINTS: Omit<EndpointResult, 'status' | 'ok' | 'ms' | 'msg' | 'body'>[]
   // Codes
   { section: 'Codes',          method: 'GET', path: '/api/codes/my-children',          label: 'Mes enfants (parent)' },
   { section: 'Codes',          method: 'GET', path: '/api/codes/club-players',         label: 'Joueurs du club' },
-  // Matchs événements
-  { section: 'Matchs',         method: 'GET', path: '/api/matchs/1/events',            label: 'Événements match #1' },
-  { section: 'Matchs',         method: 'GET', path: '/api/matchs/1/convocations',      label: 'Convocations match #1' },
+  // Matchs événements — :sampleMatchId est résolu dynamiquement au lancement des tests
+  // (le match #1 était un enregistrement de test, supprimé depuis — un id fixe fait
+  // échouer ces deux tests en permanence avec un faux-positif 404).
+  { section: 'Matchs',         method: 'GET', path: '/api/matchs/:sampleMatchId/events',       label: 'Événements match (échantillon)' },
+  { section: 'Matchs',         method: 'GET', path: '/api/matchs/:sampleMatchId/convocations', label: 'Convocations match (échantillon)' },
   // Abonnement / Codes promo
   { section: 'Abonnement',     method: 'GET', path: '/api/subscription/status',        label: 'Statut abonnement' },
   { section: 'Abonnement',     method: 'GET', path: '/api/subscription/admin',         label: 'Liste abonnements (superadmin)' },
@@ -257,6 +259,7 @@ export default function DiagnosticPage() {
   const [crudResults, setCrudResults] = useState<Record<string, CrudResourceState>>({})
   const [crudRunning, setCrudRunning] = useState(false)
   const [crudClubId, setCrudClubId] = useState<number | null>(null)
+  const [sampleMatchId, setSampleMatchId] = useState<number | null>(null)
 
   useEffect(() => {
     api.get('/admin/users').then(r => {
@@ -274,6 +277,13 @@ export default function DiagnosticPage() {
     api.get('/clubs').then(r => {
       const list = r.data.data || []
       if (list.length > 0) setCrudClubId(list[0].id)
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    api.get('/matchs?limit=1').then(r => {
+      const list = r.data.data || []
+      if (list.length > 0) setSampleMatchId(list[0].id)
     }).catch(() => {})
   }, [])
 
@@ -444,10 +454,11 @@ export default function DiagnosticPage() {
     for (let i = 0; i < eps.length; i++) {
       if (abortRef.current) break
       const ep = eps[i]
+      const resolvedPath = ep.path.replace(':sampleMatchId', String(sampleMatchId ?? 1))
       const t0 = performance.now()
       let status = 0, msg = '', body: any = null, ok = false
       try {
-        const res = await fetch(window.location.origin + ep.path, {
+        const res = await fetch(window.location.origin + resolvedPath, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
           signal: AbortSignal.timeout(8000),
         })

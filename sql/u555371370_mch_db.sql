@@ -2,10 +2,10 @@
 -- version 5.2.2
 -- https://www.phpmyadmin.net/
 --
--- Hôte : 127.0.0.1:3306
--- Généré le : jeu. 13 août 2026 à 20:49
--- Version du serveur : 11.8.8-MariaDB-log
--- Version de PHP : 7.2.34
+-- Host: 127.0.0.1:3306
+-- Generation Time: Aug 14, 2026 at 06:49 AM
+-- Server version: 11.8.8-MariaDB-log
+-- PHP Version: 7.2.34
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Base de données : `u555371370_mch_db`
+-- Database: `u555371370_mch_db`
 --
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `adversaires`
+-- Table structure for table `adversaires`
 --
 
 CREATE TABLE `adversaires` (
@@ -41,7 +41,7 @@ CREATE TABLE `adversaires` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `adversaires`
+-- Dumping data for table `adversaires`
 --
 
 INSERT INTO `adversaires` (`id`, `club_id`, `nom`, `categorie`, `ville`, `contact`, `telephone`, `couleur`, `created_at`, `updated_at`) VALUES
@@ -71,7 +71,7 @@ INSERT INTO `adversaires` (`id`, `club_id`, `nom`, `categorie`, `ville`, `contac
 -- --------------------------------------------------------
 
 --
--- Structure de la table `arbitrage_presences`
+-- Table structure for table `arbitrage_presences`
 --
 
 CREATE TABLE `arbitrage_presences` (
@@ -87,7 +87,7 @@ CREATE TABLE `arbitrage_presences` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `categories`
+-- Table structure for table `categories`
 --
 
 CREATE TABLE `categories` (
@@ -101,7 +101,7 @@ CREATE TABLE `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `categories`
+-- Dumping data for table `categories`
 --
 
 INSERT INTO `categories` (`id`, `club_id`, `nom`, `couleur`, `actif`, `created_at`, `updated_at`) VALUES
@@ -111,7 +111,7 @@ INSERT INTO `categories` (`id`, `club_id`, `nom`, `couleur`, `actif`, `created_a
 -- --------------------------------------------------------
 
 --
--- Structure de la table `channels`
+-- Table structure for table `channels`
 --
 
 CREATE TABLE `channels` (
@@ -128,7 +128,7 @@ CREATE TABLE `channels` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `channels`
+-- Dumping data for table `channels`
 --
 
 INSERT INTO `channels` (`id`, `nom`, `type`, `club_id`, `equipe_id`, `membres`, `cree_par`, `actif`, `created_at`, `updated_at`) VALUES
@@ -137,7 +137,7 @@ INSERT INTO `channels` (`id`, `nom`, `type`, `club_id`, `equipe_id`, `membres`, 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `ch_equipes`
+-- Table structure for table `ch_equipes`
 --
 
 CREATE TABLE `ch_equipes` (
@@ -154,50 +154,39 @@ CREATE TABLE `ch_equipes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
--- Déchargement des données de la table `ch_equipes`
+-- Dumping data for table `ch_equipes`
 --
 
 INSERT INTO `ch_equipes` (`id`, `club_id`, `equipe_ref_id`, `equipe_id`, `nom`, `saison`, `championnat`, `couleur`, `created_at`, `updated_at`) VALUES
-(31, 1, 4, NULL, 'Hoymille ASC', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(32, 1, 4, NULL, 'Le Doulieu FC', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(33, 1, 4, NULL, 'Bergues RC 2', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(34, 1, 4, NULL, 'Loon Plage FC 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(35, 1, 4, NULL, 'Gravelines US 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(36, 1, 4, NULL, 'Coudekerque USF', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(37, 1, 4, NULL, 'Petite Synthe SM', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(38, 1, 4, NULL, 'Meteren FC', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(39, 1, 4, NULL, 'Teteghem US 2', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(40, 1, 4, NULL, 'Hazebrouck AS CHTS', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(41, 1, 4, NULL, 'Hazebrouck SC 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(42, 1, 4, NULL, 'Ghyvelde JS', '2026-2027', 'D2', '#6c757d', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(43, 1, 6, NULL, 'Le Doulieu FC 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(44, 1, 6, NULL, 'Craywick FC', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(45, 1, 6, NULL, 'Monts de Flandre US 3', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(46, 1, 6, NULL, 'Pays de Cassel US 3', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(47, 1, 6, NULL, 'St Pol sur Mer USCC 3', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(48, 1, 6, NULL, 'Grande Synthe FC 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(49, 1, 6, NULL, 'Bray Dunes US', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(50, 1, 6, NULL, 'Dunkerque Malo FC 3', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(51, 1, 6, NULL, 'Grande Synthe Albeck 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(52, 1, 6, NULL, 'Steenwerck JS 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(53, 1, 6, NULL, 'Maritime US 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(54, 1, 6, NULL, 'Bierne FC', '2026-2027', 'D4', '#6c757d', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(67, 1, 4, NULL, 'Craywick FC', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(68, 1, 4, NULL, 'Monts de Flandre US 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(69, 1, 4, NULL, 'Pays de Cassel US 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(70, 1, 4, NULL, 'St Pol sur Mer USCC 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(71, 1, 4, NULL, 'Grande Synthe FC 2', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(72, 1, 4, NULL, 'Bray Dunes US', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(73, 1, 4, NULL, 'Dunkerque Malo FC 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(74, 1, 4, NULL, 'Grande Synthe Albeck 2', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(75, 1, 4, NULL, 'Steenwerck JS 2', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(76, 1, 4, NULL, 'Maritime US 2', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(77, 1, 4, NULL, 'Bierne FC', '2026-2027', 'D2', '#6c757d', '2026-08-13 20:36:00', '2026-08-13 20:36:00');
+(90, 1, 4, NULL, 'Hoymille ASC', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(91, 1, 4, NULL, 'Le Doulieu FC', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(92, 1, 4, NULL, 'Bergues RC 2', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(93, 1, 4, NULL, 'Loon Plage FC 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(94, 1, 4, NULL, 'Gravelines US 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(95, 1, 4, NULL, 'Coudekerque USF', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(96, 1, 4, NULL, 'Petite Synthe SM', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(97, 1, 4, NULL, 'Meteren FC', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(98, 1, 4, NULL, 'Teteghem US 2', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(99, 1, 4, NULL, 'Hazebrouck AS CHTS', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(100, 1, 4, NULL, 'Hazebrouck SC 3', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(101, 1, 4, NULL, 'Ghyvelde JS', '2026-2027', 'D2', '#6c757d', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(102, 1, 6, NULL, 'Le Doulieu FC 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(103, 1, 6, NULL, 'Craywick FC', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(104, 1, 6, NULL, 'Monts de Flandre US 3', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(105, 1, 6, NULL, 'Pays de Cassel US 3', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(106, 1, 6, NULL, 'St Pol sur Mer USCC 3', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(107, 1, 6, NULL, 'Grande Synthe FC 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(108, 1, 6, NULL, 'Bray Dunes US', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(109, 1, 6, NULL, 'Dunkerque Malo FC 3', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(110, 1, 6, NULL, 'Grande Synthe Albeck 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(111, 1, 6, NULL, 'Steenwerck JS 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(112, 1, 6, NULL, 'Maritime US 2', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(113, 1, 6, NULL, 'Bierne FC', '2026-2027', 'D4', '#6c757d', '2026-08-13 21:16:20', '2026-08-13 21:16:20');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `ch_matchs`
+-- Table structure for table `ch_matchs`
 --
 
 CREATE TABLE `ch_matchs` (
@@ -217,81 +206,59 @@ CREATE TABLE `ch_matchs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
--- Déchargement des données de la table `ch_matchs`
+-- Dumping data for table `ch_matchs`
 --
 
 INSERT INTO `ch_matchs` (`id`, `club_id`, `equipe_ref_id`, `dom_id`, `ext_id`, `journee`, `date`, `score_dom`, `score_ext`, `saison`, `championnat`, `created_at`, `updated_at`) VALUES
-(45, 1, 4, 31, 32, NULL, '2026-09-06', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(46, 1, 4, 32, 33, NULL, '2026-09-20', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(47, 1, 4, 34, 32, NULL, '2026-10-04', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(48, 1, 4, 32, 35, NULL, '2026-10-18', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(49, 1, 4, 36, 32, NULL, '2026-11-01', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(50, 1, 4, 32, 37, NULL, '2026-11-08', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(51, 1, 4, 38, 32, NULL, '2026-11-22', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(52, 1, 4, 39, 32, NULL, '2026-12-06', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(53, 1, 4, 32, 40, NULL, '2026-12-13', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(54, 1, 4, 41, 32, NULL, '2027-01-31', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(55, 1, 4, 32, 42, NULL, '2027-02-07', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(56, 1, 4, 33, 32, NULL, '2027-02-14', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(57, 1, 4, 32, 34, NULL, '2027-02-28', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(58, 1, 4, 35, 32, NULL, '2027-03-07', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(59, 1, 4, 32, 36, NULL, '2027-03-14', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(60, 1, 4, 37, 32, NULL, '2027-03-21', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(61, 1, 4, 32, 38, NULL, '2027-04-04', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(62, 1, 4, 32, 39, NULL, '2027-04-18', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(63, 1, 4, 40, 32, NULL, '2027-04-25', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(64, 1, 4, 32, 41, NULL, '2027-05-09', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(65, 1, 4, 42, 32, NULL, '2027-05-23', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(66, 1, 4, 32, 31, NULL, '2027-05-30', NULL, NULL, '2026-2027', 'D2', '2026-08-13 17:01:56', '2026-08-13 17:01:56'),
-(67, 1, 6, 43, 44, NULL, '2026-09-06', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(68, 1, 6, 45, 43, NULL, '2026-09-20', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(69, 1, 6, 43, 46, NULL, '2026-10-04', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(70, 1, 6, 47, 43, NULL, '2026-10-18', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(71, 1, 6, 43, 48, NULL, '2026-11-01', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(72, 1, 6, 49, 43, NULL, '2026-11-08', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(73, 1, 6, 43, 50, NULL, '2026-11-22', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(74, 1, 6, 43, 51, NULL, '2026-12-06', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(75, 1, 6, 52, 43, NULL, '2026-12-13', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(76, 1, 6, 43, 53, NULL, '2027-01-31', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(77, 1, 6, 54, 43, NULL, '2027-02-07', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(78, 1, 6, 43, 45, NULL, '2027-02-14', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(79, 1, 6, 46, 43, NULL, '2027-02-28', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(80, 1, 6, 43, 47, NULL, '2027-03-07', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(81, 1, 6, 48, 43, NULL, '2027-03-14', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(82, 1, 6, 43, 49, NULL, '2027-03-21', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(83, 1, 6, 50, 43, NULL, '2027-04-04', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(84, 1, 6, 51, 43, NULL, '2027-04-18', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(85, 1, 6, 43, 52, NULL, '2027-04-25', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(86, 1, 6, 53, 43, NULL, '2027-05-09', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(87, 1, 6, 43, 54, NULL, '2027-05-23', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(88, 1, 6, 44, 43, NULL, '2027-05-30', NULL, NULL, '2026-2027', 'D4', '2026-08-13 17:02:24', '2026-08-13 17:02:24'),
-(111, 1, 4, 32, 67, NULL, '2026-09-06', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(112, 1, 4, 68, 32, NULL, '2026-09-20', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(113, 1, 4, 32, 69, NULL, '2026-10-04', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(114, 1, 4, 70, 32, NULL, '2026-10-18', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(115, 1, 4, 32, 71, NULL, '2026-11-01', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(116, 1, 4, 72, 32, NULL, '2026-11-08', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(117, 1, 4, 32, 73, NULL, '2026-11-22', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(118, 1, 4, 32, 74, NULL, '2026-12-06', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(119, 1, 4, 75, 32, NULL, '2026-12-13', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(120, 1, 4, 32, 76, NULL, '2027-01-31', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(121, 1, 4, 77, 32, NULL, '2027-02-07', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(122, 1, 4, 32, 68, NULL, '2027-02-14', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(123, 1, 4, 69, 32, NULL, '2027-02-28', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(124, 1, 4, 32, 70, NULL, '2027-03-07', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(125, 1, 4, 71, 32, NULL, '2027-03-14', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(126, 1, 4, 32, 72, NULL, '2027-03-21', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(127, 1, 4, 73, 32, NULL, '2027-04-04', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(128, 1, 4, 74, 32, NULL, '2027-04-18', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(129, 1, 4, 32, 75, NULL, '2027-04-25', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(130, 1, 4, 76, 32, NULL, '2027-05-09', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(131, 1, 4, 32, 77, NULL, '2027-05-23', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00'),
-(132, 1, 4, 67, 32, NULL, '2027-05-30', NULL, NULL, '2026-2027', 'D2', '2026-08-13 20:36:00', '2026-08-13 20:36:00');
+(155, 1, 4, 90, 91, NULL, '2026-09-06', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(156, 1, 4, 91, 92, NULL, '2026-09-20', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(157, 1, 4, 93, 91, NULL, '2026-10-04', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(158, 1, 4, 91, 94, NULL, '2026-10-18', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(159, 1, 4, 95, 91, NULL, '2026-11-01', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(160, 1, 4, 91, 96, NULL, '2026-11-08', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(161, 1, 4, 97, 91, NULL, '2026-11-22', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(162, 1, 4, 98, 91, NULL, '2026-12-06', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(163, 1, 4, 91, 99, NULL, '2026-12-13', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(164, 1, 4, 100, 91, NULL, '2027-01-31', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(165, 1, 4, 91, 101, NULL, '2027-02-07', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(166, 1, 4, 92, 91, NULL, '2027-02-14', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(167, 1, 4, 91, 93, NULL, '2027-02-28', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(168, 1, 4, 94, 91, NULL, '2027-03-07', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(169, 1, 4, 91, 95, NULL, '2027-03-14', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(170, 1, 4, 96, 91, NULL, '2027-03-21', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(171, 1, 4, 91, 97, NULL, '2027-04-04', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(172, 1, 4, 91, 98, NULL, '2027-04-18', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(173, 1, 4, 99, 91, NULL, '2027-04-25', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(174, 1, 4, 91, 100, NULL, '2027-05-09', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(175, 1, 4, 101, 91, NULL, '2027-05-23', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(176, 1, 4, 91, 90, NULL, '2027-05-30', NULL, NULL, '2026-2027', 'D2', '2026-08-13 21:15:37', '2026-08-13 21:15:37'),
+(177, 1, 6, 102, 103, NULL, '2026-09-06', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(178, 1, 6, 104, 102, NULL, '2026-09-20', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(179, 1, 6, 102, 105, NULL, '2026-10-04', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(180, 1, 6, 106, 102, NULL, '2026-10-18', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(181, 1, 6, 102, 107, NULL, '2026-11-01', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(182, 1, 6, 108, 102, NULL, '2026-11-08', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(183, 1, 6, 102, 109, NULL, '2026-11-22', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(184, 1, 6, 102, 110, NULL, '2026-12-06', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(185, 1, 6, 111, 102, NULL, '2026-12-13', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(186, 1, 6, 102, 112, NULL, '2027-01-31', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(187, 1, 6, 113, 102, NULL, '2027-02-07', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(188, 1, 6, 102, 104, NULL, '2027-02-14', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(189, 1, 6, 105, 102, NULL, '2027-02-28', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(190, 1, 6, 102, 106, NULL, '2027-03-07', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(191, 1, 6, 107, 102, NULL, '2027-03-14', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(192, 1, 6, 102, 108, NULL, '2027-03-21', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(193, 1, 6, 109, 102, NULL, '2027-04-04', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(194, 1, 6, 110, 102, NULL, '2027-04-18', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(195, 1, 6, 102, 111, NULL, '2027-04-25', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(196, 1, 6, 112, 102, NULL, '2027-05-09', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(197, 1, 6, 102, 113, NULL, '2027-05-23', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20'),
+(198, 1, 6, 103, 102, NULL, '2027-05-30', NULL, NULL, '2026-2027', 'D4', '2026-08-13 21:16:20', '2026-08-13 21:16:20');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `clubs`
+-- Table structure for table `clubs`
 --
 
 CREATE TABLE `clubs` (
@@ -316,7 +283,7 @@ CREATE TABLE `clubs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `clubs`
+-- Dumping data for table `clubs`
 --
 
 INSERT INTO `clubs` (`id`, `nom`, `logo`, `description`, `adresse`, `ville`, `code_postal`, `telephone`, `email`, `site_web`, `reseaux_sociaux`, `couleur_primaire`, `couleur_secondaire`, `numero_affiliation`, `actif`, `created_at`, `updated_at`, `slug`) VALUES
@@ -325,7 +292,7 @@ INSERT INTO `clubs` (`id`, `nom`, `logo`, `description`, `adresse`, `ville`, `co
 -- --------------------------------------------------------
 
 --
--- Structure de la table `compositions`
+-- Table structure for table `compositions`
 --
 
 CREATE TABLE `compositions` (
@@ -341,7 +308,7 @@ CREATE TABLE `compositions` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `convocations`
+-- Table structure for table `convocations`
 --
 
 CREATE TABLE `convocations` (
@@ -360,17 +327,23 @@ CREATE TABLE `convocations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `convocations`
+-- Dumping data for table `convocations`
 --
 
 INSERT INTO `convocations` (`id`, `match_id`, `joueur_id`, `club_id`, `statut`, `commentaire`, `email_envoye`, `created_at`, `updated_at`, `reponse_at`, `notifie`, `notifie_at`) VALUES
 (1, 1, 2, 0, 'present', NULL, 0, '2026-06-30 17:33:02', '2026-06-30 20:09:28', '2026-06-30 20:09:28', 1, '2026-06-30 17:33:07'),
-(2, 6, 3, 0, 'present', NULL, 0, '2026-07-05 17:09:04', '2026-07-05 17:11:30', '2026-07-05 17:11:30', 1, '2026-07-05 17:09:14');
+(2, 6, 3, 0, 'present', NULL, 0, '2026-07-05 17:09:04', '2026-07-05 17:11:30', '2026-07-05 17:11:30', 1, '2026-07-05 17:09:14'),
+(35, 175, 15, 0, 'present', NULL, 0, '2026-08-13 21:23:42', '2026-08-13 21:23:45', '2026-08-13 21:23:45', 1, '2026-08-13 21:23:42'),
+(36, 175, 27, 0, 'present', NULL, 0, '2026-08-13 21:23:42', '2026-08-13 21:23:46', '2026-08-13 21:23:46', 1, '2026-08-13 21:23:42'),
+(37, 175, 28, 0, 'present', NULL, 0, '2026-08-13 21:23:42', '2026-08-13 21:23:46', '2026-08-13 21:23:46', 1, '2026-08-13 21:23:42'),
+(38, 175, 29, 0, 'present', NULL, 0, '2026-08-13 21:23:42', '2026-08-13 21:23:47', '2026-08-13 21:23:47', 1, '2026-08-13 21:23:42'),
+(39, 175, 30, 0, 'present', NULL, 0, '2026-08-13 21:23:42', '2026-08-13 21:23:48', '2026-08-13 21:23:48', 1, '2026-08-13 21:23:42'),
+(40, 175, 31, 0, 'present', NULL, 0, '2026-08-13 21:23:42', '2026-08-13 21:23:50', '2026-08-13 21:23:50', 1, '2026-08-13 21:23:42');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `equipes`
+-- Table structure for table `equipes`
 --
 
 CREATE TABLE `equipes` (
@@ -392,7 +365,7 @@ CREATE TABLE `equipes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `equipes`
+-- Dumping data for table `equipes`
 --
 
 INSERT INTO `equipes` (`id`, `club_id`, `sport_id`, `nom`, `categorie`, `niveau`, `couleur`, `actif`, `created_at`, `updated_at`, `categorie_id`, `genre`, `format`, `couleur_maillot`, `description`) VALUES
@@ -408,7 +381,7 @@ INSERT INTO `equipes` (`id`, `club_id`, `sport_id`, `nom`, `categorie`, `niveau`
 -- --------------------------------------------------------
 
 --
--- Structure de la table `equipe_coachs`
+-- Table structure for table `equipe_coachs`
 --
 
 CREATE TABLE `equipe_coachs` (
@@ -420,7 +393,7 @@ CREATE TABLE `equipe_coachs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `equipe_coachs`
+-- Dumping data for table `equipe_coachs`
 --
 
 INSERT INTO `equipe_coachs` (`id`, `equipe_id`, `user_id`, `created_at`, `updated_at`) VALUES
@@ -462,7 +435,7 @@ INSERT INTO `equipe_coachs` (`id`, `equipe_id`, `user_id`, `created_at`, `update
 -- --------------------------------------------------------
 
 --
--- Structure de la table `follows`
+-- Table structure for table `follows`
 --
 
 CREATE TABLE `follows` (
@@ -475,7 +448,7 @@ CREATE TABLE `follows` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `invite_codes`
+-- Table structure for table `invite_codes`
 --
 
 CREATE TABLE `invite_codes` (
@@ -496,7 +469,7 @@ CREATE TABLE `invite_codes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `invite_codes`
+-- Dumping data for table `invite_codes`
 --
 
 INSERT INTO `invite_codes` (`id`, `club_id`, `code`, `role`, `uses_count`, `max_uses`, `actif`, `created_at`, `updated_at`, `equipe_id`, `categorie`, `label`, `created_by`, `expires_at`) VALUES
@@ -516,7 +489,7 @@ INSERT INTO `invite_codes` (`id`, `club_id`, `code`, `role`, `uses_count`, `max_
 -- --------------------------------------------------------
 
 --
--- Structure de la table `licencies`
+-- Table structure for table `licencies`
 --
 
 CREATE TABLE `licencies` (
@@ -535,7 +508,7 @@ CREATE TABLE `licencies` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `licencies`
+-- Dumping data for table `licencies`
 --
 
 INSERT INTO `licencies` (`id`, `user_id`, `equipe_id`, `club_id`, `numero_licence`, `poste`, `numero_maillot`, `pied_fort`, `statut`, `date_expiration_licence`, `created_at`, `updated_at`) VALUES
@@ -586,7 +559,7 @@ INSERT INTO `licencies` (`id`, `user_id`, `equipe_id`, `club_id`, `numero_licenc
 -- --------------------------------------------------------
 
 --
--- Structure de la table `matchs`
+-- Table structure for table `matchs`
 --
 
 CREATE TABLE `matchs` (
@@ -617,96 +590,62 @@ CREATE TABLE `matchs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `matchs`
+-- Dumping data for table `matchs`
 --
 
 INSERT INTO `matchs` (`id`, `equipe_id`, `club_id`, `adversaire_id`, `adversaire`, `date`, `heure_rdv`, `terrain_id`, `domicile_exterieur`, `type`, `statut`, `score_equipe`, `score_adversaire`, `championnat`, `journee`, `description`, `actif`, `created_at`, `updated_at`, `heure`, `lieu`, `rapport`, `besoin_arbitre`, `saison`) VALUES
-(65, 4, 1, 13, 'Teteghem US 2', '2026-12-06 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(66, 4, 1, 14, 'Hazebrouck AS CHTS', '2026-12-13 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(67, 4, 1, 15, 'Hazebrouck SC 3', '2027-01-31 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(68, 4, 1, 16, 'Ghyvelde JS', '2027-02-07 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(69, 4, 1, 7, 'Bergues RC 2', '2027-02-14 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(70, 4, 1, 8, 'Loon Plage FC 3', '2027-02-28 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(71, 4, 1, 9, 'Gravelines US 3', '2027-03-07 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(72, 4, 1, 10, 'Coudekerque USF', '2027-03-14 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(73, 4, 1, 11, 'Petite Synthe SM', '2027-03-21 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(74, 4, 1, 12, 'Meteren FC', '2027-04-04 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(75, 4, 1, 13, 'Teteghem US 2', '2027-04-18 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(76, 4, 1, 14, 'Hazebrouck AS CHTS', '2027-04-25 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(77, 4, 1, 15, 'Hazebrouck SC 3', '2027-05-09 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(78, 4, 1, 16, 'Ghyvelde JS', '2027-05-23 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(79, 4, 1, 6, 'Hoymille ASC', '2027-05-30 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:35:31', '2026-08-13 20:35:31', NULL, NULL, NULL, 0, '2026-2027'),
-(80, 4, 1, 17, 'Craywick FC', '2026-09-06 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(81, 4, 1, 18, 'Monts de Flandre US 3', '2026-09-20 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(82, 4, 1, 19, 'Pays de Cassel US 3', '2026-10-04 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(83, 4, 1, 20, 'St Pol sur Mer USCC 3', '2026-10-18 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(84, 4, 1, 21, 'Grande Synthe FC 2', '2026-11-01 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(85, 4, 1, 22, 'Bray Dunes US', '2026-11-08 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(86, 4, 1, 23, 'Dunkerque Malo FC 3', '2026-11-22 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(87, 4, 1, 24, 'Grande Synthe Albeck 2', '2026-12-06 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(88, 4, 1, 25, 'Steenwerck JS 2', '2026-12-13 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(89, 4, 1, 26, 'Maritime US 2', '2027-01-31 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(90, 4, 1, 27, 'Bierne FC', '2027-02-07 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(91, 4, 1, 18, 'Monts de Flandre US 3', '2027-02-14 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(92, 4, 1, 19, 'Pays de Cassel US 3', '2027-02-28 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(93, 4, 1, 20, 'St Pol sur Mer USCC 3', '2027-03-07 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(94, 4, 1, 21, 'Grande Synthe FC 2', '2027-03-14 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(95, 4, 1, 22, 'Bray Dunes US', '2027-03-21 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(96, 4, 1, 23, 'Dunkerque Malo FC 3', '2027-04-04 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(97, 4, 1, 24, 'Grande Synthe Albeck 2', '2027-04-18 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(98, 4, 1, 25, 'Steenwerck JS 2', '2027-04-25 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(99, 4, 1, 26, 'Maritime US 2', '2027-05-09 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(100, 4, 1, 27, 'Bierne FC', '2027-05-23 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(101, 4, 1, 17, 'Craywick FC', '2027-05-30 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 20:36:00', '2026-08-13 20:36:00', NULL, NULL, NULL, 0, '2026-2027'),
-(102, 4, 1, 6, 'Hoymille ASC', '2026-09-06 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(103, 4, 1, 7, 'Bergues RC 2', '2026-09-20 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(104, 4, 1, 8, 'Loon Plage FC 3', '2026-10-04 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(105, 4, 1, 9, 'Gravelines US 3', '2026-10-18 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(106, 4, 1, 10, 'Coudekerque USF', '2026-11-01 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(107, 4, 1, 11, 'Petite Synthe SM', '2026-11-08 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(108, 4, 1, 12, 'Meteren FC', '2026-11-22 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(109, 4, 1, 13, 'Teteghem US 2', '2026-12-06 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(110, 4, 1, 14, 'Hazebrouck AS CHTS', '2026-12-13 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(111, 4, 1, 15, 'Hazebrouck SC 3', '2027-01-31 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(112, 4, 1, 16, 'Ghyvelde JS', '2027-02-07 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(113, 4, 1, 7, 'Bergues RC 2', '2027-02-14 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(114, 4, 1, 8, 'Loon Plage FC 3', '2027-02-28 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(115, 4, 1, 9, 'Gravelines US 3', '2027-03-07 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(116, 4, 1, 10, 'Coudekerque USF', '2027-03-14 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(117, 4, 1, 11, 'Petite Synthe SM', '2027-03-21 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(118, 4, 1, 12, 'Meteren FC', '2027-04-04 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(119, 4, 1, 13, 'Teteghem US 2', '2027-04-18 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(120, 4, 1, 14, 'Hazebrouck AS CHTS', '2027-04-25 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(121, 4, 1, 15, 'Hazebrouck SC 3', '2027-05-09 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(122, 4, 1, 16, 'Ghyvelde JS', '2027-05-23 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(123, 4, 1, 6, 'Hoymille ASC', '2027-05-30 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'Seniors D2', NULL, NULL, 1, '2026-08-13 20:38:31', '2026-08-13 20:38:31', NULL, NULL, NULL, 0, '2026-2027'),
-(124, 6, 1, 17, 'Craywick FC', '2026-09-06 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(125, 6, 1, 18, 'Monts de Flandre US 3', '2026-09-20 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(126, 6, 1, 19, 'Pays de Cassel US 3', '2026-10-04 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(127, 6, 1, 20, 'St Pol sur Mer USCC 3', '2026-10-18 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(128, 6, 1, 21, 'Grande Synthe FC 2', '2026-11-01 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(129, 6, 1, 22, 'Bray Dunes US', '2026-11-08 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(130, 6, 1, 23, 'Dunkerque Malo FC 3', '2026-11-22 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(131, 6, 1, 24, 'Grande Synthe Albeck 2', '2026-12-06 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(132, 6, 1, 25, 'Steenwerck JS 2', '2026-12-13 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(133, 6, 1, 26, 'Maritime US 2', '2027-01-31 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(134, 6, 1, 27, 'Bierne FC', '2027-02-07 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(135, 6, 1, 18, 'Monts de Flandre US 3', '2027-02-14 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(136, 6, 1, 19, 'Pays de Cassel US 3', '2027-02-28 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(137, 6, 1, 20, 'St Pol sur Mer USCC 3', '2027-03-07 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(138, 6, 1, 21, 'Grande Synthe FC 2', '2027-03-14 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(139, 6, 1, 22, 'Bray Dunes US', '2027-03-21 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(140, 6, 1, 23, 'Dunkerque Malo FC 3', '2027-04-04 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(141, 6, 1, 24, 'Grande Synthe Albeck 2', '2027-04-18 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(142, 6, 1, 25, 'Steenwerck JS 2', '2027-04-25 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(143, 6, 1, 26, 'Maritime US 2', '2027-05-09 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(144, 6, 1, 27, 'Bierne FC', '2027-05-23 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027'),
-(145, 6, 1, 17, 'Craywick FC', '2027-05-30 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 20:38:50', '2026-08-13 20:38:50', NULL, NULL, NULL, 0, '2026-2027');
+(153, 4, 1, 6, 'Hoymille ASC', '2026-09-06 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(154, 4, 1, 7, 'Bergues RC 2', '2026-09-20 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(155, 4, 1, 8, 'Loon Plage FC 3', '2026-10-04 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(156, 4, 1, 9, 'Gravelines US 3', '2026-10-18 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(157, 4, 1, 10, 'Coudekerque USF', '2026-11-01 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(158, 4, 1, 11, 'Petite Synthe SM', '2026-11-08 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(159, 4, 1, 12, 'Meteren FC', '2026-11-22 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(160, 4, 1, 13, 'Teteghem US 2', '2026-12-06 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(161, 4, 1, 14, 'Hazebrouck AS CHTS', '2026-12-13 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(162, 4, 1, 15, 'Hazebrouck SC 3', '2027-01-31 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(163, 4, 1, 16, 'Ghyvelde JS', '2027-02-07 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(164, 4, 1, 7, 'Bergues RC 2', '2027-02-14 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(165, 4, 1, 8, 'Loon Plage FC 3', '2027-02-28 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(166, 4, 1, 9, 'Gravelines US 3', '2027-03-07 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(167, 4, 1, 10, 'Coudekerque USF', '2027-03-14 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(168, 4, 1, 11, 'Petite Synthe SM', '2027-03-21 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(169, 4, 1, 12, 'Meteren FC', '2027-04-04 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(170, 4, 1, 13, 'Teteghem US 2', '2027-04-18 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(171, 4, 1, 14, 'Hazebrouck AS CHTS', '2027-04-25 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(172, 4, 1, 15, 'Hazebrouck SC 3', '2027-05-09 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:15:37', NULL, NULL, NULL, 0, '2026-2027'),
+(173, 4, 1, 16, 'Ghyvelde JS', '2027-05-23 00:00:00', NULL, NULL, 'exterieur', 'match', 'en_cours', NULL, NULL, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-14 06:35:35', NULL, NULL, NULL, 0, '2026-2027'),
+(174, 4, 1, 6, 'Hoymille ASC', '2027-05-30 00:00:00', NULL, NULL, 'domicile', 'match', 'termine', 2, 1, 'D2', NULL, NULL, 1, '2026-08-13 21:15:37', '2026-08-13 21:23:11', NULL, NULL, NULL, 0, '2026-2027'),
+(175, 6, 1, 17, 'Craywick FC', '2026-09-06 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(176, 6, 1, 18, 'Monts de Flandre US 3', '2026-09-20 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(177, 6, 1, 19, 'Pays de Cassel US 3', '2026-10-04 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(178, 6, 1, 20, 'St Pol sur Mer USCC 3', '2026-10-18 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(179, 6, 1, 21, 'Grande Synthe FC 2', '2026-11-01 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(180, 6, 1, 22, 'Bray Dunes US', '2026-11-08 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(181, 6, 1, 23, 'Dunkerque Malo FC 3', '2026-11-22 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(182, 6, 1, 24, 'Grande Synthe Albeck 2', '2026-12-06 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(183, 6, 1, 25, 'Steenwerck JS 2', '2026-12-13 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(184, 6, 1, 26, 'Maritime US 2', '2027-01-31 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(185, 6, 1, 27, 'Bierne FC', '2027-02-07 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(186, 6, 1, 18, 'Monts de Flandre US 3', '2027-02-14 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(187, 6, 1, 19, 'Pays de Cassel US 3', '2027-02-28 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(188, 6, 1, 20, 'St Pol sur Mer USCC 3', '2027-03-07 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(189, 6, 1, 21, 'Grande Synthe FC 2', '2027-03-14 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(190, 6, 1, 22, 'Bray Dunes US', '2027-03-21 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(191, 6, 1, 23, 'Dunkerque Malo FC 3', '2027-04-04 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(192, 6, 1, 24, 'Grande Synthe Albeck 2', '2027-04-18 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(193, 6, 1, 25, 'Steenwerck JS 2', '2027-04-25 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(194, 6, 1, 26, 'Maritime US 2', '2027-05-09 00:00:00', NULL, NULL, 'exterieur', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(195, 6, 1, 27, 'Bierne FC', '2027-05-23 00:00:00', NULL, NULL, 'domicile', 'match', 'programme', NULL, NULL, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:16:20', NULL, NULL, NULL, 0, '2026-2027'),
+(196, 6, 1, 17, 'Craywick FC', '2027-05-30 00:00:00', NULL, NULL, 'exterieur', 'match', 'termine', 1, 5, 'D4', NULL, NULL, 1, '2026-08-13 21:16:20', '2026-08-13 21:24:13', NULL, NULL, NULL, 0, '2026-2027'),
+(197, 4, 1, NULL, NULL, '2026-08-18 19:15:00', '2026-08-18 19:00:00', 2, 'domicile', 'entrainement', 'programme', NULL, NULL, NULL, NULL, NULL, 1, '2026-08-13 21:18:34', '2026-08-13 21:18:34', NULL, NULL, NULL, 0, NULL),
+(198, 6, 1, NULL, NULL, '2026-08-18 19:15:00', '2026-08-18 19:00:00', 2, 'domicile', 'entrainement', 'programme', NULL, NULL, NULL, NULL, NULL, 1, '2026-08-13 21:18:34', '2026-08-13 21:18:34', NULL, NULL, NULL, 0, NULL),
+(199, 4, 1, NULL, 'Hallennes Olympic', '2026-08-23 15:00:00', '2026-08-23 14:00:00', 1, 'exterieur', 'coupe', 'programme', NULL, NULL, NULL, NULL, NULL, 1, '2026-08-13 21:20:33', '2026-08-13 21:20:33', NULL, NULL, NULL, 0, '2026-2027');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `match_events`
+-- Table structure for table `match_events`
 --
 
 CREATE TABLE `match_events` (
@@ -723,24 +662,27 @@ CREATE TABLE `match_events` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `match_events`
+-- Dumping data for table `match_events`
 --
 
 INSERT INTO `match_events` (`id`, `match_id`, `club_id`, `type`, `minute`, `joueur_id`, `equipe`, `description`, `created_at`, `passeur_id`) VALUES
-(1, 5, 1, 'debut', 0, NULL, NULL, NULL, '2026-06-30 20:17:00', NULL),
-(2, 5, 1, 'debut', 0, NULL, NULL, NULL, '2026-06-30 20:17:05', NULL),
-(3, 5, 1, 'debut', 0, NULL, NULL, NULL, '2026-06-30 20:17:08', NULL),
-(4, 5, 1, 'debut', 0, NULL, NULL, NULL, '2026-06-30 20:17:27', NULL),
-(5, 6, 1, 'debut', 0, NULL, NULL, NULL, '2026-07-05 17:12:43', NULL),
-(6, 6, 1, 'debut', 0, NULL, NULL, NULL, '2026-07-05 17:12:57', NULL),
-(7, 6, 1, 'debut', 0, NULL, NULL, NULL, '2026-07-05 17:12:58', NULL),
-(8, 6, 1, 'debut', 0, NULL, NULL, NULL, '2026-07-05 17:12:59', NULL),
-(9, 13, 1, 'debut', 0, NULL, NULL, NULL, '2026-08-05 16:04:25', NULL);
+(10, 174, 1, 'debut', 0, NULL, NULL, NULL, '2026-08-13 21:22:49', NULL),
+(11, 174, 1, 'but', NULL, NULL, 'exterieur', NULL, '2026-08-13 21:22:54', NULL),
+(12, 174, 1, 'but', NULL, NULL, 'domicile', NULL, '2026-08-13 21:22:57', NULL),
+(13, 174, 1, 'but', NULL, NULL, 'domicile', NULL, '2026-08-13 21:23:08', NULL),
+(14, 196, 1, 'debut', 0, NULL, NULL, NULL, '2026-08-13 21:23:59', NULL),
+(15, 196, 1, 'but', NULL, NULL, 'domicile', NULL, '2026-08-13 21:24:01', NULL),
+(16, 196, 1, 'but', NULL, NULL, 'domicile', NULL, '2026-08-13 21:24:08', NULL),
+(17, 196, 1, 'but', NULL, NULL, 'exterieur', NULL, '2026-08-13 21:24:09', NULL),
+(18, 196, 1, 'but', NULL, NULL, 'domicile', NULL, '2026-08-13 21:24:11', NULL),
+(19, 196, 1, 'but', NULL, NULL, 'domicile', NULL, '2026-08-13 21:24:11', NULL),
+(20, 196, 1, 'but', NULL, NULL, 'domicile', NULL, '2026-08-13 21:24:11', NULL),
+(21, 173, 1, 'debut', 0, NULL, NULL, NULL, '2026-08-14 06:35:35', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `messages`
+-- Table structure for table `messages`
 --
 
 CREATE TABLE `messages` (
@@ -758,7 +700,7 @@ CREATE TABLE `messages` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `notifications`
+-- Table structure for table `notifications`
 --
 
 CREATE TABLE `notifications` (
@@ -778,7 +720,7 @@ CREATE TABLE `notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `notifications`
+-- Dumping data for table `notifications`
 --
 
 INSERT INTO `notifications` (`id`, `user_id`, `club_id`, `type`, `titre`, `message`, `lu`, `data`, `send_at`, `created_at`, `updated_at`, `lien`, `lu_at`) VALUES
@@ -801,12 +743,37 @@ INSERT INTO `notifications` (`id`, `user_id`, `club_id`, `type`, `titre`, `messa
 (17, 17, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 30/08/2026 contre Trou du cul', 0, '{\"match_id\":13}', NULL, '2026-08-05 15:58:57', '2026-08-05 15:58:57', '/convocations', NULL),
 (18, 18, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 30/08/2026 contre Trou du cul', 0, '{\"match_id\":13}', NULL, '2026-08-05 15:58:57', '2026-08-05 15:58:57', '/convocations', NULL),
 (19, 19, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 30/08/2026 contre Trou du cul', 0, '{\"match_id\":13}', NULL, '2026-08-05 15:58:57', '2026-08-05 15:58:57', '/convocations', NULL),
-(20, 20, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 30/08/2026 contre Trou du cul', 0, '{\"match_id\":13}', NULL, '2026-08-05 15:58:57', '2026-08-05 15:58:57', '/convocations', NULL);
+(20, 20, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 30/08/2026 contre Trou du cul', 0, '{\"match_id\":13}', NULL, '2026-08-05 15:58:57', '2026-08-05 15:58:57', '/convocations', NULL),
+(21, 8, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(22, 18, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(23, 9, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(24, 10, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(25, 11, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(26, 12, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(27, 13, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(28, 14, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(29, 15, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(30, 16, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(31, 17, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(32, 19, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(33, 20, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(34, 21, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(35, 22, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(36, 23, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(37, 24, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(38, 25, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":80}', NULL, '2026-08-13 20:58:22', '2026-08-13 20:58:22', '/convocations', NULL),
+(39, 2, NULL, 'resultat', 'Résultat du match', 'Match contre Hoymille ASC : 2 - 1', 0, NULL, NULL, '2026-08-13 21:23:11', '2026-08-13 21:23:11', '/resultats/174', NULL),
+(40, 15, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":175}', NULL, '2026-08-13 21:23:42', '2026-08-13 21:23:42', '/convocations', NULL),
+(41, 27, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":175}', NULL, '2026-08-13 21:23:42', '2026-08-13 21:23:42', '/convocations', NULL),
+(42, 28, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":175}', NULL, '2026-08-13 21:23:42', '2026-08-13 21:23:42', '/convocations', NULL),
+(43, 29, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":175}', NULL, '2026-08-13 21:23:42', '2026-08-13 21:23:42', '/convocations', NULL),
+(44, 30, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":175}', NULL, '2026-08-13 21:23:42', '2026-08-13 21:23:42', '/convocations', NULL),
+(45, 31, NULL, 'convocation', 'Convocation — Match', 'Vous êtes convoqué(e) pour le 06/09/2026 contre Craywick FC', 0, '{\"match_id\":175}', NULL, '2026-08-13 21:23:42', '2026-08-13 21:23:42', '/convocations', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `player_votes`
+-- Table structure for table `player_votes`
 --
 
 CREATE TABLE `player_votes` (
@@ -821,7 +788,7 @@ CREATE TABLE `player_votes` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `promo_codes`
+-- Table structure for table `promo_codes`
 --
 
 CREATE TABLE `promo_codes` (
@@ -840,7 +807,7 @@ CREATE TABLE `promo_codes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
--- Déchargement des données de la table `promo_codes`
+-- Dumping data for table `promo_codes`
 --
 
 INSERT INTO `promo_codes` (`id`, `code`, `type`, `valeur`, `description`, `max_uses`, `uses_count`, `expires_at`, `actif`, `created_by`, `createdAt`, `updatedAt`) VALUES
@@ -849,7 +816,7 @@ INSERT INTO `promo_codes` (`id`, `code`, `type`, `valeur`, `description`, `max_u
 -- --------------------------------------------------------
 
 --
--- Structure de la table `SequelizeMeta`
+-- Table structure for table `SequelizeMeta`
 --
 
 CREATE TABLE `SequelizeMeta` (
@@ -859,7 +826,7 @@ CREATE TABLE `SequelizeMeta` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `sports`
+-- Table structure for table `sports`
 --
 
 CREATE TABLE `sports` (
@@ -873,7 +840,7 @@ CREATE TABLE `sports` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `sports`
+-- Dumping data for table `sports`
 --
 
 INSERT INTO `sports` (`id`, `nom`, `icone`, `actif`, `created_at`, `updated_at`, `nb_joueurs_equipe`) VALUES
@@ -886,7 +853,7 @@ INSERT INTO `sports` (`id`, `nom`, `icone`, `actif`, `created_at`, `updated_at`,
 -- --------------------------------------------------------
 
 --
--- Structure de la table `subscriptions`
+-- Table structure for table `subscriptions`
 --
 
 CREATE TABLE `subscriptions` (
@@ -907,7 +874,7 @@ CREATE TABLE `subscriptions` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `support_tickets`
+-- Table structure for table `support_tickets`
 --
 
 CREATE TABLE `support_tickets` (
@@ -927,7 +894,7 @@ CREATE TABLE `support_tickets` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `terrains`
+-- Table structure for table `terrains`
 --
 
 CREATE TABLE `terrains` (
@@ -944,7 +911,7 @@ CREATE TABLE `terrains` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `terrains`
+-- Dumping data for table `terrains`
 --
 
 INSERT INTO `terrains` (`id`, `club_id`, `nom`, `adresse`, `ville`, `code_postal`, `capacite`, `actif`, `created_at`, `updated_at`) VALUES
@@ -957,7 +924,7 @@ INSERT INTO `terrains` (`id`, `club_id`, `nom`, `adresse`, `ville`, `code_postal
 -- --------------------------------------------------------
 
 --
--- Structure de la table `users`
+-- Table structure for table `users`
 --
 
 CREATE TABLE `users` (
@@ -992,12 +959,12 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `users`
+-- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`id`, `nom`, `prenom`, `email`, `password_hash`, `role`, `club_id`, `parent_id`, `google_id`, `refresh_token`, `avatar`, `telephone`, `date_naissance`, `actif`, `derniere_connexion`, `notif_email`, `notif_push`, `pied_fort`, `poste`, `created_at`, `updated_at`, `taille`, `email_verified`, `email_verify_token`, `email_verify_expires`, `two_fa_enabled`, `two_fa_code`, `two_fa_expires`) VALUES
-(1, 'Maquet', 'Hugo', 'hugo22042006@gmail.com', 'Hugo2204', 'superadmin', NULL, NULL, '105766615634534912279', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6InN1cGVyYWRtaW4iLCJjbHViX2lkIjpudWxsLCJpYXQiOjE3ODY2NTM1ODcsImV4cCI6MTc4NzI1ODM4N30.7J6nM-q71UMg9pmX_jxflNAxruyV9GG5gcW9DpEZTw0', 'https://lh3.googleusercontent.com/a/ACg8ocLCf_Gg_JUfMsdRzmQcMvtxTVz9xriVCjeCgij-9PAoh4orEbE=s96-c', '0651420020', NULL, 1, '2026-08-13 20:39:47', 1, 1, NULL, NULL, '2026-06-12 14:23:21', '2026-08-13 20:39:47', NULL, 0, NULL, NULL, 0, NULL, NULL),
-(2, 'Maquet', 'Hugo', 'hugo.maquet2204@gmail.com', 'Hugo2204', 'coach', 1, NULL, '102240548389093754116', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Miwicm9sZSI6ImNvYWNoIiwiY2x1Yl9pZCI6MSwiaWF0IjoxNzg2NjUzNTM2LCJleHAiOjE3ODcyNTgzMzZ9.4lOxS0enPGPjMUqXNjkKS_NeN65PeOnGDld9cHCOoB8', 'https://drive.google.com/thumbnail?id=1GiQGfaYA62myzvqeV-BI5BHl1WoMlpwU&sz=w1000', '0651420020', '2006-04-22', 1, '2026-08-13 20:38:56', 1, 1, 'droit', 'Aillier', '2026-06-13 09:46:27', '2026-08-13 20:39:05', 165, 1, NULL, NULL, 1, NULL, NULL),
+(1, 'Maquet', 'Hugo', 'hugo22042006@gmail.com', 'Hugo2204', 'superadmin', NULL, NULL, '105766615634534912279', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6InN1cGVyYWRtaW4iLCJjbHViX2lkIjpudWxsLCJpYXQiOjE3ODY2OTAxMjUsImV4cCI6MTc4NzI5NDkyNX0.6Kzelv5F6O4u5lDfkOF3q8OobvfdPJoOK1lrrM-7STc', 'https://lh3.googleusercontent.com/a/ACg8ocLCf_Gg_JUfMsdRzmQcMvtxTVz9xriVCjeCgij-9PAoh4orEbE=s96-c', '0651420020', NULL, 1, '2026-08-14 06:48:45', 1, 1, NULL, NULL, '2026-06-12 14:23:21', '2026-08-14 06:48:45', NULL, 0, NULL, NULL, 0, NULL, NULL),
+(2, 'Maquet', 'Hugo', 'hugo.maquet2204@gmail.com', 'Hugo2204', 'coach', 1, NULL, '102240548389093754116', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Miwicm9sZSI6ImNvYWNoIiwiY2x1Yl9pZCI6MSwiaWF0IjoxNzg2NjkwMDk5LCJleHAiOjE3ODcyOTQ4OTl9.07FtUsXs52oPN99U3JoU2fRlr1g1JSjUvs8Ja1GPujk', 'https://drive.google.com/thumbnail?id=1GiQGfaYA62myzvqeV-BI5BHl1WoMlpwU&sz=w1000', '0651420020', '2006-04-22', 1, '2026-08-14 06:48:19', 1, 1, 'droit', 'Aillier', '2026-06-13 09:46:27', '2026-08-14 06:48:19', 165, 1, NULL, NULL, 1, NULL, NULL),
 (4, 'ANGELE WYON', 'ANGELE', 'angele.wyon@gmail.com', NULL, 'coach', 1, NULL, '104386522269063535867', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwicm9sZSI6ImNvYWNoIiwiY2x1Yl9pZCI6MSwiaWF0IjoxNzgzMTEwMzExLCJleHAiOjE3ODM3MTUxMTF9.i_gCAO8Qhn6kOdd-F1VZYJbs1tDyTht40YWrMXMrklw', 'https://lh3.googleusercontent.com/a/ACg8ocKIhpDK_NaEerfmgTm61UgTGJCIyx0cM73tDoYMFj5ea4TB2A=s96-c', '0768061675', '2006-08-28', 1, '2026-07-03 20:25:11', 1, 1, NULL, NULL, '2026-07-02 18:43:03', '2026-07-04 16:39:44', NULL, 0, NULL, NULL, 0, NULL, NULL),
 (5, 'Nelsonwinner Yt', 'Nelsonwinner', 'carottes1109@gmail.com', 'Hugo220406', 'coach', 1, NULL, '118377108886445539353', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwicm9sZSI6ImNvYWNoIiwiY2x1Yl9pZCI6MSwiaWF0IjoxNzgzMjgzOTI3LCJleHAiOjE3ODM4ODg3Mjd9._gPfVvnXmCOQhgQEQEGJVxeqxk-KhpINBiam4O8Kj2U', 'https://drive.google.com/thumbnail?id=18K_fJDi_JzpeINIeDfUDW_joP0qLWNA_&sz=w1000', '0651420020', '2006-04-22', 0, '2026-07-05 20:38:47', 1, 1, 'droit', 'GARDIEN', '2026-07-05 16:46:16', '2026-08-05 06:28:08', 173, 0, NULL, NULL, 0, NULL, NULL),
 (6, 'Maquet', 'Sébastien', 'sma22041703@gmail.com', '$2a$12$E7BSHacCtsxTfrfOhN0OweZ6pktt2s2BqX5pGQhlB/Ub1Rw9GEN92', 'coach', 1, NULL, '103661466499366650106', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Niwicm9sZSI6ImNvYWNoIiwiY2x1Yl9pZCI6MSwiaWF0IjoxNzg1OTQ1Nzk5LCJleHAiOjE3ODY1NTA1OTl9.6gZY4f4aVqW4pet1a3jg0knFn72GwXECj_jatkr1tYo', NULL, '0699018208', '1976-03-11', 1, '2026-08-05 16:03:19', 1, 1, 'droit', 'Attaquant', '2026-07-20 16:37:33', '2026-08-05 16:03:19', 163, 0, 'b13d5ebecf113b326f18b206fc2cfa8517ccbd6495b9b2fc54fd7cee8f20068a', '2026-07-21 16:47:17', 0, NULL, NULL),
@@ -1028,42 +995,42 @@ INSERT INTO `users` (`id`, `nom`, `prenom`, `email`, `password_hash`, `role`, `c
 (31, 'Vandenbussche', 'Lucas', 'lucasvandenbussche62@gmail.com', '$2a$12$kx0vuKm//jFm0Bd637BvZO2Q.EuORKb3fykN1YoVkYPAMqjBDEFm.', 'joueur', 1, NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzEsInJvbGUiOiJqb3VldXIiLCJjbHViX2lkIjoxLCJpYXQiOjE3ODYyMjI5MTcsImV4cCI6MTc4NjgyNzcxN30.UYmsrXKsjM0JrLTACcILuiGtRFWhkG7AcT_FAp15EWw', NULL, '0784921126', '2006-01-10', 1, NULL, 1, 1, 'droit', 'Défenseur', '2026-08-08 21:01:57', '2026-08-08 21:02:53', 178, 0, '9e84d518d92e1a94d16f336cc1b31593b3e25bd275bc561fe69fba72c4c149d0', '2026-08-09 21:01:57', 0, NULL, NULL);
 
 --
--- Index pour les tables déchargées
+-- Indexes for dumped tables
 --
 
 --
--- Index pour la table `adversaires`
+-- Indexes for table `adversaires`
 --
 ALTER TABLE `adversaires`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `arbitrage_presences`
+-- Indexes for table `arbitrage_presences`
 --
 ALTER TABLE `arbitrage_presences`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_presence` (`club_id`,`user_id`,`date`);
 
 --
--- Index pour la table `categories`
+-- Indexes for table `categories`
 --
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `channels`
+-- Indexes for table `channels`
 --
 ALTER TABLE `channels`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `ch_equipes`
+-- Indexes for table `ch_equipes`
 --
 ALTER TABLE `ch_equipes`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `ch_matchs`
+-- Indexes for table `ch_matchs`
 --
 ALTER TABLE `ch_matchs`
   ADD PRIMARY KEY (`id`),
@@ -1071,88 +1038,88 @@ ALTER TABLE `ch_matchs`
   ADD KEY `ext_id` (`ext_id`);
 
 --
--- Index pour la table `clubs`
+-- Indexes for table `clubs`
 --
 ALTER TABLE `clubs`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `slug` (`slug`);
 
 --
--- Index pour la table `compositions`
+-- Indexes for table `compositions`
 --
 ALTER TABLE `compositions`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `convocations`
+-- Indexes for table `convocations`
 --
 ALTER TABLE `convocations`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `equipes`
+-- Indexes for table `equipes`
 --
 ALTER TABLE `equipes`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `equipe_coachs`
+-- Indexes for table `equipe_coachs`
 --
 ALTER TABLE `equipe_coachs`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `follows`
+-- Indexes for table `follows`
 --
 ALTER TABLE `follows`
   ADD PRIMARY KEY (`follower_id`,`followed_id`);
 
 --
--- Index pour la table `invite_codes`
+-- Indexes for table `invite_codes`
 --
 ALTER TABLE `invite_codes`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `code` (`code`);
 
 --
--- Index pour la table `licencies`
+-- Indexes for table `licencies`
 --
 ALTER TABLE `licencies`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `matchs`
+-- Indexes for table `matchs`
 --
 ALTER TABLE `matchs`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `match_events`
+-- Indexes for table `match_events`
 --
 ALTER TABLE `match_events`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `messages`
+-- Indexes for table `messages`
 --
 ALTER TABLE `messages`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `notifications`
+-- Indexes for table `notifications`
 --
 ALTER TABLE `notifications`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `player_votes`
+-- Indexes for table `player_votes`
 --
 ALTER TABLE `player_votes`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_vote_per_match` (`match_id`,`voter_id`);
 
 --
--- Index pour la table `promo_codes`
+-- Indexes for table `promo_codes`
 --
 ALTER TABLE `promo_codes`
   ADD PRIMARY KEY (`id`),
@@ -1160,19 +1127,19 @@ ALTER TABLE `promo_codes`
   ADD KEY `idx_promo_actif` (`actif`);
 
 --
--- Index pour la table `SequelizeMeta`
+-- Indexes for table `SequelizeMeta`
 --
 ALTER TABLE `SequelizeMeta`
   ADD PRIMARY KEY (`name`);
 
 --
--- Index pour la table `sports`
+-- Indexes for table `sports`
 --
 ALTER TABLE `sports`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `subscriptions`
+-- Indexes for table `subscriptions`
 --
 ALTER TABLE `subscriptions`
   ADD PRIMARY KEY (`id`),
@@ -1182,7 +1149,7 @@ ALTER TABLE `subscriptions`
   ADD KEY `idx_sub_period_end` (`current_period_end`);
 
 --
--- Index pour la table `support_tickets`
+-- Indexes for table `support_tickets`
 --
 ALTER TABLE `support_tickets`
   ADD PRIMARY KEY (`id`),
@@ -1191,13 +1158,13 @@ ALTER TABLE `support_tickets`
   ADD KEY `idx_support_statut` (`statut`);
 
 --
--- Index pour la table `terrains`
+-- Indexes for table `terrains`
 --
 ALTER TABLE `terrains`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `users`
+-- Indexes for table `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
@@ -1205,159 +1172,159 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `google_id` (`google_id`);
 
 --
--- AUTO_INCREMENT pour les tables déchargées
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT pour la table `adversaires`
+-- AUTO_INCREMENT for table `adversaires`
 --
 ALTER TABLE `adversaires`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
--- AUTO_INCREMENT pour la table `arbitrage_presences`
+-- AUTO_INCREMENT for table `arbitrage_presences`
 --
 ALTER TABLE `arbitrage_presences`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `categories`
+-- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT pour la table `channels`
+-- AUTO_INCREMENT for table `channels`
 --
 ALTER TABLE `channels`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT pour la table `ch_equipes`
+-- AUTO_INCREMENT for table `ch_equipes`
 --
 ALTER TABLE `ch_equipes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=78;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=114;
 
 --
--- AUTO_INCREMENT pour la table `ch_matchs`
+-- AUTO_INCREMENT for table `ch_matchs`
 --
 ALTER TABLE `ch_matchs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=133;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=199;
 
 --
--- AUTO_INCREMENT pour la table `clubs`
+-- AUTO_INCREMENT for table `clubs`
 --
 ALTER TABLE `clubs`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT pour la table `compositions`
+-- AUTO_INCREMENT for table `compositions`
 --
 ALTER TABLE `compositions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `convocations`
+-- AUTO_INCREMENT for table `convocations`
 --
 ALTER TABLE `convocations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
--- AUTO_INCREMENT pour la table `equipes`
+-- AUTO_INCREMENT for table `equipes`
 --
 ALTER TABLE `equipes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
--- AUTO_INCREMENT pour la table `equipe_coachs`
+-- AUTO_INCREMENT for table `equipe_coachs`
 --
 ALTER TABLE `equipe_coachs`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
--- AUTO_INCREMENT pour la table `invite_codes`
+-- AUTO_INCREMENT for table `invite_codes`
 --
 ALTER TABLE `invite_codes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- AUTO_INCREMENT pour la table `licencies`
+-- AUTO_INCREMENT for table `licencies`
 --
 ALTER TABLE `licencies`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
--- AUTO_INCREMENT pour la table `matchs`
+-- AUTO_INCREMENT for table `matchs`
 --
 ALTER TABLE `matchs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=146;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=200;
 
 --
--- AUTO_INCREMENT pour la table `match_events`
+-- AUTO_INCREMENT for table `match_events`
 --
 ALTER TABLE `match_events`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
--- AUTO_INCREMENT pour la table `messages`
+-- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `notifications`
+-- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
--- AUTO_INCREMENT pour la table `player_votes`
+-- AUTO_INCREMENT for table `player_votes`
 --
 ALTER TABLE `player_votes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `promo_codes`
+-- AUTO_INCREMENT for table `promo_codes`
 --
 ALTER TABLE `promo_codes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=409;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=420;
 
 --
--- AUTO_INCREMENT pour la table `sports`
+-- AUTO_INCREMENT for table `sports`
 --
 ALTER TABLE `sports`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT pour la table `subscriptions`
+-- AUTO_INCREMENT for table `subscriptions`
 --
 ALTER TABLE `subscriptions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `support_tickets`
+-- AUTO_INCREMENT for table `support_tickets`
 --
 ALTER TABLE `support_tickets`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT pour la table `terrains`
+-- AUTO_INCREMENT for table `terrains`
 --
 ALTER TABLE `terrains`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT pour la table `users`
+-- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
--- Contraintes pour les tables déchargées
+-- Constraints for dumped tables
 --
 
 --
--- Contraintes pour la table `ch_matchs`
+-- Constraints for table `ch_matchs`
 --
 ALTER TABLE `ch_matchs`
   ADD CONSTRAINT `ch_matchs_ibfk_1` FOREIGN KEY (`dom_id`) REFERENCES `ch_equipes` (`id`) ON DELETE CASCADE,

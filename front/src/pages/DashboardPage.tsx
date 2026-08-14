@@ -247,7 +247,17 @@ export default function DashboardPage() {
         <div className="bg-white border border-[#e8e8f0] rounded-lg overflow-hidden flex flex-col">
           <div className="p-6 border-b border-[#e8e8f0] flex justify-between items-center">
             <h4 className="text-headline-md">Notifications récentes</h4>
-            <button className="text-primary text-label-md hover:underline">Marquer comme lu</button>
+            {notifs.some(n => !n.lu) && (
+              <button
+                onClick={() => {
+                  api.patch('/profil/notifications/toutes-lues').catch(() => {})
+                  setNotifs(prev => prev.map(n => ({ ...n, lu: true })))
+                }}
+                className="text-primary text-label-md hover:underline"
+              >
+                Marquer comme lu
+              </button>
+            )}
           </div>
           <div className="flex-1 divide-y divide-[#e8e8f0]">
             {loading ? (

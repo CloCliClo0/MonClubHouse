@@ -9,6 +9,9 @@ const getResultatsLocaux = async (req, res) => {
 
     if (req.query.equipe_id) {
       where.equipe_id = req.query.equipe_id;
+    } else if (req.user?.role === 'superadmin') {
+      // Superadmin sans club_id précisé : même convention que matchController.getAll —
+      // pas de filtre club, il supervise tous les clubs de la plateforme.
     } else {
       // club_id est obligatoire dès qu'on ne cible pas une équipe précise — la query param
       // (page publique, qui porte toujours son propre clubId dans l'URL) ou, à défaut, le club

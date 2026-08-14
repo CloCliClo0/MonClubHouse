@@ -80,6 +80,7 @@ export default function MatchDetailPage() {
   const [scoreHome, setScoreHome] = useState<number>(0)
   const [scoreAway, setScoreAway] = useState<number>(0)
   const [saving, setSaving]       = useState(false)
+  const [resetting, setResetting] = useState(false)
   const [msg, setMsg]             = useState('')
 
   // Socket.io
@@ -200,6 +201,20 @@ export default function MatchDetailPage() {
       setTimeout(() => setMsg(''), 2500)
       load()
     } catch { setMsg('Erreur lors de la sauvegarde') } finally { setSaving(false) }
+  }
+
+  const resetScore = async () => {
+    if (!confirm('Réinitialiser le score de ce match ? Il repassera au statut "Programmé".')) return
+    setResetting(true)
+    setMsg('')
+    try {
+      await api.patch(`/matchs/${matchId}/score`, { score_equipe: null, score_adversaire: null, statut: 'programme' })
+      setScoreHome(0)
+      setScoreAway(0)
+      setMsg('Score réinitialisé')
+      setTimeout(() => setMsg(''), 2500)
+      load()
+    } catch { setMsg('Erreur lors de la réinitialisation') } finally { setResetting(false) }
   }
 
   if (loading) return (
@@ -486,12 +501,19 @@ export default function MatchDetailPage() {
                 ))}
               </div>
               {canManage && (
-                <div className="flex items-center gap-3 pt-2">
-                  <button onClick={saveScore} disabled={saving}
+                <div className="flex items-center gap-3 pt-2 flex-wrap">
+                  <button onClick={saveScore} disabled={saving || resetting}
                     className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-label-lg hover:bg-primary-container disabled:opacity-50 transition-colors">
                     {saving ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <span className="material-symbols-outlined text-[18px]">save</span>}
                     Enregistrer le score
                   </button>
+                  {(match.score_equipe !== undefined && match.score_equipe !== null) && (
+                    <button onClick={resetScore} disabled={saving || resetting}
+                      className="flex items-center gap-2 px-5 py-2.5 border border-outline-variant text-on-surface-variant rounded-xl text-label-lg hover:bg-surface-container-low disabled:opacity-50 transition-colors">
+                      {resetting ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <span className="material-symbols-outlined text-[18px]">restart_alt</span>}
+                      Réinitialiser le score
+                    </button>
+                  )}
                   {msg && <p className={`text-body-md ${msg.includes('Erreur') ? 'text-error' : 'text-green-600'}`}>{msg}</p>}
                 </div>
               )}
