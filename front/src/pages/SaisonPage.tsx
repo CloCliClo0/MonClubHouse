@@ -173,11 +173,14 @@ export default function SaisonPage() {
   useEffect(() => {
     if (!selectedTeamId) { setMatchs([]); return }
     setLoadingMatchs(true)
-    api.get(`/matchs?equipe_id=${selectedTeamId}&type=${activeTab}`)
+    // Saison hors-championnat pour l'amical ("hors championnat") : les matchs amicaux n'ont jamais
+    // de saison en base, filtrer dessus viderait systématiquement la liste.
+    const saisonParam = SEASON_REQUIRED_TYPES.includes(activeTab) ? `&saison=${encodeURIComponent(selectedSaison)}` : ''
+    api.get(`/matchs?equipe_id=${selectedTeamId}&type=${activeTab}${saisonParam}`)
       .then(r => setMatchs(r.data.data || r.data || []))
       .catch(() => setMatchs([]))
       .finally(() => setLoadingMatchs(false))
-  }, [selectedTeamId, activeTab])
+  }, [selectedTeamId, activeTab, selectedSaison])
 
   // ── Chargement des saisons disponibles pour l'équipe ──────────────────────
 

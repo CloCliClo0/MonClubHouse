@@ -12,6 +12,7 @@ const getAll = async (req, res) => {
     if (req.query.equipe_id) where.equipe_id = req.query.equipe_id;
     if (req.query.type) where.type = req.query.type;
     if (req.query.statut) where.statut = req.query.statut;
+    if (req.query.saison) where.saison = req.query.saison;
 
     if (req.query.month) {
       const [annee, mois] = req.query.month.split('-').map(Number);

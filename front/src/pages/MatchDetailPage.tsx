@@ -258,7 +258,7 @@ export default function MatchDetailPage() {
               <p className="text-white/60 text-xs mt-0.5">{match.domicile_exterieur === 'domicile' ? '🏠' : '✈️'}</p>
             </div>
             <div className="flex items-center gap-3 bg-white/10 rounded-2xl px-5 py-4">
-              {canManage && match.statut !== 'termine' && !isLive ? (
+              {canManage && !isLive ? (
                 <>
                   <button onClick={() => setScoreHome(s => Math.max(0, s - 1))} className="text-white/60 hover:text-white text-2xl font-black">−</button>
                   <span className="text-white font-black text-4xl w-8 text-center">{scoreHome}</span>
@@ -280,7 +280,7 @@ export default function MatchDetailPage() {
           </div>
 
           {/* +1 buttons */}
-          {canManage && match.statut !== 'termine' && !isLive && (
+          {canManage && !isLive && (
             <div className="flex items-center justify-center gap-4 mt-4">
               <button onClick={() => setScoreHome(s => s + 1)} className="bg-white/20 hover:bg-white/30 text-white text-label-md px-4 py-1.5 rounded-full">
                 +1

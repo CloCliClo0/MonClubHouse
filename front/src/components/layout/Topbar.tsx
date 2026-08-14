@@ -4,7 +4,7 @@ import api from '../../services/api'
 import { logout } from '../../services/auth'
 import { useLang } from '../../i18n/LangContext'
 
-type Notif = { id: number; titre: string; contenu: string; lu: boolean; created_at: string; lien?: string }
+type Notif = { id: number; titre: string; contenu: string; lu: boolean; createdAt: string; lien?: string }
 
 const detectIOS = () =>
   /ipad|iphone|ipod/i.test(navigator.userAgent) ||
@@ -169,7 +169,7 @@ export default function Topbar({ onMenuToggle }: Props) {
                         <p className="text-label-lg text-on-surface">{n.titre}</p>
                         <p className="text-body-sm text-on-surface-variant mt-0.5 line-clamp-2">{n.contenu}</p>
                         <p className="text-[11px] text-on-surface-variant/60 mt-1">
-                          {new Date(n.created_at).toLocaleDateString('fr-FR')}
+                          {new Date(n.createdAt).toLocaleDateString('fr-FR')}
                         </p>
                       </div>
                     ))
