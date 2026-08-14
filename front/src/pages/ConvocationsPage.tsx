@@ -80,6 +80,7 @@ export default function ConvocationsPage() {
   const [teamPlayers, setTeamPlayers]     = useState<TeamPlayer[]>([])
   const [loadingMatches, setLoadingMatches] = useState(true)
   const [typeFilter, setTypeFilter]       = useState('')
+  const [equipeFilter, setEquipeFilter]   = useState('')
   const [loadingPlayers, setLoadingPlayers] = useState(false)
   const [isClubFallback, setIsClubFallback] = useState(false)
   const [exportingAll, setExportingAll] = useState(false)
@@ -459,7 +460,14 @@ export default function ConvocationsPage() {
     setSendStep('done')
   }
 
-  const filteredMatches = typeFilter ? matches.filter(m => m.type === typeFilter) : matches
+  const equipeOptions = Array.from(
+    new Map(matches.map(m => [m.equipe?.id, m.equipe])).values()
+  ).filter((e): e is Match['equipe'] => !!e?.id)
+    .sort((a, b) => a.nom.localeCompare(b.nom))
+
+  const filteredMatches = matches
+    .filter(m => !typeFilter || m.type === typeFilter)
+    .filter(m => !equipeFilter || String(m.equipe?.id) === equipeFilter)
 
   // ── Sélection du match ─────────────────────────────────────────────────────
 
@@ -482,22 +490,37 @@ export default function ConvocationsPage() {
         </div>
 
         {!loadingMatches && matches.length > 0 && (
-          <div className="mb-4 flex items-center gap-2 flex-wrap">
-            <span className="text-label-md text-on-surface-variant">Type :</span>
-            <button onClick={() => setTypeFilter('')}
-              className={`px-3 py-1.5 rounded-full text-label-md font-semibold border-2 transition-all ${
-                typeFilter === '' ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
-              }`}>
-              Tous
-            </button>
-            {TYPE_FILTERS.map(f => (
-              <button key={f.key} onClick={() => setTypeFilter(f.key)}
+          <div className="mb-4 flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-label-md text-on-surface-variant">Type :</span>
+              <button onClick={() => setTypeFilter('')}
                 className={`px-3 py-1.5 rounded-full text-label-md font-semibold border-2 transition-all ${
-                  typeFilter === f.key ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+                  typeFilter === '' ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
                 }`}>
-                {f.label}
+                Tous
               </button>
-            ))}
+              {TYPE_FILTERS.map(f => (
+                <button key={f.key} onClick={() => setTypeFilter(f.key)}
+                  className={`px-3 py-1.5 rounded-full text-label-md font-semibold border-2 transition-all ${
+                    typeFilter === f.key ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {equipeOptions.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-label-md text-on-surface-variant">Équipe :</span>
+                <div className="relative">
+                  <select value={equipeFilter} onChange={e => setEquipeFilter(e.target.value)}
+                    className="appearance-none pl-3 pr-8 py-1.5 rounded-full text-label-md font-semibold border-2 border-[#e8e8f0] text-on-surface-variant hover:border-primary/40 focus:outline-none focus:border-primary bg-white transition-all">
+                    <option value="">Toutes</option>
+                    {equipeOptions.map(eq => <option key={eq.id} value={eq.id}>{eq.nom}</option>)}
+                  </select>
+                  <span className="material-symbols-outlined absolute right-1.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

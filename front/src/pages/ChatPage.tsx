@@ -3,7 +3,7 @@ import api from '../services/api'
 import EmojiPicker from '../components/EmojiPicker'
 
 type Channel = { id: number; nom: string; type: string; icon?: string }
-type Message = { id: number; sender_id: number; sender?: { nom: string; prenom: string }; contenu: string; created_at: string; mine?: boolean }
+type Message = { id: number; sender_id: number; sender?: { nom: string; prenom: string }; contenu: string; createdAt: string; mine?: boolean }
 
 const TYPE_ICON: Record<string, string> = {
   equipe: 'sports_soccer', club: 'house', dirigeants: 'badge', prive: 'lock', groupe: 'forum',
@@ -105,7 +105,7 @@ export default function ChatPage() {
     setInput('')
     const temp: Message = {
       id: Date.now(), sender_id: 0, contenu: text,
-      created_at: new Date().toISOString(), mine: true,
+      createdAt: new Date().toISOString(), mine: true,
     }
     setMessages(prev => [...prev, temp])
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
@@ -275,7 +275,7 @@ export default function ChatPage() {
                         </div>
                         <span className={`text-[10px] text-on-surface-variant/60 mt-1 ${msg.mine ? 'mr-1' : 'ml-1'}`}>
                           {(() => {
-                            const d = new Date((msg.created_at || '').replace(' ', 'T'))
+                            const d = new Date((msg.createdAt || '').replace(' ', 'T'))
                             return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
                           })()}
                         </span>

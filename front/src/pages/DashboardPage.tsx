@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 
 type Stats = { membres: number; equipes: number; matchs_weekend: number; notifications: number }
 type Event = { id: number; date: string; heure: string; lieu: string; type: string; adversaire?: string; equipe?: { nom: string } }
-type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; created_at: string; lien?: string }
+type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; createdAt: string; lien?: string }
 type PersonalStats = {
   taux_presence_matchs: number | null
   taux_presence_entrainements: number | null
@@ -247,7 +247,17 @@ export default function DashboardPage() {
         <div className="bg-white border border-[#e8e8f0] rounded-lg overflow-hidden flex flex-col">
           <div className="p-6 border-b border-[#e8e8f0] flex justify-between items-center">
             <h4 className="text-headline-md">Notifications récentes</h4>
-            <button className="text-primary text-label-md hover:underline">Marquer comme lu</button>
+            {notifs.some(n => !n.lu) && (
+              <button
+                onClick={() => {
+                  api.patch('/profil/notifications/toutes-lues').catch(() => {})
+                  setNotifs(prev => prev.map(n => ({ ...n, lu: true })))
+                }}
+                className="text-primary text-label-md hover:underline"
+              >
+                Marquer comme lu
+              </button>
+            )}
           </div>
           <div className="flex-1 divide-y divide-[#e8e8f0]">
             {loading ? (
@@ -266,7 +276,7 @@ export default function DashboardPage() {
                     <p className="text-label-lg text-on-surface">{n.titre}</p>
                     <p className="text-body-sm text-on-surface-variant mt-1 line-clamp-2">{n.contenu}</p>
                     <p className={`text-body-sm mt-1 font-semibold ${!n.lu ? 'text-blue-500' : 'text-on-surface-variant/60'}`}>
-                      {new Date(n.created_at).toLocaleDateString('fr-FR')}
+                      {new Date(n.createdAt).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
                 </div>

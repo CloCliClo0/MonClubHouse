@@ -38,6 +38,7 @@ type MatchDisplay = {
   label: string
   date: string
   equipe: string
+  equipe_id: number
   terrain: string
   competition: string
   type: string
@@ -76,6 +77,7 @@ function toDisplay(m: ApiMatch): MatchDisplay {
     label:       m.adversaire ? `${m.equipe.nom} vs ${m.adversaire}` : m.equipe.nom,
     date:        formatDate(m.date, m.heure_rdv),
     equipe:      m.equipe.nom,
+    equipe_id:   m.equipe.id,
     terrain:     m.terrain?.nom ?? m.lieu ?? '—',
     competition: m.championnat ?? TYPE_LABELS[m.type] ?? m.type,
     type:        m.type,
@@ -215,6 +217,7 @@ export default function CompositionPage() {
   const [matches, setMatches]   = useState<MatchDisplay[]>([])
   const [loading, setLoading]   = useState(true)
   const [fetchError, setFetchError] = useState(false)
+  const [equipeFilter, setEquipeFilter] = useState('')
 
   const [convocations, setConvocations]       = useState<ConvoquedPlayer[]>([])
   const [rawCounts, setRawCounts]             = useState({ present: 0, incertain: 0, convoque: 0, absent: 0, non_retenu: 0 })
@@ -406,6 +409,14 @@ export default function CompositionPage() {
   const isSelected = (id: number, source: 'field' | 'bench') =>
     selected?.id === id && selected?.source === source
 
+  const equipeOptions = Array.from(
+    new Map(matches.map(m => [m.equipe_id, m.equipe])).entries()
+  ).map(([id, nom]) => ({ id, nom })).sort((a, b) => a.nom.localeCompare(b.nom))
+
+  const filteredMatches = equipeFilter
+    ? matches.filter(m => String(m.equipe_id) === equipeFilter)
+    : matches
+
   // ── Sélection du match ────────────────────────────────────────────────────
   if (!selectedMatchId) {
     return (
@@ -454,8 +465,34 @@ export default function CompositionPage() {
 
         {!loading && !fetchError && matches.length > 0 && (
           <>
+            {equipeOptions.length > 1 && (
+              <div className="mb-4 flex items-center gap-2 flex-wrap">
+                <span className="text-label-md text-on-surface-variant">Équipe :</span>
+                <button onClick={() => setEquipeFilter('')}
+                  className={`px-3 py-1.5 rounded-full text-label-md font-semibold border-2 transition-all ${
+                    equipeFilter === '' ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+                  }`}>
+                  Toutes
+                </button>
+                {equipeOptions.map(eq => (
+                  <button key={eq.id} onClick={() => setEquipeFilter(String(eq.id))}
+                    className={`px-3 py-1.5 rounded-full text-label-md font-semibold border-2 transition-all ${
+                      equipeFilter === String(eq.id) ? 'border-primary bg-primary/10 text-primary' : 'border-[#e8e8f0] text-on-surface-variant hover:border-primary/40'
+                    }`}>
+                    {eq.nom}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {filteredMatches.length === 0 ? (
+              <div className="flex flex-col items-center py-20 text-on-surface-variant gap-3">
+                <span className="material-symbols-outlined text-[48px] opacity-30">filter_alt_off</span>
+                <p className="text-body-md">Aucun match pour cette équipe.</p>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {matches.map(m => (
+              {filteredMatches.map(m => (
                 <button
                   key={m.id}
                   onClick={() => setSelectedMatchId(m.id)}
@@ -487,6 +524,7 @@ export default function CompositionPage() {
                 </button>
               ))}
             </div>
+            )}
 
             <div className="mt-6 bg-surface-container-low border border-outline-variant rounded-xl p-4 flex items-center gap-3 text-body-sm text-on-surface-variant">
               <span className="material-symbols-outlined text-primary">info</span>

@@ -12,6 +12,7 @@ const getAll = async (req, res) => {
     if (req.query.equipe_id) where.equipe_id = req.query.equipe_id;
     if (req.query.type) where.type = req.query.type;
     if (req.query.statut) where.statut = req.query.statut;
+    if (req.query.saison) where.saison = req.query.saison;
 
     if (req.query.month) {
       const [annee, mois] = req.query.month.split('-').map(Number);
@@ -186,6 +187,12 @@ const saisirScore = async (req, res) => {
     const { score_equipe, score_adversaire, statut } = req.body;
     const match = await Match.findByPk(req.params.id);
     if (!match) return res.status(404).json({ success: false, message: 'Match introuvable' });
+
+    // Vérification appartenance au club (alignée sur update())
+    if (req.user.role !== 'superadmin' && match.club_id !== req.user.club_id) {
+      return res.status(403).json({ success: false, message: 'Accès interdit' });
+    }
+
     const allowedStatuts = ['programme', 'en_cours', 'termine'];
     await match.update({
       score_equipe,

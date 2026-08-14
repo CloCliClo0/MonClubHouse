@@ -22,7 +22,7 @@ type UserData = {
   has_google?: boolean; has_password?: boolean
   email_verified?: boolean; two_fa_enabled?: boolean
 }
-type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; created_at: string }
+type Notif = { id: number; titre: string; contenu: string; type: string; lu: boolean; createdAt: string }
 
 const ROLE_LABELS: Record<string, string> = {
   superadmin: 'Super Administrateur', admin: 'Administrateur',
@@ -641,7 +641,7 @@ export default function ProfilePage() {
                       </div>
                       <p className="text-on-surface-variant text-body-md mb-1">{n.contenu}</p>
                       <p className="text-[11px] text-on-surface-variant/60 font-medium">
-                        {new Date(n.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {new Date(n.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>
                     </div>
                   </div>

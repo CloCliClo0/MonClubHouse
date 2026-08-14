@@ -15,7 +15,7 @@ router.post('/recurring', authenticate, requireMinRole('coach'), createRecurring
 router.get('/:id', authenticate, getById);
 router.post('/', authenticate, requireMinRole('coach'), validateMatch, create);
 router.put('/:id', authenticate, requireMinRole('coach'), update);
-router.patch('/:id/score', authenticate, requireMinRole('dirigeant'), saisirScore);
+router.patch('/:id/score', authenticate, requireMinRole('coach'), saisirScore);
 router.patch('/:id/disable', authenticate, requireMinRole('coach'), remove);
 
 // Convocations

@@ -7,12 +7,23 @@ const createNotification = async ({ user_id, type, titre, contenu, lien, donnees
 
 const getMes = async (req, res) => {
   try {
-    const notifications = await Notification.findAll({
-      where: { user_id: req.user.id },
-      order: [['created_at', 'DESC']],
-      limit: Math.min(parseInt(req.query.limit, 10) || 50, 100)
-    });
-    const nonLues = notifications.filter(n => !n.lu).length;
+    const where = { user_id: req.user.id };
+    // Le frontend (ex: cloche Topbar) demande "lu=false" pour n'afficher que les non-lues —
+    // ce filtre était ignoré côté back, la liste renvoyait toujours les N plus récentes toutes
+    // confondues, quitte à masquer des non-lues plus anciennes derrière des lues plus récentes.
+    if (req.query.lu === 'true') where.lu = true;
+    else if (req.query.lu === 'false') where.lu = false;
+
+    const [notifications, nonLues] = await Promise.all([
+      Notification.findAll({
+        where,
+        order: [['created_at', 'DESC']],
+        limit: Math.min(parseInt(req.query.limit, 10) || 50, 100)
+      }),
+      // Total réel des non-lues, indépendant de la pagination/du filtre ci-dessus —
+      // sert de badge de compteur, ne doit jamais être plafonné par `limit`.
+      Notification.count({ where: { user_id: req.user.id, lu: false } }),
+    ]);
     return res.json({ success: true, data: { notifications, non_lues: nonLues } });
   } catch (err) {
     console.error('[notificationController]', err.message);

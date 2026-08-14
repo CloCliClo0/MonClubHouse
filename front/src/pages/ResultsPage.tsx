@@ -183,12 +183,13 @@ export default function ResultsPage() {
                 {displayed.map(m => {
                   const result = m.statut === 'termine' ? getResult(m) : null
                   const isFuture = m.statut === 'programme'
+                  const isLive = m.statut === 'en_cours'
                   return (
                     <div key={m.id}
                       className={`p-5 flex items-center justify-between flex-wrap gap-4 transition-colors ${
-                        m.statut === 'termine' ? 'hover:bg-surface-container-low cursor-pointer' : 'opacity-80'
+                        m.statut === 'termine' || isLive ? 'hover:bg-surface-container-low cursor-pointer' : 'opacity-80'
                       }`}
-                      onClick={() => m.statut === 'termine' && navigate(`/resultats/${m.id}`)}>
+                      onClick={() => (m.statut === 'termine' || isLive) && navigate(`/resultats/${m.id}`)}>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className="text-label-md text-on-surface-variant">{m.championnat || m.equipe?.categorie?.nom}</span>
@@ -215,8 +216,13 @@ export default function ResultsPage() {
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="text-label-lg text-primary font-bold">{m.equipe?.nom}</span>
-                          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f4f4f6]">
-                            {isFuture ? (
+                          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${isLive ? 'bg-red-50' : 'bg-[#f4f4f6]'}`}>
+                            {isLive ? (
+                              <span className="text-label-lg text-red-600 font-semibold flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                {m.score_equipe ?? 0} — {m.score_adversaire ?? 0}
+                              </span>
+                            ) : isFuture ? (
                               <span className="text-label-lg text-on-surface-variant">à venir</span>
                             ) : (
                               <>
@@ -244,6 +250,13 @@ export default function ResultsPage() {
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-label-md hover:bg-primary/20 transition-colors">
                             <span className="material-symbols-outlined text-[16px]">edit</span>
                             Saisir
+                          </button>
+                        )}
+                        {isLive && (
+                          <button onClick={e => { e.stopPropagation(); navigate(`/resultats/${m.id}`) }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-lg text-label-md hover:bg-red-600 transition-colors">
+                            <span className="material-symbols-outlined text-[16px]">radio_button_checked</span>
+                            Reprendre le direct
                           </button>
                         )}
                       </div>
